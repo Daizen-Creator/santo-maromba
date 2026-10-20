@@ -83,7 +83,7 @@ describe('Catálogos locais de alimentação e treino', () => {
       .toBe(exercises.length);
   });
 
-  it('adiciona a coluna econômica ao atualizar um SQLite com schema antigo', async () => {
+  it('migra tabelas antigas de alimentos e receitas sem perder dados nem falhar no índice de substituição', async () => {
     const oldDbPath = path.join(tempDirectory, 'old-fittrack.db');
     const oldDb = await createDatabaseDriver(oldDbPath);
     try {
@@ -97,10 +97,24 @@ describe('Catálogos locais de alimentação e treino', () => {
         is_custom INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL
       )`);
+      oldDb.exec(`CREATE TABLE foods (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL
+      )`);
+      oldDb.execute('INSERT INTO foods (id, name, category) VALUES (?, ?, ?)', ['food-legacy', 'Arroz antigo', 'grain']);
 
       await runMigrations(oldDb);
       expect(oldDb.query<{ name: string }>('PRAGMA table_info(recipes)')
         .some(column => column.name === 'budget_swaps')).toBe(true);
+      const foodColumns = oldDb.query<{ name: string }>('PRAGMA table_info(foods)').map(column => column.name);
+      expect(foodColumns).toContain('substitute_group_id');
+      expect(foodColumns).toContain('image_url');
+      expect(oldDb.queryOne<{ name: string }>('SELECT name FROM foods WHERE id = ?', ['food-legacy'])?.name)
+        .toBe('Arroz antigo');
+      expect(oldDb.queryOne<{ name: string }>(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_foods_substitute_group'"
+      )?.name).toBe('idx_foods_substitute_group');
       expect(oldDb.queryOne('SELECT value FROM app_metadata WHERE key = ?', ['nutrition_catalog_version']))
         .toBeUndefined();
     } finally {
