@@ -1,0 +1,278 @@
+-- ============================================================================
+-- FITTRACK PERSONAL — SCHEMA COMPLETO DO BANCO DE DADOS (SQLITE)
+-- Arquitetura relacional, tipos estritos, foreign keys e índices
+-- ============================================================================
+
+-- Tabela de Versionamento de Migrações
+CREATE TABLE IF NOT EXISTS schema_version (
+  version INTEGER PRIMARY KEY,
+  description TEXT NOT NULL,
+  applied_at TEXT NOT NULL
+);
+
+-- 1. Perfil do Usuário
+CREATE TABLE IF NOT EXISTS profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  birth_date TEXT NOT NULL,
+  height_cm REAL NOT NULL,
+  biological_sex TEXT NOT NULL CHECK(biological_sex IN ('male', 'female', 'unspecified')),
+  activity_level TEXT NOT NULL CHECK(activity_level IN ('sedentary', 'light', 'moderate', 'heavy', 'extreme')),
+  training_experience TEXT NOT NULL CHECK(training_experience IN ('beginner', 'intermediate', 'advanced')),
+  fitness_goal TEXT NOT NULL CHECK(fitness_goal IN ('muscle_gain', 'gradual_weight_gain', 'maintenance', 'fat_loss', 'weight_reduction', 'body_recomposition')),
+  target_weight_kg REAL,
+  dietary_restrictions TEXT, -- JSON Array
+  allergies TEXT,            -- JSON Array
+  dietary_preferences TEXT,
+  food_budget_monthly REAL,
+  meals_per_day INTEGER NOT NULL DEFAULT 4 CHECK(meals_per_day BETWEEN 3 AND 6),
+  training_days_per_week INTEGER NOT NULL DEFAULT 5 CHECK(training_days_per_week BETWEEN 1 AND 7),
+  work_schedule TEXT,
+  study_schedule TEXT,
+  sleep_schedule TEXT,
+  training_schedule TEXT,
+  available_equipment TEXT,  -- JSON Array
+  interruption_history_notes TEXT,
+  initial_history_confirmed INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+-- 2. Histórico de Peso
+CREATE TABLE IF NOT EXISTS weight_records (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL,
+  date TEXT NOT NULL, -- YYYY-MM-DD
+  weight_kg REAL NOT NULL CHECK(weight_kg > 0),
+  notes TEXT,
+  source TEXT NOT NULL CHECK(source IN ('verified', 'self_reported')),
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_weight_records_date ON weight_records(date);
+CREATE INDEX IF NOT EXISTS idx_weight_records_profile ON weight_records(profile_id);
+
+-- 3. Histórico de Alterações de Metas
+CREATE TABLE IF NOT EXISTS target_change_history (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  previous_calories REAL NOT NULL,
+  proposed_calories REAL NOT NULL,
+  reason TEXT NOT NULL,
+  basis_data TEXT NOT NULL, -- JSON com dados utilizados
+  status TEXT NOT NULL CHECK(status IN ('accepted', 'rejected', 'edited')),
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+-- 4. Medidas Corporais
+CREATE TABLE IF NOT EXISTS body_measurements (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  weight_kg REAL,
+  waist_circ_cm REAL,
+  arm_relaxed_cm REAL,
+  arm_flexed_cm REAL,
+  chest_cm REAL,
+  thigh_cm REAL,
+  hip_cm REAL,
+  shoulder_circ_cm REAL,
+  calf_cm REAL,
+  body_fat_pct REAL,
+  source TEXT NOT NULL,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+-- 5. Fotos e Metadados do Físico
+CREATE TABLE IF NOT EXISTS photos (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL,
+  date TEXT NOT NULL, -- YYYY-MM-DD
+  pose TEXT NOT NULL CHECK(pose IN ('front_relaxed', 'front_flexed', 'back', 'side_left', 'side_right', 'custom')),
+  custom_pose_name TEXT,
+  file_path TEXT NOT NULL,
+  lighting_notes TEXT,
+  notes TEXT,
+  is_primary INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_photos_date ON photos(date);
+
+-- 6. Alimentos e Base Nutricional
+CREATE TABLE IF NOT EXISTS foods (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  serving_size_g REAL NOT NULL DEFAULT 100,
+  calories REAL NOT NULL,
+  protein_g REAL NOT NULL,
+  carbs_g REAL NOT NULL,
+  fats_g REAL NOT NULL,
+  fiber_g REAL DEFAULT 0,
+  is_cooked INTEGER NOT NULL DEFAULT 0, -- 0 = cru, 1 = cozido
+  price_estimated REAL,
+    substitute_group_id TEXT,
+    image_url TEXT,
+    image_credit TEXT,
+  source TEXT NOT NULL DEFAULT 'TACO/TBCA',
+  is_custom INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+  CREATE INDEX IF NOT EXISTS idx_foods_substitute_group ON foods(substitute_group_id);
+
+-- 7. Receitas
+CREATE TABLE IF NOT EXISTS recipes (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL CHECK(category IN ('breakfast', 'lunch', 'snack', 'pre_workout', 'post_workout', 'dinner', 'supper')),
+  prep_time_minutes INTEGER,
+  instructions TEXT NOT NULL,
+    image_url TEXT,
+    image_credit TEXT,
+  budget_swaps TEXT NOT NULL DEFAULT '[]',
+  is_favorite INTEGER NOT NULL DEFAULT 0,
+  is_custom INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+-- 8. Ingredientes de Receitas
+CREATE TABLE IF NOT EXISTS recipe_ingredients (
+  id TEXT PRIMARY KEY,
+  recipe_id TEXT NOT NULL,
+  food_id TEXT NOT NULL,
+  amount_g REAL NOT NULL,
+  is_optional INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
+  FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE RESTRICT
+);
+
+-- 9. Despensa do Usuário
+CREATE TABLE IF NOT EXISTS pantry_items (
+  id TEXT PRIMARY KEY,
+  food_id TEXT NOT NULL,
+  amount_available_g REAL NOT NULL,
+  unit_price REAL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
+);
+
+-- 10. Refeições Registradas
+CREATE TABLE IF NOT EXISTS logged_meals (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  meal_name TEXT NOT NULL,
+  calories REAL NOT NULL,
+  protein_g REAL NOT NULL,
+  carbs_g REAL NOT NULL,
+  fats_g REAL NOT NULL,
+  items_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+-- 11. Biblioteca de Exercícios
+CREATE TABLE IF NOT EXISTS exercises (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  primary_muscle TEXT NOT NULL,
+  secondary_muscles TEXT, -- JSON Array
+  equipment TEXT NOT NULL,
+  difficulty TEXT NOT NULL,
+  instructions TEXT NOT NULL,
+    description TEXT,
+    execution_tips TEXT,
+    image_url TEXT,
+    image_credit TEXT,
+    youtube_url TEXT,
+  common_errors TEXT,
+  alternatives TEXT, -- JSON Array de IDs
+  created_at TEXT NOT NULL
+);
+
+-- 12. Sessões de Treino Registradas
+CREATE TABLE IF NOT EXISTS workout_sessions (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  split_name TEXT NOT NULL,
+  completed INTEGER NOT NULL DEFAULT 1,
+  duration_minutes INTEGER,
+  perceived_exertion INTEGER CHECK(perceived_exertion BETWEEN 1 AND 10),
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+-- 13. Séries e Cargas de Exercícios
+CREATE TABLE IF NOT EXISTS workout_sets (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  exercise_id TEXT NOT NULL,
+  set_number INTEGER NOT NULL,
+  weight_kg REAL NOT NULL,
+  reps INTEGER NOT NULL,
+  rpe REAL CHECK(rpe BETWEEN 1 AND 10),
+  is_pr INTEGER NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS exercise_media (
+  id TEXT PRIMARY KEY,
+  exercise_id TEXT NOT NULL,
+  file_name TEXT NOT NULL UNIQUE,
+  mime_type TEXT NOT NULL CHECK(mime_type IN ('image/png', 'image/jpeg', 'image/gif', 'video/mp4')),
+  original_name TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_exercise_media_exercise ON exercise_media(exercise_id, created_at);
+
+-- 14. Registro de Hidratação
+CREATE TABLE IF NOT EXISTS hydration_logs (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL, -- YYYY-MM-DD
+  amount_ml INTEGER NOT NULL,
+  logged_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_hydration_date ON hydration_logs(date);
+
+-- 15. Configurações da Aplicação
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+-- Arquivos importados pelo editor visual ficam no userData; o banco guarda somente metadados.
+CREATE TABLE IF NOT EXISTS customization_media (
+  id TEXT PRIMARY KEY,
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL CHECK(mime_type IN ('image/png', 'image/jpeg', 'image/gif', 'video/mp4')),
+  kind TEXT NOT NULL CHECK(kind IN ('background', 'canvas')),
+  file_path TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_customization_media_kind ON customization_media(kind, created_at);
+
+-- 16. Projeções físicas salvas pelo usuário (cenários estimados)
+CREATE TABLE IF NOT EXISTS physique_projections (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL,
+  input_json TEXT NOT NULL,
+  result_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_physique_projections_profile_created
+  ON physique_projections(profile_id, created_at DESC);

@@ -1,0 +1,26 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+dist-electron/
+release/
+coverage/
+
+# Local databases, user photos/media and runtime state
+/data/
+/userData/
+/exercise_media/
+/shape_photos/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.log
+
+# Local environment and editor files
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini

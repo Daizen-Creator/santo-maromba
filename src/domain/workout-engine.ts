@@ -1,0 +1,243 @@
+import { Exercise, WorkoutSet } from '../shared/types';
+import { INITIAL_EXERCISES } from '../database/seeds/exercise-seeds';
+
+export interface DailyWorkoutPlan {
+  dayName: string;
+  splitTitle: string;
+  focusMuscles: string;
+  exercises: Array<{
+    exercise: Exercise;
+    sets: number;
+    repRange: string;
+    restSeconds: number;
+    recommendedWeightKg?: number;
+  }>;
+  recoveryNotes: string;
+}
+
+export interface ScheduledWorkout {
+  plan: DailyWorkoutPlan;
+  scheduledDate: Date;
+  daysUntil: number;
+}
+
+const WEEKDAY_NAMES = [
+  'domingo', 'segunda-feira', 'terça-feira', 'quarta-feira',
+  'quinta-feira', 'sexta-feira', 'sábado'
+];
+
+const normalizeDayName = (value: string): string =>
+  value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('pt-BR');
+
+const planMatchesWeekday = (plan: DailyWorkoutPlan, weekday: number): boolean => {
+  const dayName = normalizeDayName(plan.dayName);
+  if (dayName === 'segunda a sexta') return weekday >= 1 && weekday <= 5;
+  if (dayName === 'sabado & domingo') return weekday === 0 || weekday === 6;
+  return dayName === normalizeDayName(WEEKDAY_NAMES[weekday]);
+};
+
+export const getNextScheduledWorkout = (
+  plans: DailyWorkoutPlan[],
+  fromDate: Date = new Date()
+): ScheduledWorkout | null => {
+  for (let daysUntil = 0; daysUntil < 7; daysUntil += 1) {
+    const scheduledDate = new Date(
+      fromDate.getFullYear(),
+      fromDate.getMonth(),
+      fromDate.getDate() + daysUntil
+    );
+    const plan = plans.find(item => planMatchesWeekday(item, scheduledDate.getDay()));
+    if (plan) return { plan, scheduledDate, daysUntil };
+  }
+  return null;
+};
+
+export class WorkoutEngine {
+  private exercises: Exercise[];
+
+  constructor(customExercises?: Exercise[]) {
+    this.exercises = customExercises || INITIAL_EXERCISES;
+  }
+
+  /**
+   * Sugere divisões de treino baseadas na disponibilidade semanal (3, 5 ou 7 dias)
+   * Respeitando que 7 dias disponíveis não significa musculação pesada 7 dias por semana.
+   */
+  generateSplit(daysPerWeek: number, isReturningFromBreak: boolean = false): DailyWorkoutPlan[] {
+    const plans: DailyWorkoutPlan[] = [];
+
+    // Ajuste de volume inicial para retornos de interrupção
+    const volumeMultiplier = isReturningFromBreak ? 0.75 : 1.0;
+
+    const findEx = (id: string) => this.exercises.find(e => e.id === id) || this.exercises[0];
+
+    if (daysPerWeek === 3) {
+      // Divisão 3 Dias: Full Body Alternado com descanso intercalado
+      plans.push({
+        dayName: 'Segunda-feira',
+        splitTitle: 'Full Body A — Força e Estímulo Global',
+        focusMuscles: 'Peito, Costas, Quadríceps, Ombros',
+        recoveryNotes: 'Intervalo mínimo de 48 horas recomendado antes da próxima sessão de musculação.',
+        exercises: [
+          { exercise: findEx('ex-agachamento-livre'), sets: Math.round(3 * volumeMultiplier), repRange: '6 - 8', restSeconds: 120 },
+          { exercise: findEx('ex-supino-reto'), sets: Math.round(3 * volumeMultiplier), repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-puxada-alta'), sets: Math.round(3 * volumeMultiplier), repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-desenvolvimento-halteres'), sets: Math.round(3 * volumeMultiplier), repRange: '10 - 12', restSeconds: 60 },
+          { exercise: findEx('ex-gemeos-em-pe'), sets: 3, repRange: '12 - 15', restSeconds: 60 }
+        ]
+      });
+
+      plans.push({
+        dayName: 'Quarta-feira',
+        splitTitle: 'Full Body B — Posterior e Densidade',
+        focusMuscles: 'Isquiotibiais, Costas, Peito Superior, Braços',
+        recoveryNotes: 'Foco na cadeia posterior e controle motor excêntrico.',
+        exercises: [
+          { exercise: findEx('ex-stiff'), sets: Math.round(3 * volumeMultiplier), repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-remada-curvada'), sets: Math.round(3 * volumeMultiplier), repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-supino-inclinado-halteres'), sets: Math.round(3 * volumeMultiplier), repRange: '10 - 12', restSeconds: 90 },
+          { exercise: findEx('ex-rosca-direta'), sets: 3, repRange: '10 - 12', restSeconds: 60 },
+          { exercise: findEx('ex-triceps-corda'), sets: 3, repRange: '10 - 12', restSeconds: 60 }
+        ]
+      });
+
+      plans.push({
+        dayName: 'Sexta-feira',
+        splitTitle: 'Full Body C — Hipertrofia e Volume',
+        focusMuscles: 'Quadríceps, Ombros, Costas, Core',
+        recoveryNotes: 'Descanso completo no sábado e domingo.',
+        exercises: [
+          { exercise: findEx('ex-leg-press-45'), sets: Math.round(4 * volumeMultiplier), repRange: '10 - 12', restSeconds: 90 },
+          { exercise: findEx('ex-remada-serrote'), sets: Math.round(3 * volumeMultiplier), repRange: '10 - 12', restSeconds: 60 },
+          { exercise: findEx('ex-elevacao-lateral'), sets: 4, repRange: '12 - 15', restSeconds: 60 },
+          { exercise: findEx('ex-mesa-flexora'), sets: 3, repRange: '10 - 12', restSeconds: 60 },
+          { exercise: findEx('ex-abdominal-infra'), sets: 3, repRange: '15 - 20', restSeconds: 45 }
+        ]
+      });
+    } else if (daysPerWeek === 5) {
+      // Divisão 5 Dias: Push / Pull / Legs + Upper / Lower
+      plans.push({
+        dayName: 'Segunda-feira',
+        splitTitle: 'Treino A — Empurrar (Push: Peitoral, Ombros, Tríceps)',
+        focusMuscles: 'Peitoral maior, Deltoide anterior/lateral, Tríceps',
+        recoveryNotes: 'Recuperação muscular estimada: 48h.',
+        exercises: [
+          { exercise: findEx('ex-supino-reto'), sets: Math.round(4 * volumeMultiplier), repRange: '6 - 8', restSeconds: 120 },
+          { exercise: findEx('ex-supino-inclinado-halteres'), sets: Math.round(3 * volumeMultiplier), repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-desenvolvimento-halteres'), sets: Math.round(3 * volumeMultiplier), repRange: '10 - 12', restSeconds: 90 },
+          { exercise: findEx('ex-elevacao-lateral'), sets: 4, repRange: '12 - 15', restSeconds: 60 },
+          { exercise: findEx('ex-triceps-corda'), sets: 3, repRange: '10 - 12', restSeconds: 60 },
+          { exercise: findEx('ex-triceps-testa'), sets: 3, repRange: '10 - 12', restSeconds: 60 }
+        ]
+      });
+
+      plans.push({
+        dayName: 'Terça-feira',
+        splitTitle: 'Treino B — Puxar (Pull: Dorsais, Trapézio, Bíceps, Antebraço)',
+        focusMuscles: 'Latíssimo do dorso, Romboides, Bíceps braquial',
+        recoveryNotes: 'Recuperação muscular estimada: 48h.',
+        exercises: [
+          { exercise: findEx('ex-puxada-alta'), sets: Math.round(4 * volumeMultiplier), repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-remada-curvada'), sets: Math.round(4 * volumeMultiplier), repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-remada-serrote'), sets: Math.round(3 * volumeMultiplier), repRange: '10 - 12', restSeconds: 60 },
+          { exercise: findEx('ex-rosca-direta'), sets: 3, repRange: '10 - 12', restSeconds: 60 },
+          { exercise: findEx('ex-rosca-martelo'), sets: 3, repRange: '10 - 12', restSeconds: 60 }
+        ]
+      });
+
+      plans.push({
+        dayName: 'Quarta-feira',
+        splitTitle: 'Treino C — Pernas Completo (Legs: Quadríceps, Posterior, Panturrilha)',
+        focusMuscles: 'Quadríceps, Isquiotibiais, Glúteos, Panturrilhas',
+        recoveryNotes: 'Maior demanda do sistema nervoso central.',
+        exercises: [
+          { exercise: findEx('ex-agachamento-livre'), sets: Math.round(4 * volumeMultiplier), repRange: '6 - 8', restSeconds: 120 },
+          { exercise: findEx('ex-leg-press-45'), sets: Math.round(3 * volumeMultiplier), repRange: '10 - 12', restSeconds: 90 },
+          { exercise: findEx('ex-stiff'), sets: Math.round(3 * volumeMultiplier), repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-cadeira-extensora'), sets: 3, repRange: '12 - 15', restSeconds: 60 },
+          { exercise: findEx('ex-mesa-flexora'), sets: 3, repRange: '10 - 12', restSeconds: 60 },
+          { exercise: findEx('ex-gemeos-em-pe'), sets: 4, repRange: '12 - 15', restSeconds: 60 }
+        ]
+      });
+
+      plans.push({
+        dayName: 'Quinta-feira',
+        splitTitle: 'Treino D — Membros Superiores (Upper Body)',
+        focusMuscles: 'Peito, Costas, Ombros, Braços',
+        recoveryNotes: 'Volume moderado com foco em pontos fracos.',
+        exercises: [
+          { exercise: findEx('ex-supino-inclinado-halteres'), sets: 3, repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-puxada-alta'), sets: 3, repRange: '10 - 12', restSeconds: 90 },
+          { exercise: findEx('ex-elevacao-lateral'), sets: 4, repRange: '12 - 15', restSeconds: 60 },
+          { exercise: findEx('ex-triceps-corda'), sets: 3, repRange: '12 - 15', restSeconds: 60 },
+          { exercise: findEx('ex-rosca-direta'), sets: 3, repRange: '12 - 15', restSeconds: 60 }
+        ]
+      });
+
+      plans.push({
+        dayName: 'Sexta-feira',
+        splitTitle: 'Treino E — Membros Inferiores & Abdômen (Lower & Core)',
+        focusMuscles: 'Cadeia posterior, Quadríceps e Core',
+        recoveryNotes: 'Final de semana livre para recuperação e supercompensação.',
+        exercises: [
+          { exercise: findEx('ex-elevacao-pelvica'), sets: 4, repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-leg-press-45'), sets: 3, repRange: '10 - 12', restSeconds: 90 },
+          { exercise: findEx('ex-mesa-flexora'), sets: 3, repRange: '10 - 12', restSeconds: 60 },
+          { exercise: findEx('ex-gemeos-em-pe'), sets: 4, repRange: '15 - 20', restSeconds: 60 },
+          { exercise: findEx('ex-abdominal-infra'), sets: 4, repRange: '15 - 20', restSeconds: 45 }
+        ]
+      });
+    } else {
+      // 7 dias disponíveis: 5 dias de musculação + 2 dias de recuperação ativa / cardio leve
+      plans.push({
+        dayName: 'Segunda a Sexta',
+        splitTitle: 'Rotina Dividida (Push / Pull / Legs / Upper / Lower)',
+        focusMuscles: 'Grupos musculares distribuídos',
+        recoveryNotes: 'Sessões concentradas de 50 a 65 minutos.',
+        exercises: [
+          { exercise: findEx('ex-supino-reto'), sets: 4, repRange: '8 - 10', restSeconds: 90 },
+          { exercise: findEx('ex-agachamento-livre'), sets: 4, repRange: '8 - 10', restSeconds: 120 }
+        ]
+      });
+
+      plans.push({
+        dayName: 'Sábado & Domingo',
+        splitTitle: 'Recuperação Ativa & Condicionamento Cardiovascular',
+        focusMuscles: 'Mobilidade, caminhada inclinada ou cardio zona 2',
+        recoveryNotes: 'Não treinar musculação até a falha 7 dias por semana para evitar overtraining do SNC.',
+        exercises: []
+      });
+    }
+
+    return plans;
+  }
+
+  /**
+   * Sugere progressão de carga inteligente baseada no histórico de repetições
+   */
+  suggestProgression(
+    exerciseId: string,
+    historySets: WorkoutSet[],
+    targetRepMax: number = 10
+  ): { suggestedWeightKg: number; rationale: string } {
+    const exerciseSets = historySets.filter(s => s.exerciseId === exerciseId);
+    if (exerciseSets.length === 0) {
+      return { suggestedWeightKg: 10, rationale: 'Carga inicial para calibração de técnica.' };
+    }
+
+    const lastSet = exerciseSets[exerciseSets.length - 1];
+    if (lastSet.reps >= targetRepMax && (!lastSet.rpe || lastSet.rpe <= 8)) {
+      // Bateu o teto de repetições com esforço controlado -> progressão de sobrecarga
+      const increment = 2.0; // +2kg
+      return {
+        suggestedWeightKg: Number((lastSet.weightKg + increment).toFixed(1)),
+        rationale: `Meta de ${targetRepMax} repetições atingida com boa reserva (RPE ${lastSet.rpe || '≤8'}). Aumente +${increment} kg na primeira série.`
+      };
+    }
+
+    return {
+      suggestedWeightKg: lastSet.weightKg,
+      rationale: `Mantenha a carga de ${lastSet.weightKg} kg e busque progredir em repetições com técnica estrita.`
+    };
+  }
+}

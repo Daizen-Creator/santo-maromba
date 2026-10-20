@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 158 82% 38%;
+    --primary-foreground: 210 40% 98%;
+    --primary-hover: 158 82% 32%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 71% 45%;
+    --success-foreground: 144 100% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 12%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 158 82% 38%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 240 6% 4%;
+    --foreground: 210 10% 92%;
+    --card: 220 5% 8%;
+    --card-foreground: 210 10% 92%;
+    --popover: 220 5% 8%;
+    --popover-foreground: 210 10% 92%;
+    --primary: 150 37% 54%;
+    --primary-foreground: 150 30% 7%;
+    --primary-hover: 150 39% 61%;
+    --secondary: 220 5% 12%;
+    --secondary-foreground: 210 10% 92%;
+    --muted: 220 5% 11%;
+    --muted-foreground: 220 7% 61%;
+    --accent: 220 5% 14%;
+    --accent-foreground: 210 10% 92%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 71% 45%;
+    --success-foreground: 144 100% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 12%;
+    --border: 220 5% 17%;
+    --input: 220 5% 17%;
+    --ring: 150 37% 54%;
+    --radius: 1rem;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 0;
+}
+
+body {
+  font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse at 78% 1%, hsl(150 25% 15% / 0.13), transparent 35%),
+    hsl(var(--background));
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -0.025em;
+}
+
+button,
+input,
+select,
+textarea {
+  transition-property: color, background-color, border-color, box-shadow, opacity, filter;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+button:active:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid hsl(var(--ring) / 0.78);
+  outline-offset: 2px;
+}
+
+.window-titlebar {
+  -webkit-app-region: drag;
+  app-region: drag;
+  user-select: none;
+}
+
+.window-controls,
+.window-controls button {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+.bg-card {
+  background-color: hsl(var(--card) / 0.84);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.view-enter {
+  animation: view-enter 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes view-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Custom sleek scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
