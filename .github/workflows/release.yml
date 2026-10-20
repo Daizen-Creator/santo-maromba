@@ -31,7 +31,36 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Publish Windows installer and portable app to GitHub Releases
-        run: npx electron-builder --win nsis portable --publish always
+      - name: Build Windows installer and portable app
+        run: npx electron-builder --win nsis portable --publish never
+
+      - name: Publish installer, portable app and updater manifest
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $repository = $env:GITHUB_REPOSITORY
+          $version = (node -p "require('./package.json').version").Trim()
+          Copy-Item "release/Santo Maromba Setup $version.exe" "release/Santo-Maromba-Setup-$version.exe" -Force
+          Copy-Item "release/Santo Maromba Setup $version.exe.blockmap" "release/Santo-Maromba-Setup-$version.exe.blockmap" -Force
+          Copy-Item "release/Santo Maromba $version.exe" "release/Santo-Maromba-$version-Portable.exe" -Force
+          $assets = @(
+            "release/Santo-Maromba-Setup-$version.exe",
+            "release/Santo-Maromba-Setup-$version.exe.blockmap",
+            "release/Santo-Maromba-$version-Portable.exe",
+            "release/latest.yml"
+          )
+
+          foreach ($asset in $assets) {
+            if (-not (Test-Path $asset)) { throw "Artefato não encontrado: $asset" }
+          }
+
+          gh release view $tag --repo $repository *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --repo $repository --title "Santo Maromba $version" --generate-notes
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+          gh release upload $tag @assets --repo $repository --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
