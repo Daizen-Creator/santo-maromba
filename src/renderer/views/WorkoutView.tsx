@@ -21,7 +21,7 @@ import { YouTubePlayer } from '../components/YouTubePlayer';
 import { formatRestTime, remainingRestSeconds } from '../../domain/rest-timer';
 import { compareWorkoutSetWithHistory } from '../../domain/workout-comparison';
 import { hydrateWorkoutTemplate, serializeWorkoutPlans } from '../../domain/workout-templates';
-import { getWorkoutScheduleStatus } from '../../domain/workout-schedule';
+import { getPlannedWorkoutStreak, getWorkoutScheduleStatus } from '../../domain/workout-schedule';
 import { getWorkoutWeekDates, shiftWorkoutWeek } from '../../domain/workout-week-calendar';
 
 const OFFLINE_EXERCISE_IMAGE: Record<MuscleGroup, string> = {
@@ -132,6 +132,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   const [restTimer, setRestTimer] = useState<{ exerciseName: string; durationSeconds: number; endsAtMs: number } | null>(null);
   const [restNowMs, setRestNowMs] = useState(() => Date.now());
   const [restCompleteMessage, setRestCompleteMessage] = useState<string | null>(null);
+  const plannedWorkoutStreak = useMemo(() => getPlannedWorkoutStreak(workoutSchedule, sessions, getLocalIsoDate()), [workoutSchedule, sessions]);
 
   useEffect(() => {
     let active = true;
@@ -458,6 +459,20 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
         <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-xs text-destructive">
           {sessionValidationError}
         </div>
+      )}
+
+      {activeTab === 'today' && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/[0.04] px-4 py-3" aria-label="Sequência de treinos planejados">
+          <div>
+            <strong className="text-sm text-foreground">
+              {plannedWorkoutStreak.completedSessions > 0
+                ? `${plannedWorkoutStreak.completedSessions} ${plannedWorkoutStreak.completedSessions === 1 ? 'treino planejado concluído' : 'treinos planejados concluídos'} em sequência`
+                : 'Nenhuma sequência de treinos registrada'}
+            </strong>
+            <p className="mt-1 text-[10px] text-muted-foreground">Descanso, deload e dias sem treino planejado não interrompem a sequência; um treino planejado perdido interrompe.</p>
+          </div>
+          {plannedWorkoutStreak.latestCompletedDate && <span className="rounded-lg border border-border/70 bg-card/60 px-2.5 py-1 text-[10px] text-muted-foreground">Até {new Date(`${plannedWorkoutStreak.latestCompletedDate}T12:00:00`).toLocaleDateString('pt-BR')}</span>}
+        </section>
       )}
 
       {/* 1. ABA TREINO DE HOJE (LOG EM TEMPO REAL) */}

@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.61. Estado após validação dos incrementos: **132 validadas, 28 parciais, 17 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.62. Estado após validação dos incrementos: **134 validadas, 27 parciais, 16 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -239,8 +239,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 168 | Registrar passos manualmente ou integrar dispositivo. | NENHUM | integração opcional com dispositivo | B · fonte de passos não configurada |
 | 169 | Definir horários de lembrete por hábito. | NENHUM | notificações locais | A · sem agenda |
 | 170 | Pedir consentimento e controlar notificações. | NENHUM | permissão do sistema | A · sem implementação de notificações |
-| 171 | Mostrar sequência sem punir dias perdidos. | NENHUM | — | A · sem sequência de hábitos |
-| 172 | Distinguir descanso planejado de treino não realizado. | TREI | — | P · dias de recuperação existem, falta registrar treino perdido |
+| 171 | Mostrar sequência sem punir dias perdidos. | `workout-schedule.ts`; `WorkoutView.tsx` | agenda explícita de treino | V · conta sessões planejadas e concluídas em sequência; descanso/deload e dias sem plano são neutros, treino passado perdido interrompe e sessão de hoje ainda aberta não interrompe; `workout-schedule.test.ts` |
+| 172 | Distinguir descanso planejado de treino não realizado. | `workout-schedule.ts`; `WorkoutView.tsx` | — | V · descanso/deload permanecem distintos; dia de treino passado sem sessão aparece como “Treino perdido”, enquanto sessões parciais e concluídas têm estados próprios; `workout-schedule.test.ts` |
 | 173 | Registrar suplementos consumidos. | `NutritionView.tsx`; `supplement-intake.ts`; diário SQLite/PWA | alimento classificado como suplemento | V · registro rápido salva o item no diário real, no resumo nutricional e também funciona offline; `supplement-intake.test.ts`, `daily-log-persistence.test.ts`, `daily-meal-api.test.ts` |
 | 174 | Registrar dose/quantidade e consultar histórico de suplementos. | `NutritionView.tsx`; `supplement-intake.ts`; histórico alimentar | quantidade em gramas e data do diário | V · calcula macros por porção identificada e lista doses realmente consumidas por data/horário, sem incluir planejamentos; os mesmos testes do item 173 validam cálculo e recuperação |
 | 175 | Marcar aquecimento concluído por treino. | `WorkoutView.tsx`; SQLite/PWA; migração 40 | — | V · checklist por sessão permanece após reabrir o SQLite e funciona offline; `workout-media-persistence.test.ts`, `workout-recovery-persistence.test.ts`, `workout-migration.test.ts`, `validation.test.ts` |
