@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas. O cadastro e os favoritos de alimentos/receitas estão implementados localmente e passam por validação para a próxima versão. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas e atualizada até a versão 1.0.7. Estado atual: **50 validadas, 62 parciais, 65 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -307,7 +307,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - Release 1.0.5: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.5.
 - GitHub Actions e release 1.0.6: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39723951888).
 - Release 1.0.6: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.6.
-- Incremento 1.0.7: 72 testes e build locais passaram; empacotamento e publicação ainda pendentes.
+- GitHub Actions e release 1.0.7: 72 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39724467747).
+- Release 1.0.7: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.7.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
@@ -315,7 +316,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - IDs **31, 46, 47, 58 e 157** receberam tratamento de transparência/proveniência, ainda **parcial**: qualidade, origem declarada, referência, data e confiança têm campos persistentes; a interface marca valores estimados/não verificados.
 - IDs **CAT-02, CAT-04, CAT-12 e CAT-13** avançaram parcialmente. Os seeds ainda não têm referências rastreáveis por item, densidade, micronutrientes ou 500 cadastros verificados, então esses critérios permanecem incompletos.
 - IDs **61, 65 e 67** estão concluídos e validados: busca de receitas/alimentos; cadastro e edição de alimento pessoal com rótulo de origem e persistência; favoritos e filtros de favoritos para receitas e alimentos no SQLite/PWA.
-- IDs **88, 91 e 92** estão concluídos e validados: cronômetro de descanso; marcação persistente por série; salvamento de sessão parcial sem tratá-la como treino concluído.
+- IDs **88, 91 e 92** estão concluídos e validados: cronômetro de descanso ligado ao intervalo planejado; marcação persistente por série; salvamento de sessão parcial sem tratá-la como treino concluído.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas
