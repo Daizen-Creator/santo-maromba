@@ -440,7 +440,10 @@ CREATE TABLE IF NOT EXISTS app_settings (
 CREATE TABLE IF NOT EXISTS personal_diary_entries (
   id TEXT PRIMARY KEY,
   date TEXT NOT NULL UNIQUE,
-  note TEXT NOT NULL CHECK(length(trim(note)) BETWEEN 1 AND 3000),
+  note TEXT NOT NULL DEFAULT '' CHECK(length(trim(note)) <= 3000),
+  sleep_hours REAL CHECK(sleep_hours BETWEEN 0 AND 24),
+  energy_level INTEGER CHECK(energy_level BETWEEN 1 AND 5),
+  symptoms TEXT CHECK(length(symptoms) <= 500),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

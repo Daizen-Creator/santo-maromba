@@ -349,6 +349,9 @@ export interface PersonalDiaryEntry {
   id: string;
   date: string;
   note: string;
+  sleepHours?: number;
+  energyLevel?: number;
+  symptoms?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -360,7 +363,10 @@ export interface PersonalDiaryDateRange {
 
 export interface SavePersonalDiaryEntryInput {
   date: string;
-  note: string;
+  note?: string;
+  sleepHours?: number;
+  energyLevel?: number;
+  symptoms?: string;
 }
 
 export interface DailyIntakeProgress {

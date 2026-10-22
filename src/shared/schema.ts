@@ -296,8 +296,13 @@ export const PersonalDiaryDateRangeSchema = z.object({
 }).strict().refine(range => range.fromDate <= range.toDate, 'A data inicial deve ser anterior à data final.');
 export const SavePersonalDiaryEntryInputSchema = z.object({
   date: PersonalDiaryDateSchema,
-  note: z.string().trim().min(1, 'Escreva uma observação antes de salvar.').max(3000)
-}).strict();
+  note: z.string().trim().max(3000).optional(),
+  sleepHours: z.number().min(0).max(24).optional(),
+  energyLevel: z.number().int().min(1).max(5).optional(),
+  symptoms: z.string().trim().max(500).optional()
+}).strict().refine(input => Boolean(input.note || input.sleepHours != null || input.energyLevel != null || input.symptoms), {
+  message: 'Registre uma anotação, sono, energia ou sintoma para salvar o dia.'
+});
 
 export const WorkoutSessionInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data de treino válida.'),

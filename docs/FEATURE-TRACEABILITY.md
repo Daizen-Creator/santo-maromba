@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.58. Estado após validação dos incrementos: **124 validadas, 28 parciais, 25 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.59. Estado após validação dos incrementos: **128 validadas, 28 parciais, 21 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -231,11 +231,11 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 |---:|---|---|---|---|
 | 161 | Registrar água diária e recuperar após reiniciar. | PERF; DIAR | — | V · `daily-log-persistence.test.ts` |
 | 162 | Calcular meta de água por peso e exibir progresso. | PERF; DASH | — | P · cálculo existe; validação clínica/configuração limitada |
-| 163 | Registrar sono por data. | NENHUM | — | A · horário de perfil não é diário de sono |
-| 164 | Registrar duração e consultar histórico de sono. | NENHUM | — | A · sem registro de sono |
-| 165 | Registrar nível de energia diário. | NENHUM | — | A · sem campo/fluxo |
+| 163 | Registrar sono por data. | `PersonalDiaryView.tsx`; API SQLite/PWA; migração 39 | — | V · sono em horas, ligado a data local, pode ser criado e editado no diário; `personal-diary-persistence.test.ts` |
+| 164 | Registrar duração e consultar histórico de sono. | Diário pessoal; `PersonalDiaryRepository`; migração 39 | — | V · duração de 0 a 24 h permanece após reabrir SQLite, entra no histórico mensal e funciona offline na PWA; `personal-diary-persistence.test.ts` |
+| 165 | Registrar nível de energia diário. | Diário pessoal; API SQLite/PWA; migração 39 | — | V · nível explícito de 1 a 5 persistido por data e validado; `personal-diary-persistence.test.ts` |
 | 166 | Registrar por sessão desconforto de 0–10, região afetada e recuperação percebida de 1–5, consultar no histórico e preservar registros após reiniciar; sessões anteriores continuam sem valores inventados. | TREI | — | V · migração SQLite 29, validação IPC/offline, salvamento e reabertura testados em `workout-media-persistence.test.ts`, `workout-migration.test.ts` e `workout-recovery-persistence.test.ts` |
-| 167 | Registrar sintoma sem fornecer diagnóstico. | NENHUM | — | A · sem fluxo |
+| 167 | Registrar sintoma sem fornecer diagnóstico. | `PersonalDiaryView.tsx`; API SQLite/PWA; migração 39 | — | V · relato livre de até 500 caracteres fica salvo por data; a interface informa que não há diagnóstico; `personal-diary-persistence.test.ts` |
 | 168 | Registrar passos manualmente ou integrar dispositivo. | NENHUM | integração opcional com dispositivo | B · fonte de passos não configurada |
 | 169 | Definir horários de lembrete por hábito. | NENHUM | notificações locais | A · sem agenda |
 | 170 | Pedir consentimento e controlar notificações. | NENHUM | permissão do sistema | A · sem implementação de notificações |

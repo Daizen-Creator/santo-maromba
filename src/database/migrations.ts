@@ -564,4 +564,31 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [38, 'Marcos de evolução corporal com metas mensuráveis', new Date().toISOString()]
     );
   }
+  const version39 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 39');
+  if (!version39) {
+    const diaryColumns = db.query<{ name: string }>('PRAGMA table_info(personal_diary_entries)');
+    if (!diaryColumns.some(column => column.name === 'sleep_hours')) {
+      db.transaction(() => {
+        db.exec('ALTER TABLE personal_diary_entries RENAME TO personal_diary_entries_legacy_39');
+        db.exec(`CREATE TABLE personal_diary_entries (
+          id TEXT PRIMARY KEY,
+          date TEXT NOT NULL UNIQUE,
+          note TEXT NOT NULL DEFAULT '' CHECK(length(trim(note)) <= 3000),
+          sleep_hours REAL CHECK(sleep_hours BETWEEN 0 AND 24),
+          energy_level INTEGER CHECK(energy_level BETWEEN 1 AND 5),
+          symptoms TEXT CHECK(length(symptoms) <= 500),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )`);
+        db.exec(`INSERT INTO personal_diary_entries (id, date, note, created_at, updated_at)
+          SELECT id, date, note, created_at, updated_at FROM personal_diary_entries_legacy_39`);
+        db.exec('DROP TABLE personal_diary_entries_legacy_39');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_personal_diary_date ON personal_diary_entries(date DESC)');
+      });
+    }
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [39, 'Diário estruturado de sono, energia e sintomas', new Date().toISOString()]
+    );
+  }
 }

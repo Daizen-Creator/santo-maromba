@@ -641,7 +641,10 @@ export const api = {
     const saved: PersonalDiaryEntry = {
       id: existing?.id || `diary-${globalThis.crypto.randomUUID()}`,
       date: input.date,
-      note: input.note,
+      note: input.note?.trim() || '',
+      sleepHours: input.sleepHours ?? undefined,
+      energyLevel: input.energyLevel ?? undefined,
+      symptoms: input.symptoms?.trim() || undefined,
       createdAt: existing?.createdAt || now,
       updatedAt: now
     };
