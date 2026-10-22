@@ -82,7 +82,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       : TRAINING_WEEKDAY_ORDER.slice(0, profile?.trainingDaysPerWeek || 5)
   );
   const [foodBudgetMonthly, setFoodBudgetMonthly] = useState<string>(
-    profile?.foodBudgetMonthly ? String(profile.foodBudgetMonthly) : ''
+    profile?.foodBudgetMonthly !== undefined ? String(profile.foodBudgetMonthly) : ''
   );
   const [dietaryPreferences, setDietaryPreferences] = useState<string>(profile?.dietaryPreferences || '');
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string>(
@@ -157,7 +157,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         mealsPerDay: Number(mealsPerDay),
         trainingDaysPerWeek: Number(trainingDaysPerWeek),
         trainingWeekdays,
-        foodBudgetMonthly: foodBudgetMonthly ? Number(foodBudgetMonthly) : undefined,
+        foodBudgetMonthly: foodBudgetMonthly.trim() ? Number(foodBudgetMonthly) : undefined,
         dietaryPreferences,
         dietaryRestrictions: restrictionsArr,
         allergies: allergies.split(',').map(value => value.trim()).filter(Boolean),
@@ -538,6 +538,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <input
                   type="number"
                   min="0"
+                  max="50000"
                   step="50"
                   value={foodBudgetMonthly}
                   onChange={e => setFoodBudgetMonthly(e.target.value)}

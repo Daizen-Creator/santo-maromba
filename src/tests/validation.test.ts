@@ -169,6 +169,18 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(() => ProfileInputSchema.parse({ ...base, targetDate: '2026-02-30' })).toThrow();
   });
 
+  it('aceita orçamento alimentar mensal dentro do limite e rejeita valores negativos ou acima do máximo', () => {
+    const base = {
+      name: 'João Silva', birthDate: '2008-05-14', heightCm: 182,
+      biologicalSex: 'male', activityLevel: 'moderate', trainingExperience: 'intermediate',
+      fitnessGoal: 'muscle_gain', mealsPerDay: 4, trainingDaysPerWeek: 5
+    };
+    expect(ProfileInputSchema.parse({ ...base, foodBudgetMonthly: 1800 }).foodBudgetMonthly).toBe(1800);
+    expect(ProfileInputSchema.parse({ ...base, foodBudgetMonthly: 0 }).foodBudgetMonthly).toBe(0);
+    expect(() => ProfileInputSchema.parse({ ...base, foodBudgetMonthly: -1 })).toThrow();
+    expect(() => ProfileInputSchema.parse({ ...base, foodBudgetMonthly: 50001 })).toThrow();
+  });
+
   it('deve rejeitar perfil com dados inconsistentes ou fora dos limites clínicos', () => {
     expect(() =>
       ProfileInputSchema.parse({

@@ -35,6 +35,8 @@ import { createPlannedMealFoodItem, removePlannedMealFoodItem } from '../../doma
 import { WeeklyMealPlanner } from '../components/WeeklyMealPlanner';
 import { getPantryExpiryReminder } from '../../domain/pantry-expiry';
 import { calculateCostPerProteinGram } from '../../domain/nutrition-cost';
+import { getRecipeCostPerServing } from '../../domain/recipe-cost';
+import { getAverageMealBudget, prioritizeRecipesForMealBudget } from '../../domain/monthly-food-budget';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -59,6 +61,7 @@ interface NutritionViewProps {
   targets: NutritionTargets | null;
   summary: DashboardSummary | null;
   mealsPerDay: number;
+  foodBudgetMonthly?: number;
   wakeTime?: string;
   sleepTime?: string;
   allergies?: string[];
@@ -104,6 +107,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   targets,
   summary,
   mealsPerDay,
+  foodBudgetMonthly,
   wakeTime,
   sleepTime,
   allergies,
@@ -265,6 +269,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
   const today = new Date();
   const todayString = formatDateInput(today);
+  const averageMealBudget = getAverageMealBudget(foodBudgetMonthly, mealsPerDay, todayString);
   const nutritionBalance = calculateNutritionBalance(targets, summary);
   const mealPhotoKey = (mealEntryId: string) => mealEntryId;
 
@@ -775,7 +780,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     const slots = buildMealSchedule(mealsPerDay, targets, { wakeTime, sleepTime });
     const usedRecipeIds = new Set<string>();
     return slots.map(slot => {
-      const candidates = compatibleRecipes
+      const nutritionRankedCandidates = compatibleRecipes
         .filter(recipe => recipe.category === slot.category)
         .sort((a, b) => {
           const target = slot.target;
@@ -787,11 +792,12 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           return score(a) - score(b) - getRecipePreferenceScore(a, dietaryPreferences) * 2
             + getRecipePreferenceScore(b, dietaryPreferences) * 2;
         });
+      const candidates = prioritizeRecipesForMealBudget(nutritionRankedCandidates, averageMealBudget);
       const recipe = candidates.find(candidate => !usedRecipeIds.has(candidate.id)) || candidates[0] || null;
       if (recipe) usedRecipeIds.add(recipe.id);
       return { slot, recipe, substitution: selectedSubstitutions[slot.id] };
     });
-  }, [mealsPerDay, compatibleRecipes, dietaryPreferences, selectedSubstitutions, targets, wakeTime, sleepTime]);
+  }, [mealsPerDay, compatibleRecipes, dietaryPreferences, selectedSubstitutions, targets, wakeTime, sleepTime, averageMealBudget]);
 
   const naturalMealSlots = mealPlan.filter(({ slot }) => {
     const existing = dailyMealEntries.find(entry => entry.date === todayString && entry.slotId === slot.id);
@@ -1111,6 +1117,13 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           {mealPhotoError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealPhotoError}</p>}
 
           {/* Blocos calculados na hora a partir do perfil e das metas atuais */}
+          {foodBudgetMonthly !== undefined && (
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.05] px-4 py-3 text-xs" aria-label="Orçamento mensal aplicado ao plano">
+              <p className="font-semibold text-emerald-200">Orçamento informado: R$ {foodBudgetMonthly.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mês</p>
+              {averageMealBudget !== undefined && <p className="mt-1 text-muted-foreground">O plano prioriza receitas dentro da média de R$ {averageMealBudget.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} por refeição neste mês ({mealsPerDay} refeições por dia).</p>}
+              <p className="mt-1 text-[10px] text-muted-foreground">Custos usam preços informados quando todos os ingredientes têm preço; os demais aparecem como estimativas do catálogo. Este valor é uma referência de planejamento, não um registro de compras.</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {visibleMealPlan.map(({ slot, recipe, substitution }, index) => {
               const entry = dailyMealEntries.find(item => item.date === todayString && item.slotId === slot.id);
@@ -1121,6 +1134,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               });
               const hasPlannedChanges = baseChecklistItems.some(item => draftPlannedAmounts[`${slot.id}:${item.itemId}`] !== undefined);
               const recipePortion = recipe ? getRecipeNutritionPerServing(recipe) : null;
+              const recipeCostPerServing = recipe ? getRecipeCostPerServing(recipe) : undefined;
               const amounts = getCurrentAmounts(slot.id, checklistItems);
               const nutritionComparison = compareMealNutrition(checklistItems, entry);
               const canEditIngredients = !entry || entry.status === 'pending';
@@ -1151,6 +1165,14 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     {Math.round(slot.share * 100)}% {slot.target ? 'da meta' : 'da divisão sugerida'}
                   </span>
                 </div>
+
+                {averageMealBudget !== undefined && recipe && (
+                  <p className={`mt-3 rounded-xl border px-3 py-2 text-[10px] ${recipeCostPerServing === undefined ? 'border-border/70 text-muted-foreground' : recipeCostPerServing <= averageMealBudget ? 'border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-200' : 'border-amber-500/20 bg-amber-500/[0.05] text-amber-100'}`}>
+                    {recipeCostPerServing === undefined
+                      ? 'Sem custo cadastrado para comparar com o orçamento.'
+                      : `${recipeCostPerServing <= averageMealBudget ? 'Dentro' : 'Acima'} da média por refeição: R$ ${recipeCostPerServing.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · ${recipe.costSource === 'user_prices' ? 'preços informados' : 'estimativa do catálogo'}`}
+                  </p>
+                )}
 
                 {slot.target || recipe || substitution ? (
                   <div className="mt-4 space-y-4">
@@ -1648,7 +1670,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>{recipe.prepTimeMinutes} min</span>
                     </div>
-                    {recipe.estimatedCost && (
+                    {recipe.estimatedCost !== undefined && (
                       <div className="flex items-center gap-0.5 text-emerald-400 font-bold">
                         <span>R$ {(recipe.estimatedCost / servings).toFixed(2)} / porção ({recipe.costSource === 'user_prices' ? 'preços informados' : 'estimativa do catálogo'})</span>
                       </div>
@@ -2090,7 +2112,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <div className="rounded-xl border border-border bg-secondary/30 p-2 text-xs flex justify-between">
                       <span>{getRecipeNutritionPerServing(recipe).calories} kcal/porção</span>
                       <span className="font-bold text-primary">{getRecipeNutritionPerServing(recipe).proteinG}g Proteína</span>
-                      <span>R$ {((recipe.estimatedCost || 0) / (recipe.servings || 1)).toFixed(2)}/porção · {recipe.costSource === 'user_prices' ? 'preço informado' : 'estimativa'}</span>
+                      {recipe.estimatedCost === undefined
+                        ? <span>Sem preço completo para o custo</span>
+                        : <span>R$ {(recipe.estimatedCost / (recipe.servings || 1)).toFixed(2)}/porção · {recipe.costSource === 'user_prices' ? 'preços informados' : 'estimativa do catálogo'}</span>}
                     </div>
 
                     <ul className="text-[11px] text-muted-foreground space-y-1">

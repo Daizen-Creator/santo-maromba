@@ -1,5 +1,12 @@
 import { PantryItem, Recipe } from '../shared/types';
 
+export function getRecipeCostPerServing(recipe: Recipe): number | undefined {
+  if (recipe.estimatedCost === undefined || !Number.isFinite(recipe.estimatedCost) || recipe.estimatedCost < 0) return undefined;
+  const servings = recipe.servings ?? 1;
+  if (!Number.isFinite(servings) || servings <= 0) return undefined;
+  return recipe.estimatedCost / servings;
+}
+
 export function resolveRecipeCost(recipe: Recipe, pantry: PantryItem[]): Recipe {
   const priceByFood = new Map(pantry
     .filter(item => item.unitPrice !== undefined && item.priceSource && item.priceUpdatedAt)

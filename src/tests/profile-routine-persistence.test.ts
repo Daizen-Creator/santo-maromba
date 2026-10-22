@@ -17,6 +17,7 @@ const validProfile = {
   fitnessGoal: 'muscle_gain' as const,
   mealsPerDay: 5,
   trainingDaysPerWeek: 4,
+  foodBudgetMonthly: 1800,
   trainingWeekdays: [1, 3, 5, 0],
   targetDate: '2026-12-31',
   dietaryRestrictions: ['Sem glúten'],
@@ -53,7 +54,7 @@ describe('Perfil e rotina persistentes', () => {
     expect(repository.getProfile()).toMatchObject({
       wakeTime: '06:15', sleepTime: '22:45', trainingWeekdays: [1, 3, 5, 0], targetDate: '2026-12-31',
       dietaryRestrictions: ['Sem glúten'], allergies: ['amendoim'],
-      dietaryPreferences: 'Prefiro frango, opções econômicas'
+      dietaryPreferences: 'Prefiro frango, opções econômicas', foodBudgetMonthly: 1800
     });
     expect(db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 21')?.version).toBe(21);
 
@@ -64,11 +65,16 @@ describe('Perfil e rotina persistentes', () => {
     expect(repository.getProfile()).toMatchObject({
       wakeTime: '06:15', sleepTime: '22:45', trainingWeekdays: [1, 3, 5, 0], targetDate: '2026-12-31',
       dietaryRestrictions: ['Sem glúten'], allergies: ['amendoim'],
-      dietaryPreferences: 'Prefiro frango, opções econômicas'
+      dietaryPreferences: 'Prefiro frango, opções econômicas', foodBudgetMonthly: 1800
     });
 
-    repository.saveProfile({ ...validProfile, wakeTime: undefined, sleepTime: undefined, trainingWeekdays: undefined, targetDate: undefined });
-    expect(repository.getProfile()).toMatchObject({ wakeTime: undefined, sleepTime: undefined, trainingWeekdays: undefined, targetDate: undefined });
+    repository.saveProfile({ ...validProfile, foodBudgetMonthly: 0, wakeTime: undefined, sleepTime: undefined, trainingWeekdays: undefined, targetDate: undefined });
+    expect(repository.getProfile()).toMatchObject({
+      wakeTime: undefined, sleepTime: undefined, trainingWeekdays: undefined, targetDate: undefined,
+      foodBudgetMonthly: 0
+    });
+    repository.saveProfile({ ...validProfile, foodBudgetMonthly: undefined, wakeTime: undefined, sleepTime: undefined, trainingWeekdays: undefined, targetDate: undefined });
+    expect(repository.getProfile()?.foodBudgetMonthly).toBeUndefined();
   });
 
   it('mantém os horários estruturados no armazenamento local offline da PWA', async () => {
@@ -83,7 +89,11 @@ describe('Perfil e rotina persistentes', () => {
     expect(await api.getProfile()).toMatchObject({
       wakeTime: '05:50', sleepTime: '21:40', trainingWeekdays: [1, 3, 5, 0], targetDate: '2026-12-31',
       dietaryRestrictions: ['Sem glúten'], allergies: ['amendoim'],
-      dietaryPreferences: 'Prefiro frango, opções econômicas'
+      dietaryPreferences: 'Prefiro frango, opções econômicas', foodBudgetMonthly: 1800
     });
+    await api.saveProfile({ ...validProfile, foodBudgetMonthly: 0 });
+    expect(await api.getProfile()).toMatchObject({ foodBudgetMonthly: 0 });
+    await api.saveProfile({ ...validProfile, foodBudgetMonthly: undefined });
+    expect((await api.getProfile())?.foodBudgetMonthly).toBeUndefined();
   });
 });

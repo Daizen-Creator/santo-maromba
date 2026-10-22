@@ -28,7 +28,7 @@ export class ProfileRepository {
       dietaryRestrictions: row.dietary_restrictions ? JSON.parse(row.dietary_restrictions) : [],
       allergies: row.allergies ? JSON.parse(row.allergies) : [],
       dietaryPreferences: row.dietary_preferences || undefined,
-      foodBudgetMonthly: row.food_budget_monthly ? Number(row.food_budget_monthly) : undefined,
+      foodBudgetMonthly: row.food_budget_monthly == null ? undefined : Number(row.food_budget_monthly),
       mealsPerDay: Number(row.meals_per_day),
       trainingDaysPerWeek: Number(row.training_days_per_week),
       trainingWeekdays: row.training_weekdays ? JSON.parse(row.training_weekdays) : undefined,
@@ -90,6 +90,9 @@ export class ProfileRepository {
     const targetDate = Object.prototype.hasOwnProperty.call(profile, 'targetDate')
       ? profile.targetDate || null
       : existing?.targetDate ?? null;
+    const foodBudgetMonthly = Object.prototype.hasOwnProperty.call(profile, 'foodBudgetMonthly')
+      ? profile.foodBudgetMonthly ?? null
+      : existing?.foodBudgetMonthly ?? null;
     const changedFields: ProfileGoalChangeField[] = existing
       ? [
           ...(fitnessGoal !== existing.fitnessGoal ? ['fitnessGoal' as const] : []),
@@ -141,7 +144,7 @@ export class ProfileRepository {
           dietaryRestrictions,
           allergies,
           profile.dietaryPreferences ?? existing.dietaryPreferences ?? null,
-          profile.foodBudgetMonthly ?? existing.foodBudgetMonthly ?? null,
+          foodBudgetMonthly,
           mealsPerDay,
           trainingDaysPerWeek,
           trainingWeekdays,
@@ -184,7 +187,7 @@ export class ProfileRepository {
           dietaryRestrictions,
           allergies,
           profile.dietaryPreferences ?? null,
-          profile.foodBudgetMonthly ?? null,
+          foodBudgetMonthly,
           mealsPerDay,
           trainingDaysPerWeek,
           trainingWeekdays,

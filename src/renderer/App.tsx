@@ -228,7 +228,9 @@ export const App: React.FC = () => {
 
   const handleUpdatePantryPrice = async (input: PantryPriceUpdateInput) => {
     await api.updatePantryPrice(input);
-    setPantry(await api.getPantry());
+    const [updatedPantry, updatedRecipes] = await Promise.all([api.getPantry(), api.getRecipes()]);
+    setPantry(updatedPantry);
+    setRecipes(updatedRecipes);
   };
 
   const handleLogWorkoutSession = async (sessionData: any) => {
@@ -548,6 +550,7 @@ export const App: React.FC = () => {
               targets={summary?.nutritionTargets || null}
               summary={summary}
               mealsPerDay={mealCount}
+              foodBudgetMonthly={profile?.foodBudgetMonthly}
               wakeTime={profile?.wakeTime}
               sleepTime={profile?.sleepTime}
               allergies={profile?.allergies}
