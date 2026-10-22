@@ -19,6 +19,8 @@ import {
   ShoppingListPurchaseInput,
   ShoppingExpenseRecord,
   ShoppingExpenseSummary,
+  MealPrepEvent,
+  MealPrepEventInput,
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
@@ -84,7 +86,7 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryItemUpdateInputSchema, PantryPriceUpdateInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, MealPrepEventInputSchema, MealPrepEventIdSchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryItemUpdateInputSchema, PantryPriceUpdateInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -109,6 +111,7 @@ const LOCAL_STORAGE_KEY_PANTRY = 'fittrack_pantry';
 const LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION = 'fittrack_pantry_consumption';
 const LOCAL_STORAGE_KEY_SHOPPING_LISTS = 'fittrack_shopping_lists';
 const LOCAL_STORAGE_KEY_SHOPPING_EXPENSES = 'fittrack_shopping_expenses';
+const LOCAL_STORAGE_KEY_MEAL_PREP_EVENTS = 'fittrack_meal_prep_events';
 const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
 const LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES = 'fittrack_workout_templates';
 const LOCAL_STORAGE_KEY_WORKOUT_SCHEDULE = 'fittrack_workout_schedule';
@@ -913,6 +916,57 @@ export const api = {
     }
     const expenses = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_SHOPPING_EXPENSES) || '[]') as ShoppingExpenseRecord[];
     return summarizeShoppingExpenses(range, expenses);
+  },
+
+  getMealPrepEvents: async (rawRange: NutritionAnalyticsQuery): Promise<MealPrepEvent[]> => {
+    const range = NutritionAnalyticsQuerySchema.parse(rawRange);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getMealPrepEvents(range);
+      if (!res.success) throw new Error(res.error || 'Não foi possível carregar o calendário de preparo.');
+      return res.data || [];
+    }
+    const events = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MEAL_PREP_EVENTS) || '[]') as MealPrepEvent[];
+    return events.filter(event => event.date >= range.fromDate && event.date <= range.toDate)
+      .sort((left, right) => left.date.localeCompare(right.date) || left.scheduledTime.localeCompare(right.scheduledTime));
+  },
+
+  saveMealPrepEvent: async (rawInput: MealPrepEventInput): Promise<MealPrepEvent> => {
+    const input = MealPrepEventInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveMealPrepEvent(input);
+      if (!res.success) throw new Error(res.error || 'Não foi possível salvar o preparo.');
+      return res.data!;
+    }
+    const recipe = (await api.getRecipes()).find(item => item.id === input.recipeId);
+    if (!recipe) throw new Error('A receita escolhida não existe no catálogo local.');
+    const events = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MEAL_PREP_EVENTS) || '[]') as MealPrepEvent[];
+    const existing = input.id ? events.find(event => event.id === input.id) : undefined;
+    if (input.id && !existing) throw new Error('O preparo não existe mais no calendário.');
+    const now = new Date().toISOString();
+    const event: MealPrepEvent = {
+      ...input,
+      id: input.id || `meal-prep-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
+      recipeName: recipe.name,
+      notes: input.notes || undefined,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY_MEAL_PREP_EVENTS, JSON.stringify([
+      ...events.filter(item => item.id !== event.id), event
+    ]));
+    return event;
+  },
+
+  deleteMealPrepEvent: async (rawId: string): Promise<void> => {
+    const id = MealPrepEventIdSchema.parse(rawId);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.deleteMealPrepEvent(id);
+      if (!res.success) throw new Error(res.error || 'Não foi possível excluir o preparo.');
+      return;
+    }
+    const events = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MEAL_PREP_EVENTS) || '[]') as MealPrepEvent[];
+    if (!events.some(event => event.id === id)) throw new Error('O preparo não existe mais no calendário.');
+    localStorage.setItem(LOCAL_STORAGE_KEY_MEAL_PREP_EVENTS, JSON.stringify(events.filter(event => event.id !== id)));
   },
 
   // --- TREINOS ---

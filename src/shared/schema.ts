@@ -461,6 +461,16 @@ export const NutritionAnalyticsQuerySchema = z.object({
   message: 'Consulte no máximo 367 dias por vez.',
   path: ['toDate']
 });
+export const MealPrepEventInputSchema = z.object({
+  id: z.string().trim().min(1).max(80).optional(),
+  date: DailyMealDateSchema,
+  scheduledTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, 'Informe um horário de preparo válido.'),
+  recipeId: z.string().trim().min(1).max(100).regex(/^[\w-]+$/),
+  servings: z.number().int().min(1).max(50),
+  notes: z.string().trim().max(1000).optional(),
+  status: z.enum(['planned', 'prepared', 'cancelled'])
+}).strict();
+export const MealPrepEventIdSchema = z.string().trim().min(1).max(80);
 export const DailyMealCopyInputSchema = z.object({
   sourceDate: DailyMealDateSchema,
   targetDate: DailyMealDateSchema

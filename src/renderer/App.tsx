@@ -584,6 +584,9 @@ export const App: React.FC = () => {
               onReorderDailyMeals={handleReorderDailyMeals}
               onGetShoppingList={api.getShoppingList}
               onGetShoppingExpenses={api.getShoppingExpenses}
+              onGetMealPrepEvents={api.getMealPrepEvents}
+              onSaveMealPrepEvent={api.saveMealPrepEvent}
+              onDeleteMealPrepEvent={api.deleteMealPrepEvent}
               onGenerateShoppingList={api.generateShoppingList}
               onSetShoppingItemPurchased={api.setShoppingItemPurchased}
               onSetRecipeFavorite={handleSetRecipeFavorite}

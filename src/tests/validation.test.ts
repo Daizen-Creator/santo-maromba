@@ -5,6 +5,7 @@ import {
   DailyMealHistoryQuerySchema,
   DailyMealCopyInputSchema,
   NutritionAnalyticsQuerySchema,
+  MealPrepEventInputSchema,
   SaveMealTemplateInputSchema,
   ApplyMealTemplateInputSchema,
   PhotoInputSchema,
@@ -96,6 +97,16 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(NutritionAnalyticsQuerySchema.parse({ fromDate: '2026-10-16', toDate: '2026-10-22' }).toDate).toBe('2026-10-22');
     expect(() => NutritionAnalyticsQuerySchema.parse({ fromDate: '2026-02-31', toDate: '2026-03-01' })).toThrow();
     expect(() => NutritionAnalyticsQuerySchema.parse({ fromDate: '2025-01-01', toDate: '2026-10-22' })).toThrow();
+  });
+
+  it('valida data, horário, receita, porções e estado do preparo', () => {
+    expect(MealPrepEventInputSchema.parse({
+      date: '2026-10-24', scheduledTime: '08:30', recipeId: 'recipe-oatmeal',
+      servings: 4, status: 'planned'
+    })).toMatchObject({ date: '2026-10-24', scheduledTime: '08:30', servings: 4 });
+    expect(() => MealPrepEventInputSchema.parse({
+      date: '2026-02-30', scheduledTime: '25:00', recipeId: '../recipe', servings: 0, status: 'unknown'
+    })).toThrow();
   });
 
   it('valida cadastro nutricional por 100 g e rejeita macros negativos', () => {

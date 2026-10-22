@@ -13,6 +13,8 @@ import {
   ShoppingListItem,
   ShoppingListPurchaseInput,
   ShoppingExpenseSummary,
+  MealPrepEvent,
+  MealPrepEventInput,
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
@@ -128,6 +130,9 @@ export interface FitTrackAPI {
   generateShoppingList: (weekStartDate: string) => Promise<{ success: boolean; data?: ShoppingListItem[]; error?: string }>;
   setShoppingItemPurchased: (input: ShoppingListPurchaseInput) => Promise<{ success: boolean; data?: ShoppingListItem[]; error?: string }>;
   getShoppingExpenses: (range: NutritionAnalyticsQuery) => Promise<{ success: boolean; data?: ShoppingExpenseSummary; error?: string }>;
+  getMealPrepEvents: (range: NutritionAnalyticsQuery) => Promise<{ success: boolean; data?: MealPrepEvent[]; error?: string }>;
+  saveMealPrepEvent: (input: MealPrepEventInput) => Promise<{ success: boolean; data?: MealPrepEvent; error?: string }>;
+  deleteMealPrepEvent: (id: string) => Promise<{ success: boolean; error?: string }>;
 
   // Treinos
   getExercises: () => Promise<{ success: boolean; data?: Exercise[]; error?: string }>;
@@ -231,6 +236,9 @@ const api: FitTrackAPI = {
   generateShoppingList: weekStartDate => ipcRenderer.invoke(IPC_CHANNELS.GENERATE_SHOPPING_LIST, weekStartDate),
   setShoppingItemPurchased: input => ipcRenderer.invoke(IPC_CHANNELS.SET_SHOPPING_ITEM_PURCHASED, input),
   getShoppingExpenses: range => ipcRenderer.invoke(IPC_CHANNELS.GET_SHOPPING_EXPENSES, range),
+  getMealPrepEvents: range => ipcRenderer.invoke(IPC_CHANNELS.GET_MEAL_PREP_EVENTS, range),
+  saveMealPrepEvent: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_MEAL_PREP_EVENT, input),
+  deleteMealPrepEvent: id => ipcRenderer.invoke(IPC_CHANNELS.DELETE_MEAL_PREP_EVENT, id),
 
   getExercises: () => ipcRenderer.invoke(IPC_CHANNELS.GET_EXERCISES),
   addExerciseMedia: (input) => ipcRenderer.invoke(IPC_CHANNELS.ADD_EXERCISE_MEDIA, input),

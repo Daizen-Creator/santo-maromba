@@ -34,6 +34,8 @@ import {
   PantryItemUpdateInputSchema,
   PantryPriceUpdateInputSchema,
   ShoppingListPurchaseInputSchema,
+  MealPrepEventInputSchema,
+  MealPrepEventIdSchema,
   DailyMealEntryInputSchema,
   DailyMealIdentityInputSchema,
   DailyMealRestoreInputSchema,
@@ -484,6 +486,36 @@ export function registerIpcHandlers(
       return { success: true, data: service.getShoppingExpenses(range) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível consultar os gastos.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_MEAL_PREP_EVENTS, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      const range = NutritionAnalyticsQuerySchema.parse(rawInput);
+      return { success: true, data: service.getMealPrepEvents(range) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível carregar o calendário de preparo.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_MEAL_PREP_EVENT, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.saveMealPrepEvent(MealPrepEventInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar o preparo.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DELETE_MEAL_PREP_EVENT, async (event, rawId) => {
+    try {
+      getCallingWindow(event);
+      const id = MealPrepEventIdSchema.parse(rawId);
+      service.deleteMealPrepEvent(id);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível excluir o preparo.' };
     }
   });
 

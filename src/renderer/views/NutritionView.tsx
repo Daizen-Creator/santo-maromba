@@ -14,9 +14,10 @@ import {
   Star,
   Trash2,
   ImagePlus,
-  X
+  X,
+  CalendarDays
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionAnalyticsQuery, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryPriceUpdateInput, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, ShoppingExpenseSummary, ShoppingListItem, ShoppingListPurchaseInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPrepEvent, MealPrepEventInput, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionAnalyticsQuery, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryPriceUpdateInput, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, ShoppingExpenseSummary, ShoppingListItem, ShoppingListPurchaseInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -33,6 +34,7 @@ import { NaturalMealParseResult, parseNaturalMealDescription } from '../../domai
 import { getMealTurnLabel, MEAL_TURN_OPTIONS } from '../../domain/meal-turn';
 import { createPlannedMealFoodItem, removePlannedMealFoodItem } from '../../domain/meal-composition';
 import { WeeklyMealPlanner } from '../components/WeeklyMealPlanner';
+import { MealPrepCalendar } from '../components/MealPrepCalendar';
 import { getPantryExpiryReminder } from '../../domain/pantry-expiry';
 import { calculateCostPerProteinGram } from '../../domain/nutrition-cost';
 import { getRecipeCostPerServing } from '../../domain/recipe-cost';
@@ -97,6 +99,9 @@ interface NutritionViewProps {
   onGetShoppingExpenses: (range: NutritionAnalyticsQuery) => Promise<ShoppingExpenseSummary>;
   onGenerateShoppingList: (weekStartDate: string) => Promise<ShoppingListItem[]>;
   onSetShoppingItemPurchased: (input: ShoppingListPurchaseInput) => Promise<ShoppingListItem[]>;
+  onGetMealPrepEvents: (range: NutritionAnalyticsQuery) => Promise<MealPrepEvent[]>;
+  onSaveMealPrepEvent: (input: MealPrepEventInput) => Promise<MealPrepEvent>;
+  onDeleteMealPrepEvent: (id: string) => Promise<void>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
   onSetRecipeServings: (id: string, servings: number) => Promise<void>;
   onSetRecipeFinalWeight: (id: string, finalWeightG: number | null) => Promise<void>;
@@ -144,13 +149,16 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onGetShoppingExpenses,
   onGenerateShoppingList,
   onSetShoppingItemPurchased,
+  onGetMealPrepEvents,
+  onSaveMealPrepEvent,
+  onDeleteMealPrepEvent,
   onSetRecipeFavorite,
   onSetRecipeServings,
   onSetRecipeFinalWeight,
   onSetRecipeFeedback,
   onSetFoodFavorite
 }) => {
-  const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat' | 'foods' | 'history'>('meals');
+  const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat' | 'foods' | 'history' | 'prep'>('meals');
   const { preferences: unitPreferences, loading: unitsLoading, saving: unitsSaving, error: unitsError, updatePreferences } = useMeasurementUnits();
   const foodMassInputStep = unitPreferences.foodMassUnit === 'kg' ? 0.005 : 5;
   const displayFoodMass = (grams: number) => gramsToDisplayMass(grams, unitPreferences.foodMassUnit);
@@ -932,7 +940,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             { id: 'foods', label: 'Meus Alimentos', icon: Plus },
             { id: 'history', label: 'Histórico', icon: Clock },
             { id: 'what_to_eat', label: 'O Que Comer Agora?', icon: Sparkles },
-            { id: 'pantry', label: 'Minha Despensa', icon: ShoppingBag }
+            { id: 'pantry', label: 'Minha Despensa', icon: ShoppingBag },
+            { id: 'prep', label: 'Preparo', icon: CalendarDays }
           ].map(t => {
             const Icon = t.icon;
             const isActive = activeTab === t.id;
@@ -2329,6 +2338,15 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             })}
           </div>
         </div>
+      )}
+
+      {activeTab === 'prep' && (
+        <MealPrepCalendar
+          recipes={recipes}
+          onGetEvents={onGetMealPrepEvents}
+          onSaveEvent={onSaveMealPrepEvent}
+          onDeleteEvent={onDeleteMealPrepEvent}
+        />
       )}
 
       {/* MODAL DO MOTOR DE SUBSTITUIÇÃO INTELIGENTE (4 NÍVEIS) */}

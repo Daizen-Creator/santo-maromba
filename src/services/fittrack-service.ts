@@ -15,6 +15,7 @@ import { CustomizationRepository } from '../database/repositories/customization-
 import { PersonalDiaryRepository } from '../database/repositories/personal-diary-repository';
 import { MealPhotoRepository } from '../database/repositories/meal-photo-repository';
 import { ShoppingListRepository } from '../database/repositories/shopping-list-repository';
+import { MealPrepRepository } from '../database/repositories/meal-prep-repository';
 import { seedDatabase } from '../database/seeds/seedDatabase';
 import { calculateNutritionPlan } from '../domain/nutrition-calculator';
 import { SubstitutionEngine } from '../domain/substitution-engine';
@@ -42,6 +43,8 @@ import {
   ShoppingListItem,
   ShoppingListPurchaseInput,
   ShoppingExpenseSummary,
+  MealPrepEvent,
+  MealPrepEventInput,
   PhotoRecord,
   PhotoCreateInput,
   Recipe,
@@ -112,6 +115,7 @@ export class FitTrackService {
   private personalDiaryRepo: PersonalDiaryRepository;
   private mealPhotoRepo: MealPhotoRepository;
   private shoppingListRepo: ShoppingListRepository;
+  private mealPrepRepo: MealPrepRepository;
   private workoutEngine: WorkoutEngine;
   private photoStorage: PhotoStorage;
   private mealPhotoStorage: PhotoStorage;
@@ -142,6 +146,7 @@ export class FitTrackService {
     this.exerciseMediaRepo = new ExerciseMediaRepository(db);
     this.dailyLogRepo = new DailyLogRepository(db);
     this.shoppingListRepo = new ShoppingListRepository(db, this.dailyLogRepo, () => this.nutritionRepo.getFoods());
+    this.mealPrepRepo = new MealPrepRepository(db);
     this.customizationRepo = new CustomizationRepository(db);
     this.personalDiaryRepo = new PersonalDiaryRepository(db);
     this.workoutEngine = new WorkoutEngine(this.workoutRepo.getExercises());
@@ -397,6 +402,20 @@ export class FitTrackService {
 
   setShoppingItemPurchased(input: ShoppingListPurchaseInput): ShoppingListItem[] {
     return this.shoppingListRepo.setPurchased(input);
+  }
+
+  getMealPrepEvents(range: NutritionAnalyticsQuery): MealPrepEvent[] {
+    return this.mealPrepRepo.getByRange(range);
+  }
+
+  saveMealPrepEvent(input: MealPrepEventInput): MealPrepEvent {
+    const recipe = this.nutritionRepo.getRecipes().find(item => item.id === input.recipeId);
+    if (!recipe) throw new Error('A receita escolhida não existe no catálogo local.');
+    return this.mealPrepRepo.save(input, recipe.name);
+  }
+
+  deleteMealPrepEvent(id: string): void {
+    this.mealPrepRepo.delete(id);
   }
 
   getShoppingExpenses(range: NutritionAnalyticsQuery): ShoppingExpenseSummary {

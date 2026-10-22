@@ -73,6 +73,9 @@ export const IPC_CHANNELS = {
   GENERATE_SHOPPING_LIST: 'nutrition:generate-shopping-list',
   SET_SHOPPING_ITEM_PURCHASED: 'nutrition:set-shopping-item-purchased',
   GET_SHOPPING_EXPENSES: 'nutrition:get-shopping-expenses',
+  GET_MEAL_PREP_EVENTS: 'nutrition:get-meal-prep-events',
+  SAVE_MEAL_PREP_EVENT: 'nutrition:save-meal-prep-event',
+  DELETE_MEAL_PREP_EVENT: 'nutrition:delete-meal-prep-event',
 
   // Workout
   GET_EXERCISES: 'workout:get-exercises',

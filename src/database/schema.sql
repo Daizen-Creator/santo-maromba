@@ -232,6 +232,20 @@ CREATE TABLE IF NOT EXISTS shopping_expenses (
 );
 CREATE INDEX IF NOT EXISTS idx_shopping_expenses_period ON shopping_expenses(purchased_at, food_name);
 
+CREATE TABLE IF NOT EXISTS meal_prep_events (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  scheduled_time TEXT NOT NULL,
+  recipe_id TEXT NOT NULL,
+  recipe_name TEXT NOT NULL,
+  servings INTEGER NOT NULL CHECK(servings BETWEEN 1 AND 50),
+  notes TEXT,
+  status TEXT NOT NULL CHECK(status IN ('planned', 'prepared', 'cancelled')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_meal_prep_events_date ON meal_prep_events(date, scheduled_time);
+
 -- Quantidades habituais escolhidas pelo usuário; os valores nutricionais dos alimentos seguem por 100 g.
 CREATE TABLE IF NOT EXISTS food_portion_preferences (
   food_id TEXT PRIMARY KEY,

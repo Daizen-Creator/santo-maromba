@@ -511,4 +511,24 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [35, 'Histórico de compras com preço registrado na data da compra', new Date().toISOString()]
     );
   }
+  const version36 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 36');
+  if (!version36) {
+    db.exec(`CREATE TABLE IF NOT EXISTS meal_prep_events (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      scheduled_time TEXT NOT NULL,
+      recipe_id TEXT NOT NULL,
+      recipe_name TEXT NOT NULL,
+      servings INTEGER NOT NULL CHECK(servings BETWEEN 1 AND 50),
+      notes TEXT,
+      status TEXT NOT NULL CHECK(status IN ('planned', 'prepared', 'cancelled')),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_meal_prep_events_date ON meal_prep_events(date, scheduled_time)');
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [36, 'Calendário persistente de preparo de refeições', new Date().toISOString()]
+    );
+  }
 }

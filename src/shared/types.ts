@@ -824,6 +824,31 @@ export interface ShoppingExpenseSummary {
   expenses: ShoppingExpenseRecord[];
 }
 
+export type MealPrepStatus = 'planned' | 'prepared' | 'cancelled';
+
+export interface MealPrepEvent {
+  id: string;
+  date: string;
+  scheduledTime: string;
+  recipeId: string;
+  recipeName: string;
+  servings: number;
+  notes?: string;
+  status: MealPrepStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MealPrepEventInput {
+  id?: string;
+  date: string;
+  scheduledTime: string;
+  recipeId: string;
+  servings: number;
+  notes?: string;
+  status: MealPrepStatus;
+}
+
 // ============================================================================
 // MÓDULO — TREINOS, EXERCÍCIOS E PROGRESSÃO DE CARGAS
 // ============================================================================
