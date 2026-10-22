@@ -39,6 +39,8 @@ import {
   WorkoutSession,
   SaveWorkoutTemplateInput,
   WorkoutTemplate,
+  WorkoutScheduleEntry,
+  SaveWorkoutScheduleInput,
   PhysiqueProjectionInput,
   PhysiqueProjectionSnapshot,
   ExerciseMediaInput,
@@ -383,6 +385,14 @@ export class FitTrackService {
 
   saveWorkoutTemplate(input: SaveWorkoutTemplateInput): WorkoutTemplate {
     return this.workoutRepo.saveTemplate(input);
+  }
+
+  getWorkoutSchedule(): WorkoutScheduleEntry[] {
+    return this.workoutRepo.getSchedule();
+  }
+
+  saveWorkoutScheduleEntry(input: SaveWorkoutScheduleInput): WorkoutScheduleEntry {
+    return this.workoutRepo.saveScheduleEntry(input);
   }
 
   logMeal(input: LoggedMealInput): void {

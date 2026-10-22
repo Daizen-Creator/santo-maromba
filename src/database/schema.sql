@@ -259,6 +259,17 @@ CREATE TABLE IF NOT EXISTS workout_templates (
 );
 CREATE INDEX IF NOT EXISTS idx_workout_templates_updated ON workout_templates(updated_at DESC);
 
+CREATE TABLE IF NOT EXISTS workout_schedule (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL CHECK(kind IN ('training', 'rest', 'deload')),
+  title TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workout_schedule_date ON workout_schedule(date);
+
 CREATE TABLE IF NOT EXISTS exercise_media (
   id TEXT PRIMARY KEY,
   exercise_id TEXT NOT NULL,

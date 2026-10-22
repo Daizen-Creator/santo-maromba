@@ -13,7 +13,8 @@ import {
   WeightRecordInputSchema,
   RecipeServingsInputSchema,
   WorkoutSessionInputSchema,
-  SaveWorkoutTemplateInputSchema
+  SaveWorkoutTemplateInputSchema,
+  SaveWorkoutScheduleInputSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
@@ -133,6 +134,12 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
       }]
     }).plans[0].exercises[0].sets).toBe(3);
     expect(() => SaveWorkoutTemplateInputSchema.parse({ name: 'Plano vazio', plans: [] })).toThrow();
+  });
+
+  it('valida data real e tipo de dia da agenda de treinos', () => {
+    expect(SaveWorkoutScheduleInputSchema.parse({ date: '2026-10-22', kind: 'deload' }).kind).toBe('deload');
+    expect(() => SaveWorkoutScheduleInputSchema.parse({ date: '2026-02-30', kind: 'rest' })).toThrow();
+    expect(() => SaveWorkoutScheduleInputSchema.parse({ date: '2026-10-22', kind: 'missed' })).toThrow();
   });
 
   it('deve validar registros de peso com formato correto', () => {

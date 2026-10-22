@@ -126,6 +126,13 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Salva e reaplica divisões de treino nomeadas usando os exercícios do catálogo local.
 - Os modelos permanecem no SQLite do desktop ou no armazenamento local do navegador e são validados antes de atravessar o IPC.
+- Validada com 119 testes, build Windows, abertura com perfil isolado e migração do SQLite; GitHub Actions 39737859445 publicou instalador, portátil, manifesto e blockmap.
+
+## v1.1.15
+
+- Adiciona agenda persistente para treino, descanso e deload por data.
+- Uma sessão só aparece como perdida quando o dia de treino passou e não há sessão registrada; uma sessão parcial permanece identificada como parcial.
+- Validada com 126 testes, build Windows e abertura/migração em perfil isolado; publicação no GitHub está pendente.
 
 ## Publicar uma versão
 

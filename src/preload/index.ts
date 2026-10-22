@@ -17,6 +17,8 @@ import {
   WorkoutSession,
   WorkoutTemplate,
   SaveWorkoutTemplateInput,
+  WorkoutScheduleEntry,
+  SaveWorkoutScheduleInput,
   PhysiqueProjectionInput,
   PhysiqueProjectionSnapshot,
   ExerciseMediaInput,
@@ -93,6 +95,8 @@ export interface FitTrackAPI {
   generateWorkoutSplit: () => Promise<{ success: boolean; data?: DailyWorkoutPlan[]; error?: string }>;
   getWorkoutTemplates: () => Promise<{ success: boolean; data?: WorkoutTemplate[]; error?: string }>;
   saveWorkoutTemplate: (input: SaveWorkoutTemplateInput) => Promise<{ success: boolean; data?: WorkoutTemplate; error?: string }>;
+  getWorkoutSchedule: () => Promise<{ success: boolean; data?: WorkoutScheduleEntry[]; error?: string }>;
+  saveWorkoutScheduleEntry: (input: SaveWorkoutScheduleInput) => Promise<{ success: boolean; data?: WorkoutScheduleEntry; error?: string }>;
 
   // Dashboard & Metas
   calculateTargets: () => Promise<{ success: boolean; data?: NutritionTargets | null; error?: string }>;
@@ -168,6 +172,8 @@ const api: FitTrackAPI = {
   generateWorkoutSplit: () => ipcRenderer.invoke(IPC_CHANNELS.GENERATE_WORKOUT_SPLIT),
   getWorkoutTemplates: () => ipcRenderer.invoke(IPC_CHANNELS.GET_WORKOUT_TEMPLATES),
   saveWorkoutTemplate: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_WORKOUT_TEMPLATE, input),
+  getWorkoutSchedule: () => ipcRenderer.invoke(IPC_CHANNELS.GET_WORKOUT_SCHEDULE),
+  saveWorkoutScheduleEntry: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_WORKOUT_SCHEDULE, input),
 
   calculateTargets: () => ipcRenderer.invoke(IPC_CHANNELS.CALCULATE_TARGETS),
   getDashboardSummary: () => ipcRenderer.invoke(IPC_CHANNELS.GET_DASHBOARD_SUMMARY),

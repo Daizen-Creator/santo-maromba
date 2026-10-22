@@ -201,4 +201,12 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [13, 'Modelos reutilizáveis de treinos do usuário', new Date().toISOString()]
     );
   }
+
+  const version14 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 14');
+  if (!version14) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [14, 'Agenda de treino, descanso e deload do usuário', new Date().toISOString()]
+    );
+  }
 }

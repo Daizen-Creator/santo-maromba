@@ -19,4 +19,17 @@ describe('Modelos de treino offline na PWA', () => {
     expect((await api.getWorkoutTemplates()).map(template => template.id)).toEqual([saved.id]);
     expect(values.size).toBe(1);
   });
+
+  it('salva e reabre dias de treino e descanso no modo offline', async () => {
+    const values = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value)
+    });
+    await api.saveWorkoutScheduleEntry({ date: '2026-10-22', kind: 'training', title: 'Costas' });
+    await api.saveWorkoutScheduleEntry({ date: '2026-10-23', kind: 'rest' });
+    const entries = await api.getWorkoutSchedule();
+    expect(entries.map(entry => entry.kind)).toEqual(['rest', 'training']);
+    expect(values.size).toBe(1);
+  });
 });

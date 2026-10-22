@@ -702,3 +702,22 @@ export interface SaveWorkoutTemplateInput {
   name: string;
   plans: WorkoutTemplatePlan[];
 }
+
+export type WorkoutScheduleKind = 'training' | 'rest' | 'deload';
+
+export interface WorkoutScheduleEntry {
+  id: string;
+  date: string;
+  kind: WorkoutScheduleKind;
+  title?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SaveWorkoutScheduleInput {
+  date: string;
+  kind: WorkoutScheduleKind;
+  title?: string;
+  notes?: string;
+}

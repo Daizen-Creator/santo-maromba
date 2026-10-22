@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.14. Estado após validação do incremento: **71 validadas, 52 parciais, 54 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.15. Estado após validação do incremento: **72 validadas, 51 parciais, 54 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -148,7 +148,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 97 | Gerar treino em casa sem halteres. | TREI | — | V · rotina de três dias usa apenas exercícios da biblioteca local, sem peso externo prescrito, com requisitos de apoio explícitos; `workout-engine.test.ts` |
 | 98 | Salvar e reaplicar modelos de treino. | TREI | — | V · modelos nomeados são salvos no SQLite/PWA, validados contra o catálogo e reabertos para reconstruir a divisão; `workout-template-persistence.test.ts`, `workout-template-offline.test.ts`, `validation.test.ts` |
 | 99 | Medir duração efetiva da sessão. | TREI | — | V · duração persistida |
-| 100 | Agendar deload e distinguir descanso de sessão perdida. | TREI | — | P · recuperação ativa existe, deload não |
+| 100 | Agendar deload e distinguir descanso de sessão perdida. | TREI | — | V · agenda persistente classifica treino atrasado somente quando não há sessão no dia; descanso/deload ficam separados; `workout-schedule-persistence.test.ts`, `workout-schedule.test.ts`, `workout-template-offline.test.ts` |
 
 ## Funcionalidades 101–120 — shape e evolução
 

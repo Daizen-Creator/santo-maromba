@@ -14,6 +14,7 @@ import {
   WeightRecordInputSchema,
   WorkoutSessionInputSchema,
   SaveWorkoutTemplateInputSchema,
+  SaveWorkoutScheduleInputSchema,
   VisualCustomizationSchema,
   CustomizationMediaInputSchema,
   CustomizationMediaIdSchema,
@@ -379,6 +380,24 @@ export function registerIpcHandlers(
       return { success: true, data: service.saveWorkoutTemplate(SaveWorkoutTemplateInputSchema.parse(rawInput)) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível salvar o modelo de treino.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_WORKOUT_SCHEDULE, async event => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getWorkoutSchedule() };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível consultar a agenda de treino.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_WORKOUT_SCHEDULE, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.saveWorkoutScheduleEntry(SaveWorkoutScheduleInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar a agenda de treino.' };
     }
   });
 

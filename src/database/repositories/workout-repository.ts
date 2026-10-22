@@ -1,7 +1,7 @@
 import { IDatabase } from '../driver';
 import { randomUUID } from 'crypto';
-import { Exercise, SaveWorkoutTemplateInput, WorkoutSession, WorkoutSet, WorkoutTemplate } from '../../shared/types';
-import { SaveWorkoutTemplateInputSchema } from '../../shared/schema';
+import { Exercise, SaveWorkoutScheduleInput, SaveWorkoutTemplateInput, WorkoutScheduleEntry, WorkoutSession, WorkoutSet, WorkoutTemplate } from '../../shared/types';
+import { SaveWorkoutScheduleInputSchema, SaveWorkoutTemplateInputSchema } from '../../shared/schema';
 import { INITIAL_EXERCISES } from '../seeds/exercise-seeds';
 
 export class WorkoutRepository {
@@ -301,5 +301,39 @@ export class WorkoutRepository {
     const saved = this.getTemplates().find(template => template.id === id);
     if (!saved) throw new Error('Não foi possível reabrir o modelo de treino salvo.');
     return saved;
+  }
+
+  getSchedule(): WorkoutScheduleEntry[] {
+    const rows = this.db.query<any>('SELECT * FROM workout_schedule ORDER BY date DESC');
+    return rows.flatMap(row => {
+      const parsed = SaveWorkoutScheduleInputSchema.safeParse({
+        date: row.date,
+        kind: row.kind,
+        title: row.title || undefined,
+        notes: row.notes || undefined
+      });
+      if (!parsed.success || typeof row.id !== 'string' || typeof row.created_at !== 'string' || typeof row.updated_at !== 'string') return [];
+      return [{ id: row.id, ...parsed.data, createdAt: row.created_at, updatedAt: row.updated_at }];
+    });
+  }
+
+  saveScheduleEntry(rawInput: SaveWorkoutScheduleInput): WorkoutScheduleEntry {
+    const input = SaveWorkoutScheduleInputSchema.parse(rawInput);
+    const existing = this.db.queryOne<any>('SELECT id, created_at FROM workout_schedule WHERE date = ?', [input.date]);
+    const now = new Date().toISOString();
+    const entry: WorkoutScheduleEntry = {
+      id: existing?.id || `workout-schedule-${randomUUID()}`,
+      ...input,
+      createdAt: existing?.created_at || now,
+      updatedAt: now
+    };
+    this.db.execute(
+      `INSERT INTO workout_schedule (id, date, kind, title, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET kind = excluded.kind, title = excluded.title,
+         notes = excluded.notes, updated_at = excluded.updated_at`,
+      [entry.id, entry.date, entry.kind, entry.title || null, entry.notes || null, entry.createdAt, entry.updatedAt]
+    );
+    return entry;
   }
 }

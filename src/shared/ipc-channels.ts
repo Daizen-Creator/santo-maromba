@@ -63,6 +63,8 @@ export const IPC_CHANNELS = {
   GENERATE_WORKOUT_SPLIT: 'workout:generate-split',
   GET_WORKOUT_TEMPLATES: 'workout:get-templates',
   SAVE_WORKOUT_TEMPLATE: 'workout:save-template',
+  GET_WORKOUT_SCHEDULE: 'workout:get-schedule',
+  SAVE_WORKOUT_SCHEDULE: 'workout:save-schedule',
 
   // System
   GET_VISUAL_CUSTOMIZATION: 'visual:get-customization',

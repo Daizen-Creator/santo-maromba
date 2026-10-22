@@ -13,12 +13,13 @@ import {
   TrendingUp,
   Timer
 } from 'lucide-react';
-import { Exercise, ExerciseMediaInput, MuscleGroup, SaveWorkoutTemplateInput, WorkoutSession, WorkoutSet, WorkoutTemplate } from '../../shared/types';
+import { Exercise, ExerciseMediaInput, MuscleGroup, SaveWorkoutScheduleInput, SaveWorkoutTemplateInput, WorkoutScheduleEntry, WorkoutSession, WorkoutSet, WorkoutTemplate } from '../../shared/types';
 import { DailyWorkoutPlan, getNextScheduledWorkout, WorkoutEngine } from '../../domain/workout-engine';
 import { YouTubePlayer } from '../components/YouTubePlayer';
 import { formatRestTime, remainingRestSeconds } from '../../domain/rest-timer';
 import { compareWorkoutSetWithHistory } from '../../domain/workout-comparison';
 import { hydrateWorkoutTemplate, serializeWorkoutPlans } from '../../domain/workout-templates';
+import { getWorkoutScheduleStatus } from '../../domain/workout-schedule';
 
 const OFFLINE_EXERCISE_IMAGE: Record<MuscleGroup, string> = {
   peitoral: './catalog-assets/exercise-peitoral.png',
@@ -34,6 +35,11 @@ const OFFLINE_EXERCISE_IMAGE: Record<MuscleGroup, string> = {
   abdomen: './catalog-assets/exercise-abdomen.png'
 };
 
+const getLocalIsoDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
 interface WorkoutViewProps {
   exercises: Exercise[];
   sessions: WorkoutSession[];
@@ -43,6 +49,8 @@ interface WorkoutViewProps {
   onDeleteExerciseMedia: (id: string) => Promise<void>;
   onGetWorkoutTemplates: () => Promise<WorkoutTemplate[]>;
   onSaveWorkoutTemplate: (input: SaveWorkoutTemplateInput) => Promise<WorkoutTemplate>;
+  onGetWorkoutSchedule: () => Promise<WorkoutScheduleEntry[]>;
+  onSaveWorkoutScheduleEntry: (input: SaveWorkoutScheduleInput) => Promise<WorkoutScheduleEntry>;
 }
 
 export const WorkoutView: React.FC<WorkoutViewProps> = ({
@@ -53,9 +61,11 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   onAddExerciseMedia,
   onDeleteExerciseMedia,
   onGetWorkoutTemplates,
-  onSaveWorkoutTemplate
+  onSaveWorkoutTemplate,
+  onGetWorkoutSchedule,
+  onSaveWorkoutScheduleEntry
 }) => {
-  const [activeTab, setActiveTab] = useState<'today' | 'split' | 'exercises' | 'history'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'split' | 'agenda' | 'exercises' | 'history'>('today');
   const [homeTrainingMode, setHomeTrainingMode] = useState(false);
   const progressionEngine = useMemo(() => new WorkoutEngine(exercises), [exercises]);
   const [appliedWorkoutTemplate, setAppliedWorkoutTemplate] = useState<WorkoutTemplate | null>(null);
@@ -98,6 +108,14 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   const [savingWorkoutTemplate, setSavingWorkoutTemplate] = useState(false);
   const [workoutTemplateMessage, setWorkoutTemplateMessage] = useState<string | null>(null);
   const [workoutTemplateError, setWorkoutTemplateError] = useState<string | null>(null);
+  const [workoutSchedule, setWorkoutSchedule] = useState<WorkoutScheduleEntry[]>([]);
+  const [scheduleDate, setScheduleDate] = useState(getLocalIsoDate);
+  const [scheduleKind, setScheduleKind] = useState<SaveWorkoutScheduleInput['kind']>('training');
+  const [scheduleTitle, setScheduleTitle] = useState('');
+  const [scheduleNotes, setScheduleNotes] = useState('');
+  const [scheduleMessage, setScheduleMessage] = useState<string | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [savingSchedule, setSavingSchedule] = useState(false);
   const [restTimer, setRestTimer] = useState<{ exerciseName: string; durationSeconds: number; endsAtMs: number } | null>(null);
   const [restNowMs, setRestNowMs] = useState(() => Date.now());
   const [restCompleteMessage, setRestCompleteMessage] = useState<string | null>(null);
@@ -115,6 +133,44 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
       });
     return () => { active = false; };
   }, [onGetWorkoutTemplates]);
+
+  useEffect(() => {
+    let active = true;
+    onGetWorkoutSchedule()
+      .then(entries => { if (active) setWorkoutSchedule(entries); })
+      .catch(error => { if (active) setScheduleError(error instanceof Error ? error.message : 'Não foi possível carregar a agenda de treino.'); });
+    return () => { active = false; };
+  }, [onGetWorkoutSchedule]);
+
+  const handleSaveSchedule = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingSchedule(true);
+    setScheduleError(null);
+    setScheduleMessage(null);
+    try {
+      const saved = await onSaveWorkoutScheduleEntry({
+        date: scheduleDate,
+        kind: scheduleKind,
+        title: scheduleTitle || undefined,
+        notes: scheduleNotes || undefined
+      });
+      setWorkoutSchedule(current => [saved, ...current.filter(item => item.date !== saved.date)].sort((a, b) => b.date.localeCompare(a.date)));
+      setScheduleMessage(`Agenda de ${saved.date} salva como ${saved.kind === 'training' ? 'treino' : saved.kind === 'rest' ? 'descanso' : 'deload'}.`);
+    } catch (error) {
+      setScheduleError(error instanceof Error ? error.message : 'Não foi possível salvar o dia planejado.');
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const editScheduleEntry = (entry: WorkoutScheduleEntry) => {
+    setScheduleDate(entry.date);
+    setScheduleKind(entry.kind);
+    setScheduleTitle(entry.title || '');
+    setScheduleNotes(entry.notes || '');
+    setScheduleMessage(null);
+    setScheduleError(null);
+  };
 
   useEffect(() => {
     if (!restTimer) return;
@@ -302,6 +358,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
           {[
             { id: 'today', label: 'Treino de Hoje', icon: Play },
             { id: 'split', label: 'Minha Divisão', icon: Calendar },
+            { id: 'agenda', label: 'Agenda', icon: Calendar },
             { id: 'exercises', label: 'Biblioteca de Exercícios', icon: Dumbbell },
             { id: 'history', label: 'Histórico & PRs', icon: Award }
           ].map(t => {
@@ -311,6 +368,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id as any)}
+                aria-label={t.label}
+                title={t.label}
                 className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
@@ -706,6 +765,89 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
             ))}
           </div>
         </div>
+      )}
+
+      {activeTab === 'agenda' && (
+        <section className="space-y-5 rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
+          <header className="border-b border-border pb-3">
+            <h3 className="font-display text-base font-bold text-foreground">Agenda e recuperação</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Treinos planejados sem sessão registrada aparecem como perdidos depois da data. Descanso e deload ficam identificados separadamente.
+            </p>
+          </header>
+
+          <form onSubmit={handleSaveSchedule} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="space-y-1.5 text-xs font-semibold text-muted-foreground">
+              <span>Data</span>
+              <input required type="date" value={scheduleDate} onChange={event => setScheduleDate(event.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-muted-foreground">
+              <span>Tipo do dia</span>
+              <select value={scheduleKind} onChange={event => setScheduleKind(event.target.value as SaveWorkoutScheduleInput['kind'])}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground">
+                <option value="training">Treino planejado</option>
+                <option value="rest">Descanso</option>
+                <option value="deload">Deload / redução de carga</option>
+              </select>
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-muted-foreground">
+              <span>Nome ou foco (opcional)</span>
+              <input value={scheduleTitle} maxLength={80} onChange={event => setScheduleTitle(event.target.value)} placeholder="Ex.: Full Body A"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground/70" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-muted-foreground">
+              <span>Nota (opcional)</span>
+              <input value={scheduleNotes} maxLength={400} onChange={event => setScheduleNotes(event.target.value)} placeholder="Motivo do descanso ou ajuste"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground/70" />
+            </label>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <button type="submit" disabled={savingSchedule}
+                className="rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground transition hover:bg-primary-hover disabled:opacity-50">
+                {savingSchedule ? 'Salvando…' : 'Salvar dia na agenda'}
+              </button>
+            </div>
+          </form>
+
+          {scheduleMessage && <p role="status" className="text-xs text-emerald-300">{scheduleMessage}</p>}
+          {scheduleError && <p role="alert" className="text-xs text-destructive">{scheduleError}</p>}
+
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Dias registrados</h4>
+            {workoutSchedule.length === 0 ? (
+              <p className="rounded-xl border border-border/60 bg-secondary/30 p-4 text-xs text-muted-foreground">Ainda não há dias na agenda. Registre treino, descanso ou deload para acompanhar a semana.</p>
+            ) : workoutSchedule.map(entry => {
+              const status = getWorkoutScheduleStatus(entry, sessions, getLocalIsoDate());
+              const labels: Record<typeof status, string> = {
+                training: 'Treino planejado', scheduled: 'Treino agendado', completed: 'Treino realizado',
+                partial: 'Sessão parcial', missed: 'Treino perdido', rest: 'Descanso planejado', deload: 'Deload planejado'
+              };
+              const colors: Record<typeof status, string> = {
+                training: 'border-sky-500/25 bg-sky-500/5 text-sky-200', scheduled: 'border-sky-500/25 bg-sky-500/5 text-sky-200',
+                completed: 'border-emerald-500/25 bg-emerald-500/5 text-emerald-200', partial: 'border-amber-500/25 bg-amber-500/5 text-amber-200',
+                missed: 'border-rose-500/25 bg-rose-500/5 text-rose-200', rest: 'border-border bg-secondary/30 text-muted-foreground',
+                deload: 'border-primary/25 bg-primary/5 text-primary'
+              };
+              return (
+                <article key={entry.id} className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-background/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="text-xs text-foreground">
+                        {new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(`${entry.date}T12:00:00`))}
+                      </strong>
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${colors[status]}`}>{labels[status]}</span>
+                    </div>
+                    {entry.title && <p className="text-xs text-muted-foreground">{entry.title}</p>}
+                    {entry.notes && <p className="text-[11px] text-muted-foreground/80">{entry.notes}</p>}
+                  </div>
+                  <button type="button" onClick={() => editScheduleEntry(entry)} className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition hover:border-primary/40 hover:text-foreground">
+                    Editar dia
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {/* 3. ABA BIBLIOTECA DE EXERCÍCIOS */}

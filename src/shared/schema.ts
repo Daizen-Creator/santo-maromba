@@ -234,6 +234,13 @@ export const SaveWorkoutTemplateInputSchema = z.object({
   path: ['plans']
 });
 
+export const SaveWorkoutScheduleInputSchema = z.object({
+  date: z.string().refine(isRealCalendarDate, 'Informe uma data de treino válida.'),
+  kind: z.enum(['training', 'rest', 'deload']),
+  title: z.string().trim().max(80).optional(),
+  notes: z.string().trim().max(400).optional()
+}).strict();
+
 export const LoggedMealInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),
   mealName: z.string().trim().min(1).max(80),

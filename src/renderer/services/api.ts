@@ -16,6 +16,8 @@ import {
   WorkoutSession,
   WorkoutTemplate,
   SaveWorkoutTemplateInput,
+  WorkoutScheduleEntry,
+  SaveWorkoutScheduleInput,
   PhysiqueProjectionInput,
   PhysiqueProjectionSnapshot,
   ExerciseMediaInput,
@@ -53,7 +55,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
@@ -65,6 +67,7 @@ const LOCAL_STORAGE_KEY_MEASUREMENTS = 'fittrack_measurements';
 const LOCAL_STORAGE_KEY_PANTRY = 'fittrack_pantry';
 const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
 const LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES = 'fittrack_workout_templates';
+const LOCAL_STORAGE_KEY_WORKOUT_SCHEDULE = 'fittrack_workout_schedule';
 const LOCAL_STORAGE_KEY_PROJECTIONS = 'fittrack_physique_projections';
 const LOCAL_STORAGE_KEY_DAILY_LOGS = 'fittrack_daily_logs';
 const LOCAL_STORAGE_KEY_DAILY_MEALS = 'fittrack_daily_meals';
@@ -599,6 +602,50 @@ export const api = {
     };
     localStorage.setItem(LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES, JSON.stringify([template, ...templates]));
     return template;
+  },
+
+  getWorkoutSchedule: async (): Promise<WorkoutScheduleEntry[]> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getWorkoutSchedule();
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar a agenda de treino.');
+      return res.data || [];
+    }
+    try {
+      const entries = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_WORKOUT_SCHEDULE) || '[]') as WorkoutScheduleEntry[];
+      if (!Array.isArray(entries)) return [];
+      return entries.flatMap(entry => {
+        const parsed = SaveWorkoutScheduleInputSchema.safeParse({
+          date: entry?.date,
+          kind: entry?.kind,
+          title: entry?.title,
+          notes: entry?.notes
+        });
+        if (!parsed.success || typeof entry?.id !== 'string' || typeof entry?.createdAt !== 'string' || typeof entry?.updatedAt !== 'string') return [];
+        return [{ id: entry.id, ...parsed.data, createdAt: entry.createdAt, updatedAt: entry.updatedAt }];
+      }).sort((a, b) => b.date.localeCompare(a.date));
+    } catch {
+      return [];
+    }
+  },
+
+  saveWorkoutScheduleEntry: async (rawInput: SaveWorkoutScheduleInput): Promise<WorkoutScheduleEntry> => {
+    const input = SaveWorkoutScheduleInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveWorkoutScheduleEntry(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao salvar a agenda de treino.');
+      return res.data;
+    }
+    const entries = await api.getWorkoutSchedule();
+    const current = entries.find(entry => entry.date === input.date);
+    const now = new Date().toISOString();
+    const saved: WorkoutScheduleEntry = {
+      id: current?.id || `workout-schedule-${globalThis.crypto.randomUUID()}`,
+      ...input,
+      createdAt: current?.createdAt || now,
+      updatedAt: now
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY_WORKOUT_SCHEDULE, JSON.stringify([saved, ...entries.filter(entry => entry.date !== input.date)]));
+    return saved;
   },
 
   // --- METAS & DASHBOARD ---
