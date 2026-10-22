@@ -2,6 +2,13 @@
 
 O repositório público `Daizen-Creator/santo-maromba` publica releases pelo GitHub Actions. O workflow gera o instalador NSIS e a versão portátil para Windows, além do manifesto `latest.yml` usado pelo `electron-updater`.
 
+## v1.1.42
+
+- Gera uma lista semanal de compras a partir do plano, soma ingredientes repetidos e permite marcar itens comprados.
+- Exclui refeições consumidas, puladas ou canceladas; consumo parcial reduz a quantidade necessária.
+- Salva lista e marcações no SQLite desktop e no armazenamento local da PWA; a marcação só continua comprada quando a quantidade necessária não muda.
+- 216 testes em 66 arquivos aprovados. Build, instalador NSIS, portable e abertura isolada com criação do SQLite aprovados. Publicação GitHub pendente de validação do workflow.
+
 ## v1.0.4
 
 - Refeições e catálogo exibem quando os dados nutricionais são estimados ou ainda não verificados.

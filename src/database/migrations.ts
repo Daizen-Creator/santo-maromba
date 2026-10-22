@@ -424,4 +424,11 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [30, 'Planejamento semanal e ordem persistente das refeições', new Date().toISOString()]
     );
   }
+  const version31 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 31');
+  if (!version31) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [31, 'Lista de compras semanal gerada do plano alimentar', new Date().toISOString()]
+    );
+  }
 }

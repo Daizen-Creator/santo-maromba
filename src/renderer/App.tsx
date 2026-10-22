@@ -572,6 +572,9 @@ export const App: React.FC = () => {
               onApplyMealTemplate={handleApplyMealTemplate}
               onApplyWeeklyMealTemplate={handleApplyWeeklyMealTemplate}
               onReorderDailyMeals={handleReorderDailyMeals}
+              onGetShoppingList={api.getShoppingList}
+              onGenerateShoppingList={api.generateShoppingList}
+              onSetShoppingItemPurchased={api.setShoppingItemPurchased}
               onSetRecipeFavorite={handleSetRecipeFavorite}
               onSetRecipeServings={handleSetRecipeServings}
               onSetRecipeFinalWeight={handleSetRecipeFinalWeight}

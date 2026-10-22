@@ -68,6 +68,9 @@ export const IPC_CHANNELS = {
   UPDATE_PANTRY: 'nutrition:update-pantry',
   GET_SUBSTITUTIONS: 'nutrition:get-substitutions',
   FIND_RECIPES_FROM_PANTRY: 'nutrition:find-from-pantry',
+  GET_SHOPPING_LIST: 'nutrition:get-shopping-list',
+  GENERATE_SHOPPING_LIST: 'nutrition:generate-shopping-list',
+  SET_SHOPPING_ITEM_PURCHASED: 'nutrition:set-shopping-item-purchased',
 
   // Workout
   GET_EXERCISES: 'workout:get-exercises',

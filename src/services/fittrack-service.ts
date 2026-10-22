@@ -14,6 +14,7 @@ import { DailyLogRepository } from '../database/repositories/daily-log-repositor
 import { CustomizationRepository } from '../database/repositories/customization-repository';
 import { PersonalDiaryRepository } from '../database/repositories/personal-diary-repository';
 import { MealPhotoRepository } from '../database/repositories/meal-photo-repository';
+import { ShoppingListRepository } from '../database/repositories/shopping-list-repository';
 import { seedDatabase } from '../database/seeds/seedDatabase';
 import { calculateNutritionPlan } from '../domain/nutrition-calculator';
 import { SubstitutionEngine } from '../domain/substitution-engine';
@@ -38,6 +39,8 @@ import {
   NutritionTargets,
   PantryItem,
   PantryRecipeSearchInput,
+  ShoppingListItem,
+  ShoppingListPurchaseInput,
   PhotoRecord,
   PhotoCreateInput,
   Recipe,
@@ -107,6 +110,7 @@ export class FitTrackService {
   private customizationRepo: CustomizationRepository;
   private personalDiaryRepo: PersonalDiaryRepository;
   private mealPhotoRepo: MealPhotoRepository;
+  private shoppingListRepo: ShoppingListRepository;
   private workoutEngine: WorkoutEngine;
   private photoStorage: PhotoStorage;
   private mealPhotoStorage: PhotoStorage;
@@ -136,6 +140,7 @@ export class FitTrackService {
     this.projectionRepo = new PhysiqueProjectionRepository(db);
     this.exerciseMediaRepo = new ExerciseMediaRepository(db);
     this.dailyLogRepo = new DailyLogRepository(db);
+    this.shoppingListRepo = new ShoppingListRepository(db, this.dailyLogRepo, () => this.nutritionRepo.getFoods());
     this.customizationRepo = new CustomizationRepository(db);
     this.personalDiaryRepo = new PersonalDiaryRepository(db);
     this.workoutEngine = new WorkoutEngine(this.workoutRepo.getExercises());
@@ -375,6 +380,18 @@ export class FitTrackService {
     const pantry = this.nutritionRepo.getPantry();
     return new SubstitutionEngine(this.nutritionRepo.getFoods(), this.nutritionRepo.getRecipes())
       .findRecipesFromPantry(pantry, input.maxPrepTime, input.requireAllIngredients);
+  }
+
+  getShoppingList(weekStartDate: string): ShoppingListItem[] {
+    return this.shoppingListRepo.getByWeek(weekStartDate);
+  }
+
+  generateShoppingList(weekStartDate: string): ShoppingListItem[] {
+    return this.shoppingListRepo.generate(weekStartDate);
+  }
+
+  setShoppingItemPurchased(input: ShoppingListPurchaseInput): ShoppingListItem[] {
+    return this.shoppingListRepo.setPurchased(input);
   }
 
   // --- TREINOS E EXERCÍCIOS ---

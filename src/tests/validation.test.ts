@@ -20,7 +20,8 @@ import {
   ProfileGoalHistoryRecordSchema,
   SaveBodyMeasurementInputSchema,
   MeasurementUnitPreferencesSchema,
-  PantryRecipeSearchInputSchema
+  PantryRecipeSearchInputSchema,
+  ShoppingListPurchaseInputSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
@@ -29,6 +30,14 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
       .toEqual({ maxPrepTime: 30, requireAllIngredients: true });
     expect(() => PantryRecipeSearchInputSchema.parse({ maxPrepTime: 0 })).toThrow();
     expect(() => PantryRecipeSearchInputSchema.parse({ requireAllIngredients: 'yes' })).toThrow();
+  });
+
+  it('valida a marcação de compra por semana e alimento', () => {
+    expect(ShoppingListPurchaseInputSchema.parse({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: true }))
+      .toEqual({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: true });
+    expect(() => ShoppingListPurchaseInputSchema.parse({ weekStartDate: '2026-02-30', foodId: 'food-arroz', purchased: true })).toThrow();
+    expect(() => ShoppingListPurchaseInputSchema.parse({ weekStartDate: '2026-10-19', foodId: '../unsafe', purchased: true })).toThrow();
+    expect(() => ShoppingListPurchaseInputSchema.parse({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: 'yes' })).toThrow();
   });
 
   it('aceita rendimento inteiro de receita e rejeita valores fora de 1 a 50', () => {

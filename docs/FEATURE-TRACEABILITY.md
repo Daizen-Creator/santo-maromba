@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.41. Estado após validação dos incrementos: **102 validadas, 37 parciais, 38 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.42. Estado após validação dos incrementos: **105 validadas, 37 parciais, 35 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -183,8 +183,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 122 | Mover refeições para cima/baixo e manter a ordem ao recarregar a data e reabrir o SQLite. | `WeeklyMealPlanner.tsx`; `daily-meal-order.ts`; tipos/schema/canais IPC; `daily-log-repository.ts`; `migrations.ts` | SQLite ou armazenamento local PWA | V · valida a lista contra o estado atual e persiste ordem; `daily-meal-order.test.ts`, `weekly-meal-plan-persistence.test.ts` |
 | 123 | Sugerir e ranquear receitas usando alimentos e quantidades realmente disponíveis na despensa; omitir receitas sem correspondência. | `substitution-engine.ts`; `fittrack-service.ts`; `api.ts`; preload/IPC; `NutritionView.tsx` | Catálogo local e despensa do usuário | V · correspondência considera gramas; `substitution-engine.test.ts`, `daily-meal-api.test.ts` |
 | 124 | Filtrar receitas que não têm todos os ingredientes nas quantidades necessárias para o lote. | `NutritionView.tsx`; `substitution-engine.ts`; validação e IPC | Quantidades cadastradas na despensa | V · filtro estrito disponível no painel; validação, domínio e PWA testados em `validation.test.ts`, `substitution-engine.test.ts`, `daily-meal-api.test.ts` |
-| 125 | Montar lista de compras a partir do plano. | DESP | — | A · sem lista de compras |
-| 126 | Somar ingredientes repetidos numa lista de compras. | DESP | — | A · depende da lista não implementada |
+| 125 | Montar lista de compras da semana a partir dos ingredientes/porções planejados, excluindo refeições consumidas, puladas ou canceladas e descontando consumo parcial; reabrir e recuperar a lista. | `WeeklyMealPlanner.tsx`; `shopping-list.ts`; `shopping-list-repository.ts`; `api.ts`; service/IPC/preload; schema/migration | SQLite desktop; localStorage PWA | V · `shopping-list.test.ts`, `shopping-list-persistence.test.ts`, `shopping-list-api.test.ts` |
+| 126 | Somar o mesmo alimento em vários horários/dias e recalcular itens ao regenerar a semana. | `shopping-list.ts`; `shopping-list-repository.ts`; `WeeklyMealPlanner.tsx` | Plano e catálogo local | V · quantidades consolidadas e recalculadas; `shopping-list.test.ts`, `shopping-list-persistence.test.ts` |
 | 127 | Cadastrar e consultar estoque por alimento/quantidade. | DESP | — | P · despensa local existe, fluxo/validação limitado |
 | 128 | Descontar estoque após consumo confirmado. | DESP; DIAR | — | A · sem decremento automático |
 | 129 | Salvar validade e alertar antes do vencimento. | DESP | — | A · sem validade |
@@ -195,7 +195,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 134 | Adaptar plano ao orçamento definido. | DESP; NUTR | orçamento/preços | A · sem otimizador por orçamento |
 | 135 | Oferecer substituição nutricional compatível. | DESP; NUTR | dados de equivalência | V · `substitution-engine.test.ts` |
 | 136 | Priorizar receitas para aproveitar sobras. | DESP | — | A · sem controle de sobras |
-| 137 | Marcar produtos comprados na lista. | DESP | — | A · sem lista de compras |
+| 137 | Marcar/desmarcar cada item como comprado e conservar a seleção ao recarregar; ao mudar a quantidade necessária, reabrir o item como não comprado. | `WeeklyMealPlanner.tsx`; `shopping-list-repository.ts`; `api.ts`; service/IPC/preload; schema/migration | SQLite desktop; localStorage PWA | V · persistência, reabertura e redefinição após alteração; `shopping-list-persistence.test.ts`, `shopping-list-api.test.ts` |
 | 138 | Classificar itens de compra/despensa por categoria. | DESP | — | P · categorias de alimento existem, fluxo de compras não |
 | 139 | Consultar gastos por período. | DESP | preços e compras persistidos | A · sem histórico de gastos |
 | 140 | Programar preparo de refeições no calendário. | DESP | — | A · sem calendário de preparo |
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.41: 211/211 testes, build, instalador NSIS, portable e inicialização isolada por 12 segundos aprovados; publicação pendente de validação do workflow.
+- Incremento 1.1.42: 216/216 testes, build, instalador NSIS, portable, inicialização isolada por 12 segundos e publicação a confirmar.
+- Incremento 1.1.41: 211/211 testes, build, instalador NSIS, portable, inicialização isolada e publicação aprovados pelo workflow 39774510725.
 - Incremento 1.1.40: 208/208 testes, build, instalador NSIS, portable, inicialização isolada e publicação aprovados pelo workflow 39773627942.
 - Incremento 1.1.39: 203/203 testes, build e empacotamento Windows aprovados; instalador NSIS, portable e manifesto publicados pelo workflow 39771708883.
 - Incremento 1.1.38: 201/201 testes, build, instalador NSIS, portable, manifesto e abertura isolada com criação do SQLite publicados pelo workflow 39770953506.

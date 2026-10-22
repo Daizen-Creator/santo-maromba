@@ -16,7 +16,7 @@ import {
   ImagePlus,
   X
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, ShoppingListItem, ShoppingListPurchaseInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -87,6 +87,9 @@ interface NutritionViewProps {
   onApplyMealTemplate: (input: ApplyMealTemplateInput) => Promise<ApplyMealTemplateResult>;
   onApplyWeeklyMealTemplate: (input: { templateId: string; weekStartDate: string }) => Promise<ApplyWeeklyMealTemplateResult>;
   onReorderDailyMeals: (input: ReorderDailyMealsInput) => Promise<DailyMealEntry[]>;
+  onGetShoppingList: (weekStartDate: string) => Promise<ShoppingListItem[]>;
+  onGenerateShoppingList: (weekStartDate: string) => Promise<ShoppingListItem[]>;
+  onSetShoppingItemPurchased: (input: ShoppingListPurchaseInput) => Promise<ShoppingListItem[]>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
   onSetRecipeServings: (id: string, servings: number) => Promise<void>;
   onSetRecipeFinalWeight: (id: string, finalWeightG: number | null) => Promise<void>;
@@ -128,6 +131,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onApplyMealTemplate,
   onApplyWeeklyMealTemplate,
   onReorderDailyMeals,
+  onGetShoppingList,
+  onGenerateShoppingList,
+  onSetShoppingItemPurchased,
   onSetRecipeFavorite,
   onSetRecipeServings,
   onSetRecipeFinalWeight,
@@ -1827,6 +1833,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             onGetMealHistory={onGetMealHistory}
             onApplyTemplate={onApplyWeeklyMealTemplate}
             onReorderMeals={onReorderDailyMeals}
+            onGetShoppingList={onGetShoppingList}
+            onGenerateShoppingList={onGenerateShoppingList}
+            onSetShoppingItemPurchased={onSetShoppingItemPurchased}
           />
           {mealPhotoError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealPhotoError}</p>}
           <form onSubmit={copyMealsFromDay} className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">

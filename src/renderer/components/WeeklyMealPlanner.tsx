@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, LoaderCircle } from 'lucide-react';
-import { ApplyWeeklyMealTemplateResult, DailyMealEntry, DailyMealHistoryQuery, DailyMealStatus, MealTemplate, ReorderDailyMealsInput } from '../../shared/types';
+import { ApplyWeeklyMealTemplateResult, DailyMealEntry, DailyMealHistoryQuery, DailyMealStatus, MealTemplate, ReorderDailyMealsInput, ShoppingListItem, ShoppingListPurchaseInput } from '../../shared/types';
 import { moveDailyMealSlot, sortDailyMealEntries } from '../../domain/daily-meal-order';
 import { getWorkoutWeekDates, shiftWorkoutWeek } from '../../domain/workout-week-calendar';
 
@@ -11,6 +11,9 @@ interface WeeklyMealPlannerProps {
   onGetMealHistory: (query: DailyMealHistoryQuery) => Promise<DailyMealEntry[]>;
   onApplyTemplate: (input: { templateId: string; weekStartDate: string }) => Promise<ApplyWeeklyMealTemplateResult>;
   onReorderMeals: (input: ReorderDailyMealsInput) => Promise<DailyMealEntry[]>;
+  onGetShoppingList: (weekStartDate: string) => Promise<ShoppingListItem[]>;
+  onGenerateShoppingList: (weekStartDate: string) => Promise<ShoppingListItem[]>;
+  onSetShoppingItemPurchased: (input: ShoppingListPurchaseInput) => Promise<ShoppingListItem[]>;
 }
 
 const localDate = (date: Date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
@@ -21,22 +24,31 @@ const mealStatusLabel: Record<DailyMealStatus, string> = {
 };
 
 export const WeeklyMealPlanner: React.FC<WeeklyMealPlannerProps> = ({
-  templates, selectedTemplateId, onSelectTemplate, onGetMealHistory, onApplyTemplate, onReorderMeals
+  templates, selectedTemplateId, onSelectTemplate, onGetMealHistory, onApplyTemplate, onReorderMeals,
+  onGetShoppingList, onGenerateShoppingList, onSetShoppingItemPurchased
 }) => {
   const [weekAnchor, setWeekAnchor] = useState(() => localDate(new Date()));
   const weekDates = useMemo(() => getWorkoutWeekDates(weekAnchor), [weekAnchor]);
   const [entries, setEntries] = useState<DailyMealEntry[]>([]);
+  const [shoppingItems, setShoppingItems] = useState<ShoppingListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
+  const [generatingShoppingList, setGeneratingShoppingList] = useState(false);
+  const [updatingPurchasedFoodId, setUpdatingPurchasedFoodId] = useState<string | null>(null);
   const [reorderingDate, setReorderingDate] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shoppingError, setShoppingError] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
     try {
-      const results = await onGetMealHistory({ fromDate: weekDates[0], toDate: weekDates[6] });
+      const [results, savedShoppingItems] = await Promise.all([
+        onGetMealHistory({ fromDate: weekDates[0], toDate: weekDates[6] }),
+        onGetShoppingList(weekDates[0])
+      ]);
       setEntries(results);
+      setShoppingItems(savedShoppingItems);
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível carregar o plano semanal.');
@@ -48,12 +60,15 @@ export const WeeklyMealPlanner: React.FC<WeeklyMealPlannerProps> = ({
   useEffect(() => {
     let current = true;
     setLoading(true);
-    onGetMealHistory({ fromDate: weekDates[0], toDate: weekDates[6] })
-      .then(result => { if (current) { setEntries(result); setError(null); } })
+    Promise.all([
+      onGetMealHistory({ fromDate: weekDates[0], toDate: weekDates[6] }),
+      onGetShoppingList(weekDates[0])
+    ])
+      .then(([result, shopping]) => { if (current) { setEntries(result); setShoppingItems(shopping); setError(null); } })
       .catch(cause => { if (current) setError(cause instanceof Error ? cause.message : 'Não foi possível carregar o plano semanal.'); })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
-  }, [weekDates[0], weekDates[6], onGetMealHistory]);
+  }, [weekDates[0], weekDates[6], onGetMealHistory, onGetShoppingList]);
 
   const applyTemplate = async () => {
     if (!selectedTemplateId) return;
@@ -85,6 +100,32 @@ export const WeeklyMealPlanner: React.FC<WeeklyMealPlannerProps> = ({
       await refresh();
     } finally {
       setReorderingDate(null);
+    }
+  };
+
+  const generateShoppingList = async () => {
+    setGeneratingShoppingList(true);
+    setShoppingError(null);
+    try {
+      const items = await onGenerateShoppingList(weekDates[0]);
+      setShoppingItems(items);
+    } catch (cause) {
+      setShoppingError(cause instanceof Error ? cause.message : 'Não foi possível gerar a lista de compras.');
+    } finally {
+      setGeneratingShoppingList(false);
+    }
+  };
+
+  const setPurchased = async (item: ShoppingListItem, purchased: boolean) => {
+    setUpdatingPurchasedFoodId(item.foodId);
+    setShoppingError(null);
+    try {
+      const updated = await onSetShoppingItemPurchased({ weekStartDate: weekDates[0], foodId: item.foodId, purchased });
+      setShoppingItems(updated);
+    } catch (cause) {
+      setShoppingError(cause instanceof Error ? cause.message : 'Não foi possível atualizar este item.');
+    } finally {
+      setUpdatingPurchasedFoodId(null);
     }
   };
 
@@ -143,6 +184,34 @@ export const WeeklyMealPlanner: React.FC<WeeklyMealPlannerProps> = ({
           })}
         </div>
       )}
+      <section className="space-y-3 rounded-2xl border border-border bg-card/70 p-4" aria-label="Lista de compras semanal">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Lista de compras</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Quantidades somadas dos alimentos ainda necessários neste plano.</p>
+          </div>
+          <button type="button" onClick={() => void generateShoppingList()} disabled={generatingShoppingList || loading} className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:opacity-50">
+            {generatingShoppingList ? 'Atualizando lista…' : 'Gerar lista de compras'}
+          </button>
+        </div>
+        {shoppingError && <p role="alert" className="text-xs text-red-300">{shoppingError}</p>}
+        {shoppingItems.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border px-4 py-5 text-center text-xs text-muted-foreground">Ainda não há lista salva para esta semana. Gere-a depois de montar seu plano.</p>
+        ) : (
+          <>
+            <p className="text-[11px] text-muted-foreground">{shoppingItems.length} itens · {shoppingItems.filter(item => item.purchased).length} comprados</p>
+            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {shoppingItems.map(item => (
+                <li key={item.foodId} className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/50 px-3 py-2.5">
+                  <input type="checkbox" aria-label={`Marcar ${item.foodName} como comprado`} checked={item.purchased} disabled={updatingPurchasedFoodId === item.foodId} onChange={event => void setPurchased(item, event.target.checked)} className="h-4 w-4 accent-primary" />
+                  <span className={`min-w-0 flex-1 truncate text-xs ${item.purchased ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{item.foodName}</span>
+                  <span className="shrink-0 text-[11px] font-medium text-muted-foreground">{item.amountG.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} g</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
     </section>
   );
 };

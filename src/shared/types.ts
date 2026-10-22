@@ -775,6 +775,23 @@ export interface PantryRecipeSearchInput {
   requireAllIngredients?: boolean;
 }
 
+export interface ShoppingListItem {
+  id: string;
+  weekStartDate: string;
+  foodId: string;
+  foodName: string;
+  amountG: number;
+  category?: FoodCategory;
+  purchased: boolean;
+  updatedAt: string;
+}
+
+export interface ShoppingListPurchaseInput {
+  weekStartDate: string;
+  foodId: string;
+  purchased: boolean;
+}
+
 // ============================================================================
 // MÓDULO — TREINOS, EXERCÍCIOS E PROGRESSÃO DE CARGAS
 // ============================================================================

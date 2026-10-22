@@ -9,6 +9,8 @@ import {
   NutritionTargets,
   PantryItem,
   PantryRecipeSearchInput,
+  ShoppingListItem,
+  ShoppingListPurchaseInput,
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
@@ -119,6 +121,9 @@ export interface FitTrackAPI {
   updatePantry: (foodId: string, amountG: number) => Promise<{ success: boolean; error?: string }>;
   getSubstitutions: (missingFoodId: string, amountG: number) => Promise<{ success: boolean; data?: SubstitutionOption[]; error?: string }>;
   findRecipesFromPantry: (input?: PantryRecipeSearchInput) => Promise<{ success: boolean; data?: Array<Recipe & { matchRate: number }>; error?: string }>;
+  getShoppingList: (weekStartDate: string) => Promise<{ success: boolean; data?: ShoppingListItem[]; error?: string }>;
+  generateShoppingList: (weekStartDate: string) => Promise<{ success: boolean; data?: ShoppingListItem[]; error?: string }>;
+  setShoppingItemPurchased: (input: ShoppingListPurchaseInput) => Promise<{ success: boolean; data?: ShoppingListItem[]; error?: string }>;
 
   // Treinos
   getExercises: () => Promise<{ success: boolean; data?: Exercise[]; error?: string }>;
@@ -217,6 +222,9 @@ const api: FitTrackAPI = {
   updatePantry: (foodId, amountG) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_PANTRY, { foodId, amountG }),
   getSubstitutions: (missingFoodId, amountG) => ipcRenderer.invoke(IPC_CHANNELS.GET_SUBSTITUTIONS, { missingFoodId, amountG }),
   findRecipesFromPantry: input => ipcRenderer.invoke(IPC_CHANNELS.FIND_RECIPES_FROM_PANTRY, input || {}),
+  getShoppingList: weekStartDate => ipcRenderer.invoke(IPC_CHANNELS.GET_SHOPPING_LIST, weekStartDate),
+  generateShoppingList: weekStartDate => ipcRenderer.invoke(IPC_CHANNELS.GENERATE_SHOPPING_LIST, weekStartDate),
+  setShoppingItemPurchased: input => ipcRenderer.invoke(IPC_CHANNELS.SET_SHOPPING_ITEM_PURCHASED, input),
 
   getExercises: () => ipcRenderer.invoke(IPC_CHANNELS.GET_EXERCISES),
   addExerciseMedia: (input) => ipcRenderer.invoke(IPC_CHANNELS.ADD_EXERCISE_MEDIA, input),

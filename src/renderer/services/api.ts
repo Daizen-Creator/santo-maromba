@@ -14,6 +14,8 @@ import {
   NutritionTargets,
   PantryItem,
   PantryRecipeSearchInput,
+  ShoppingListItem,
+  ShoppingListPurchaseInput,
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
@@ -79,7 +81,7 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryRecipeSearchInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -89,6 +91,7 @@ import { sortDailyMealEntries } from '../../domain/daily-meal-order';
 import { getWorkoutWeekDates } from '../../domain/workout-week-calendar';
 import { inferMealTurn } from '../../domain/meal-turn';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
+import { buildShoppingList } from '../../domain/shopping-list';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_PROFILE_GOAL_HISTORY = 'fittrack_profile_goal_history';
@@ -97,6 +100,7 @@ const LOCAL_STORAGE_KEY_MEASUREMENTS = 'fittrack_measurements';
 const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENT_DEFINITIONS = 'fittrack_custom_measurement_definitions';
 const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENTS = 'fittrack_custom_measurements';
 const LOCAL_STORAGE_KEY_PANTRY = 'fittrack_pantry';
+const LOCAL_STORAGE_KEY_SHOPPING_LISTS = 'fittrack_shopping_lists';
 const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
 const LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES = 'fittrack_workout_templates';
 const LOCAL_STORAGE_KEY_WORKOUT_SCHEDULE = 'fittrack_workout_schedule';
@@ -778,6 +782,54 @@ export const api = {
     const pantry = await api.getPantry();
     const [foods, recipes] = await Promise.all([api.getFoods(), api.getRecipes()]);
     return new SubstitutionEngine(foods, recipes).findRecipesFromPantry(pantry, input.maxPrepTime, input.requireAllIngredients);
+  },
+
+  getShoppingList: async (rawWeekStartDate: string): Promise<ShoppingListItem[]> => {
+    const weekStartDate = getWorkoutWeekDates(DailyMealDateSchema.parse(rawWeekStartDate))[0];
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getShoppingList(weekStartDate);
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar a lista de compras.');
+      return res.data || [];
+    }
+    const lists: Record<string, ShoppingListItem[]> = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_SHOPPING_LISTS) || '{}');
+    return lists[weekStartDate] || [];
+  },
+
+  generateShoppingList: async (rawWeekStartDate: string): Promise<ShoppingListItem[]> => {
+    const weekDates = getWorkoutWeekDates(DailyMealDateSchema.parse(rawWeekStartDate));
+    const weekStartDate = weekDates[0];
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.generateShoppingList(weekStartDate);
+      if (!res.success) throw new Error(res.error || 'Erro ao gerar a lista de compras.');
+      return res.data || [];
+    }
+    const [meals, foods, previous] = await Promise.all([
+      api.getMealHistory({ fromDate: weekStartDate, toDate: weekDates[6] }),
+      api.getFoods(),
+      api.getShoppingList(weekStartDate)
+    ]);
+    const items = buildShoppingList(weekStartDate, meals, foods, previous);
+    const lists: Record<string, ShoppingListItem[]> = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_SHOPPING_LISTS) || '{}');
+    localStorage.setItem(LOCAL_STORAGE_KEY_SHOPPING_LISTS, JSON.stringify({ ...lists, [weekStartDate]: items }));
+    return items;
+  },
+
+  setShoppingItemPurchased: async (rawInput: ShoppingListPurchaseInput): Promise<ShoppingListItem[]> => {
+    const input = ShoppingListPurchaseInputSchema.parse(rawInput);
+    const weekStartDate = getWorkoutWeekDates(input.weekStartDate)[0];
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.setShoppingItemPurchased({ ...input, weekStartDate });
+      if (!res.success) throw new Error(res.error || 'Erro ao atualizar a lista de compras.');
+      return res.data || [];
+    }
+    const lists: Record<string, ShoppingListItem[]> = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_SHOPPING_LISTS) || '{}');
+    const current = lists[weekStartDate] || [];
+    if (!current.some(item => item.foodId === input.foodId)) throw new Error('O item não pertence à lista de compras desta semana.');
+    const updated = current.map(item => item.foodId === input.foodId
+      ? { ...item, purchased: input.purchased, updatedAt: new Date().toISOString() }
+      : item);
+    localStorage.setItem(LOCAL_STORAGE_KEY_SHOPPING_LISTS, JSON.stringify({ ...lists, [weekStartDate]: updated }));
+    return updated;
   },
 
   // --- TREINOS ---

@@ -190,6 +190,19 @@ CREATE TABLE IF NOT EXISTS pantry_items (
   FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS shopping_list_items (
+  id TEXT PRIMARY KEY,
+  week_start_date TEXT NOT NULL,
+  food_id TEXT NOT NULL,
+  food_name TEXT NOT NULL,
+  category TEXT CHECK(category IS NULL OR category IN ('protein', 'carb', 'fat', 'fruit', 'vegetable', 'dairy', 'legume', 'supplement')),
+  amount_g REAL NOT NULL CHECK(amount_g > 0),
+  purchased INTEGER NOT NULL DEFAULT 0 CHECK(purchased IN (0, 1)),
+  updated_at TEXT NOT NULL,
+  UNIQUE(week_start_date, food_id)
+);
+CREATE INDEX IF NOT EXISTS idx_shopping_list_week ON shopping_list_items(week_start_date, purchased, food_name);
+
 -- Quantidades habituais escolhidas pelo usuário; os valores nutricionais dos alimentos seguem por 100 g.
 CREATE TABLE IF NOT EXISTS food_portion_preferences (
   food_id TEXT PRIMARY KEY,

@@ -31,6 +31,7 @@ import {
   ApplyWeeklyMealTemplateInputSchema,
   ReorderDailyMealsInputSchema,
   PantryRecipeSearchInputSchema,
+  ShoppingListPurchaseInputSchema,
   DailyMealEntryInputSchema,
   DailyMealIdentityInputSchema,
   DailyMealRestoreInputSchema,
@@ -427,6 +428,36 @@ export function registerIpcHandlers(
       return { success: true, data: matched };
     } catch (err: any) {
       return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_SHOPPING_LIST, async (event, rawWeekStartDate) => {
+    try {
+      getCallingWindow(event);
+      const weekStartDate = DailyMealDateSchema.parse(rawWeekStartDate);
+      return { success: true, data: service.getShoppingList(weekStartDate) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível carregar a lista de compras.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GENERATE_SHOPPING_LIST, async (event, rawWeekStartDate) => {
+    try {
+      getCallingWindow(event);
+      const weekStartDate = DailyMealDateSchema.parse(rawWeekStartDate);
+      return { success: true, data: service.generateShoppingList(weekStartDate) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível gerar a lista de compras.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SET_SHOPPING_ITEM_PURCHASED, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      const input = ShoppingListPurchaseInputSchema.parse(rawInput);
+      return { success: true, data: service.setShoppingItemPurchased(input) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível atualizar a compra.' };
     }
   });
 
