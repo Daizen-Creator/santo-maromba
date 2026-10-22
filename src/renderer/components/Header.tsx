@@ -26,13 +26,13 @@ export const Header: React.FC<HeaderProps> = ({
   }).format(new Date());
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur-md">
+    <header className="sticky top-0 z-10 flex min-h-16 w-full shrink-0 items-center justify-between border-b border-border bg-background/80 px-4 py-2 backdrop-blur-md sm:px-6">
       <div>
-        <h1 className="font-display text-lg font-bold text-foreground tracking-tight sm:text-xl">
+        <h1 className="font-display text-base font-bold text-foreground tracking-tight sm:text-xl">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
+          <p className="hidden text-xs text-muted-foreground sm:block">{subtitle}</p>
         )}
       </div>
 
@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center gap-2 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/30 hover:bg-primary-hover active:scale-95 transition-all"
         >
           <Plus className="h-4 w-4" />
-          <span>Registrar Peso</span>
+          <span className="hidden sm:inline">Registrar Peso</span>
         </button>
       </div>
     </header>

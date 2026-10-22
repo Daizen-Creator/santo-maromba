@@ -32,6 +32,15 @@ export async function getDatabase(customPath?: string): Promise<IDatabase> {
     dbPath = path.join(dataDir, 'fittrack.db');
   }
 
+  // Preserve the existing SQLite file before the additive daily-checklist schema is applied.
+  // The stable name prevents repeated full copies on every app launch.
+  if (fs.existsSync(dbPath)) {
+    const preChecklistBackup = `${dbPath}.pre-v7.bak`;
+    if (!fs.existsSync(preChecklistBackup)) {
+      fs.copyFileSync(dbPath, preChecklistBackup, fs.constants.COPYFILE_EXCL);
+    }
+  }
+
   dbInstance = await createDatabaseDriver(dbPath);
   await runMigrations(dbInstance);
 

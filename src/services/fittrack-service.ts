@@ -41,6 +41,8 @@ import {
   ExerciseMediaInput,
   ExerciseMediaRecord,
   LoggedMealInput,
+  DailyMealEntryInput,
+  DailyMealEntry,
   HydrationLogInput,
   VisualCustomization,
   CustomizationMediaInput,
@@ -334,6 +336,14 @@ export class FitTrackService {
 
   logWater(input: HydrationLogInput): void {
     this.dailyLogRepo.addWater(input);
+  }
+
+  getDailyMeals(date: string): DailyMealEntry[] {
+    return this.dailyLogRepo.getMeals(date);
+  }
+
+  saveDailyMeal(input: DailyMealEntryInput): DailyMealEntry {
+    return this.dailyLogRepo.saveMeal(input);
   }
 
   // --- DASHBOARD & METAS ---

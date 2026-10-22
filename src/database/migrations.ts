@@ -123,4 +123,12 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [6, 'Imagens, vídeos e grupos de equivalência nutricional dos catálogos', new Date().toISOString()]
     );
   }
+
+  const version7 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 7');
+  if (!version7) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [7, 'Checklist diário de refeições com consumo real por ingrediente', new Date().toISOString()]
+    );
+  }
 }

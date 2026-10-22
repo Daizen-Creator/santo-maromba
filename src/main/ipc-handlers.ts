@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { IPC_CHANNELS } from '../shared/ipc-channels';
 import {
   InitialHistoryConfirmationSchema,
@@ -15,7 +15,9 @@ import {
   WorkoutSessionInputSchema,
   VisualCustomizationSchema,
   CustomizationMediaInputSchema,
-  CustomizationMediaIdSchema
+  CustomizationMediaIdSchema,
+  DailyMealDateSchema,
+  DailyMealEntryInputSchema
 } from '../shared/schema';
 import { FitTrackService } from '../services/fittrack-service';
 import { IDatabase } from '../database/driver';
@@ -335,6 +337,25 @@ export function registerIpcHandlers(
     }
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_DAILY_MEALS, async (event, rawDate) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getDailyMeals(DailyMealDateSchema.parse(rawDate)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível carregar as refeições do dia.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_DAILY_MEAL, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      const input = DailyMealEntryInputSchema.parse(rawInput);
+      return { success: true, data: service.saveDailyMeal(input) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar o checklist da refeição.' };
+    }
+  });
+
   ipcMain.handle(IPC_CHANNELS.ADD_HYDRATION_LOG, async (event, rawInput) => {
     try {
       getCallingWindow(event);
@@ -346,7 +367,7 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.APP_GET_VERSION, async () => {
-    return { success: true, data: '1.0.0' };
+    return { success: true, data: app.getVersion() };
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_VISUAL_CUSTOMIZATION, async event => {

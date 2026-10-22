@@ -67,6 +67,24 @@ body,
   min-height: 0;
 }
 
+.app-shell {
+  height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  .app-shell { height: 100dvh; }
+}
+
+.mobile-navigation {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.35rem);
+}
+
+.mobile-main {
+  padding-bottom: calc(4.8rem + env(safe-area-inset-bottom));
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
   margin: 0;
@@ -157,5 +175,16 @@ textarea:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .mobile-main > * {
+    min-width: 0;
+  }
+
+  .mobile-main h1,
+  .mobile-main h2 {
+    overflow-wrap: anywhere;
   }
 }

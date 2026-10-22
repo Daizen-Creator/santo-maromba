@@ -175,6 +175,27 @@ CREATE TABLE IF NOT EXISTS logged_meals (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS daily_meal_entries (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  slot_id TEXT NOT NULL,
+  meal_name TEXT NOT NULL,
+  scheduled_time TEXT NOT NULL,
+  recipe_id TEXT,
+  status TEXT NOT NULL CHECK(status IN ('pending', 'preparing', 'consumed', 'partial', 'deferred', 'skipped', 'cancelled')),
+  items_json TEXT NOT NULL DEFAULT '[]',
+  calories REAL NOT NULL DEFAULT 0 CHECK(calories >= 0),
+  protein_g REAL NOT NULL DEFAULT 0 CHECK(protein_g >= 0),
+  carbs_g REAL NOT NULL DEFAULT 0 CHECK(carbs_g >= 0),
+  fats_g REAL NOT NULL DEFAULT 0 CHECK(fats_g >= 0),
+  note TEXT,
+  completed_at TEXT,
+  updated_at TEXT NOT NULL,
+  UNIQUE(date, slot_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_meals_date ON daily_meal_entries(date, status);
+
 -- 11. Biblioteca de Exercícios
 CREATE TABLE IF NOT EXISTS exercises (
   id TEXT PRIMARY KEY,

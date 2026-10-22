@@ -154,6 +154,9 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
         }))
       });
       setSessionSuccessMsg('Treino registrado com sucesso no histórico!');
+      setActiveSets([]);
+      setSessionDuration(0);
+      setSessionRpe(0);
       setTimeout(() => setSessionSuccessMsg(null), 4000);
     } catch (error: any) {
       setSessionValidationError(error.message || 'Não foi possível salvar o treino.');

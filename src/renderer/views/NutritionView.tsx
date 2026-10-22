@@ -6,31 +6,40 @@ import {
   Sparkles,
   RefreshCw,
   ShoppingBag,
-  ChefHat
+  ChefHat,
+  CheckCircle2,
+  Circle,
+  SkipForward
 } from 'lucide-react';
-import { FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, SubstitutionOption } from '../../shared/types';
+import { DailyMealEntry, DailyMealEntryInput, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 
 interface NutritionViewProps {
   targets: NutritionTargets | null;
+  summary: DashboardSummary | null;
   mealsPerDay: number;
   foods: FoodItem[];
   recipes: Recipe[];
+  dailyMealEntries: DailyMealEntry[];
   pantry: PantryItem[];
   onGetSubstitutions: (foodId: string, amountG: number) => Promise<SubstitutionOption[]>;
   onUpdatePantry: (foodId: string, amountG: number) => Promise<void>;
   onFindRecipesFromPantry: (maxPrepTime?: number) => Promise<Array<Recipe & { matchRate: number }>>;
+  onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
 }
 
 export const NutritionView: React.FC<NutritionViewProps> = ({
   targets,
+  summary,
   mealsPerDay,
   foods,
   recipes,
+  dailyMealEntries,
   pantry,
   onGetSubstitutions,
   onUpdatePantry,
-  onFindRecipesFromPantry
+  onFindRecipesFromPantry,
+  onSaveDailyMeal
 }) => {
   const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat'>('meals');
 
@@ -54,6 +63,90 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   // "O que posso comer com o que tenho"
   const [pantryMatchedRecipes, setPantryMatchedRecipes] = useState<Array<Recipe & { matchRate: number }>>([]);
   const [findingPantryLoading, setFindingPantryLoading] = useState<boolean>(false);
+  const [draftAmounts, setDraftAmounts] = useState<Record<string, number>>({});
+  const [savingMealSlot, setSavingMealSlot] = useState<string | null>(null);
+  const [mealListFilter, setMealListFilter] = useState<'all' | 'eaten' | 'remaining'>('all');
+  const [mealSaveError, setMealSaveError] = useState<string | null>(null);
+
+  const today = new Date();
+  const todayString = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+
+  const itemsForMeal = (recipe: Recipe | null, substitution?: SubstitutionOption): DailyMealItemLog[] => {
+    const ingredients = substitution?.items ?? recipe?.ingredients ?? [];
+    return ingredients.map((item, index) => ({
+      itemId: `${item.foodId}-${index}`,
+      foodId: item.foodId,
+      foodName: item.foodName,
+      plannedAmountG: item.amountG,
+      consumedAmountG: 0,
+      calories: item.calories,
+      proteinG: item.proteinG,
+      carbsG: item.carbsG,
+      fatsG: item.fatsG
+    }));
+  };
+
+  const getCurrentAmounts = (slotId: string, items: DailyMealItemLog[]) => {
+    const entry = dailyMealEntries.find(item => item.date === todayString && item.slotId === slotId);
+    return Object.fromEntries(items.map(item => {
+      const draftKey = `${slotId}:${item.itemId}`;
+      const saved = entry?.items.find(savedItem => savedItem.itemId === item.itemId);
+      return [item.itemId, draftAmounts[draftKey] ?? saved?.consumedAmountG ?? 0];
+    })) as Record<string, number>;
+  };
+
+  const saveMealState = async (
+    slot: ReturnType<typeof buildMealSchedule>[number],
+    recipe: Recipe | null,
+    substitution: SubstitutionOption | undefined,
+    status: DailyMealStatus,
+    amounts: Record<string, number>
+  ) => {
+    const sourceItems = itemsForMeal(recipe, substitution);
+    const existing = dailyMealEntries.find(item => item.date === todayString && item.slotId === slot.id);
+    const items = sourceItems.map(item => ({
+      ...item,
+      consumedAmountG: status === 'pending'
+        ? 0
+        : Math.max(0, Math.min(5000, Number(amounts[item.itemId] || 0)))
+    }));
+    setSavingMealSlot(slot.id);
+    setMealSaveError(null);
+    try {
+      await onSaveDailyMeal({
+        date: todayString,
+        slotId: slot.id,
+        mealName: slot.title,
+        scheduledTime: slot.time,
+        recipeId: recipe?.id,
+        status,
+        items,
+        note: existing?.note
+      });
+    } catch (error) {
+      setMealSaveError(error instanceof Error ? error.message : 'Não foi possível salvar o registro da refeição.');
+    } finally {
+      setSavingMealSlot(null);
+    }
+  };
+
+  const toggleMealIngredient = async (
+    slot: ReturnType<typeof buildMealSchedule>[number],
+    recipe: Recipe | null,
+    substitution: SubstitutionOption | undefined,
+    item: DailyMealItemLog,
+    checked: boolean
+  ) => {
+    const sourceItems = itemsForMeal(recipe, substitution);
+    const amounts = getCurrentAmounts(slot.id, sourceItems);
+    amounts[item.itemId] = checked ? item.plannedAmountG : 0;
+    const consumed = sourceItems.map(source => amounts[source.itemId] || 0);
+    const any = consumed.some(amount => amount > 0);
+    const all = sourceItems.length > 0 && consumed.every((amount, index) => amount >= sourceItems[index].plannedAmountG);
+    const status: DailyMealStatus = all ? 'consumed' : any ? 'partial' : 'pending';
+    setDraftAmounts(current => ({ ...current, [`${slot.id}:${item.itemId}`]: amounts[item.itemId] }));
+    await saveMealState(slot, recipe, substitution, status, amounts);
+  };
 
   // Filtragem das 200 Receitas
   const filteredRecipes = useMemo(() => {
@@ -97,6 +190,13 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
       return { slot, recipe, substitution: selectedSubstitutions[slot.id] };
     });
   }, [mealsPerDay, recipes, selectedSubstitutions, targets]);
+
+  const visibleMealPlan = mealPlan.filter(({ slot }) => {
+    if (mealListFilter === 'all') return true;
+    const entry = dailyMealEntries.find(item => item.date === todayString && item.slotId === slot.id);
+    const eaten = entry?.status === 'consumed' || entry?.status === 'partial';
+    return mealListFilter === 'eaten' ? eaten : !eaten && entry?.status !== 'skipped' && entry?.status !== 'cancelled';
+  });
 
   // Handler para acionar substituição de ingrediente
   const handleTriggerSubstitution = async (foodId: string, foodName: string, amountG: number, slotId: string) => {
@@ -174,20 +274,53 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           {targets && (
             <div className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-foreground">Meta Diária: {targets.targetCalories} kcal</span>
+                <span className="font-bold text-foreground">{summary?.caloriesLogged == null ? 'Ainda sem consumo registrado hoje' : `Consumido: ${Math.round(summary.caloriesLogged)} / ${targets.targetCalories} kcal`}</span>
                 <span className="text-muted-foreground">
-                  Proteína: {targets.proteinGrams}g • Carboidratos: {targets.carbGrams}g • Gorduras: {targets.fatGrams}g
+                  Proteína: {summary?.proteinLoggedG == null ? '—' : `${Math.round(summary.proteinLoggedG)}g`} / {targets.proteinGrams}g • Carboidratos: {summary?.carbsLoggedG == null ? '—' : `${Math.round(summary.carbsLoggedG)}g`} / {targets.carbGrams}g • Gorduras: {summary?.fatsLoggedG == null ? '—' : `${Math.round(summary.fatsLoggedG)}g`} / {targets.fatGrams}g
                 </span>
               </div>
               <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-primary to-emerald-400 w-full" />
+                <div className="h-full bg-gradient-to-r from-primary to-emerald-400 transition-[width] duration-300" style={{ width: `${Math.min(100, Math.max(0, ((summary?.caloriesLogged || 0) / targets.targetCalories) * 100))}%` }} />
               </div>
             </div>
           )}
 
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card/70 p-3">
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar refeições do dia">
+              {([
+                ['all', 'Plano do dia'],
+                ['eaten', 'Já comi'],
+                ['remaining', 'Ainda falta comer']
+              ] as const).map(([filter, label]) => (
+                <button key={filter} type="button" onClick={() => setMealListFilter(filter)} className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${mealListFilter === filter ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="text-[11px] text-muted-foreground">
+              {dailyMealEntries.filter(entry => entry.date === todayString && (entry.status === 'consumed' || entry.status === 'partial')).length} de {mealPlan.length} refeições registradas
+            </span>
+          </div>
+          {mealSaveError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealSaveError}</p>}
+
           {/* Blocos calculados na hora a partir do perfil e das metas atuais */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {mealPlan.map(({ slot, recipe, substitution }, index) => (
+            {visibleMealPlan.map(({ slot, recipe, substitution }, index) => {
+              const entry = dailyMealEntries.find(item => item.date === todayString && item.slotId === slot.id);
+              const checklistItems = itemsForMeal(recipe, substitution);
+              const amounts = getCurrentAmounts(slot.id, checklistItems);
+              const statusLabels: Record<DailyMealStatus, string> = {
+                pending: 'Pendente', preparing: 'Em preparo', consumed: 'Consumida', partial: 'Parcial',
+                deferred: 'Adiada', skipped: 'Não consumida', cancelled: 'Cancelada'
+              };
+              const saveCurrentQuantities = () => {
+                const currentAmounts = getCurrentAmounts(slot.id, checklistItems);
+                const values = checklistItems.map(item => currentAmounts[item.itemId] || 0);
+                const anyConsumed = values.some(value => value > 0);
+                const allConsumed = checklistItems.length > 0 && values.every((value, itemIndex) => value >= checklistItems[itemIndex].plannedAmountG);
+                void saveMealState(slot, recipe, substitution, allConsumed ? 'consumed' : anyConsumed ? 'partial' : 'pending', currentAmounts);
+              };
+              return (
               <article key={slot.id} className="group rounded-2xl border border-border/80 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-xl hover:shadow-black/10">
                 <div className="flex items-start justify-between gap-4 border-b border-border/70 pb-4">
                   <div className="flex items-start gap-3">
@@ -200,13 +333,13 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     </div>
                   </div>
                   <span className="rounded-full border border-border bg-secondary/70 px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
-                    {Math.round(slot.share * 100)}% da meta
+                    {Math.round(slot.share * 100)}% {slot.target ? 'da meta' : 'da divisão sugerida'}
                   </span>
                 </div>
 
-                {slot.target ? (
+                {slot.target || recipe || substitution ? (
                   <div className="mt-4 space-y-4">
-                    <div className="grid grid-cols-4 gap-2 text-center">
+                    {slot.target && <div className="grid grid-cols-4 gap-2 text-center">
                       {[
                         { label: 'kcal', value: slot.target.calories },
                         { label: 'proteína', value: `${slot.target.proteinG}g` },
@@ -218,7 +351,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                           <strong className="mt-1 block text-sm font-semibold text-foreground">{macro.value}</strong>
                         </div>
                       ))}
-                    </div>
+                    </div>}
+
+                    {!slot.target && <p className="rounded-xl border border-border/70 bg-secondary/35 p-3 text-xs leading-relaxed text-muted-foreground">Esta é uma sugestão de receita do catálogo. As porções não foram ajustadas a uma meta pessoal porque ainda faltam dados do perfil e do peso.</p>}
 
                     {substitution ? (
                       <div className="rounded-xl border border-primary/25 bg-primary/5 p-3.5 space-y-2">
@@ -278,9 +413,80 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     Registre seu peso e complete o perfil para calcular a meta deste horário. Nenhuma quantidade foi estimada sem esses dados.
                   </p>
                 )}
+
+                <section className="mt-5 rounded-xl border border-border/70 bg-secondary/25 p-4" aria-label={`Checklist de ${slot.title}`}>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-xs font-semibold text-foreground">Meu dia</h4>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">Só o que você confirmar entra nos totais consumidos.</p>
+                    </div>
+                    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${entry?.status === 'consumed' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : entry?.status === 'partial' ? 'border-amber-500/30 bg-amber-500/10 text-amber-200' : 'border-border text-muted-foreground'}`}>
+                      {statusLabels[entry?.status || 'pending']}
+                    </span>
+                  </div>
+
+                  {checklistItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {checklistItems.map(item => {
+                        const amount = amounts[item.itemId] || 0;
+                        const draftKey = `${slot.id}:${item.itemId}`;
+                        return (
+                    <div key={item.itemId} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-background/40 px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={amount >= item.plannedAmountG}
+                              aria-label={`Marcar ${item.foodName} consumido`}
+                              onChange={event => void toggleMealIngredient(slot, recipe, substitution, item, event.target.checked)}
+                              className="h-4 w-4 accent-primary"
+                            />
+                            <span className="min-w-0 flex-1 text-xs text-foreground">{item.foodName} <span className="text-muted-foreground">({item.plannedAmountG}g na porção sugerida)</span></span>
+                            <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              Consumidos
+                              <input
+                                type="number"
+                                min="0"
+                                max="5000"
+                                step="5"
+                                value={draftAmounts[draftKey] ?? amount}
+                                onChange={event => setDraftAmounts(current => ({ ...current, [draftKey]: Math.max(0, Number(event.target.value) || 0) }))}
+                                className="w-16 rounded-md border border-border bg-card px-1.5 py-1 text-right text-xs text-foreground"
+                              />g
+                            </label>
+                          </div>
+                        );
+                      })}
+                      <button type="button" onClick={saveCurrentQuantities} disabled={savingMealSlot === slot.id} className="w-full rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:opacity-50">
+                        {savingMealSlot === slot.id ? 'Salvando…' : 'Salvar quantidades consumidas'}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Esta refeição não tem ingredientes cadastrados para contabilizar.</p>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'consumed', Object.fromEntries(checklistItems.map(item => [item.itemId, item.plannedAmountG])))} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Comi tudo
+                    </button>
+                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'preparing', getCurrentAmounts(slot.id, checklistItems))} className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">Preparar agora</button>
+                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'deferred', getCurrentAmounts(slot.id, checklistItems))} className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">Adiar</button>
+                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'skipped', getCurrentAmounts(slot.id, checklistItems))} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">
+                      <SkipForward className="h-3.5 w-3.5" /> Pular refeição
+                    </button>
+                    {entry && entry.status !== 'pending' && (
+                      <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'pending', {})} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">
+                        <Circle className="h-3.5 w-3.5" /> Desfazer
+                      </button>
+                    )}
+                  </div>
+                  {entry && (entry.status === 'consumed' || entry.status === 'partial') && (
+                    <p className="mt-3 text-[11px] text-emerald-300">Registrado às {new Date(entry.completedAt || entry.updatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · {Math.round(entry.calories)} kcal · {entry.proteinG.toFixed(1)}g proteína consumida.</p>
+                  )}
+                </section>
               </article>
-            ))}
+              );
+            })}
           </div>
+          {visibleMealPlan.length === 0 && <p className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">Nenhuma refeição nesta lista ainda.</p>}
           {/* Quick Action: O que comer com o que tenho */}
           <div className="rounded-3xl border border-primary/30 bg-gradient-to-r from-card to-primary/10 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>

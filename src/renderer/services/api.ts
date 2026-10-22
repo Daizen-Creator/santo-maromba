@@ -18,6 +18,8 @@ import {
   ExerciseMediaInput,
   ExerciseMediaRecord,
   LoggedMealInput,
+  DailyMealEntry,
+  DailyMealEntryInput,
   HydrationLogInput,
   CustomizationMediaInput,
   CustomizationMediaRecord,
@@ -36,6 +38,7 @@ import {
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-seeds';
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
+import { browserPhotoStore } from './browser-photo-store';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
@@ -44,6 +47,7 @@ const LOCAL_STORAGE_KEY_PANTRY = 'fittrack_pantry';
 const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
 const LOCAL_STORAGE_KEY_PROJECTIONS = 'fittrack_physique_projections';
 const LOCAL_STORAGE_KEY_DAILY_LOGS = 'fittrack_daily_logs';
+const LOCAL_STORAGE_KEY_DAILY_MEALS = 'fittrack_daily_meals';
 const LOCAL_STORAGE_KEY_VISUAL_CUSTOMIZATION = 'fittrack_visual_customization';
 
 const substitutionEngine = new SubstitutionEngine(INITIAL_FOODS, INITIAL_RECIPES);
@@ -172,7 +176,7 @@ export const api = {
       if (!res.success) throw new Error(res.error || 'Erro ao carregar fotos.');
       return res.data || [];
     }
-    return [];
+    return browserPhotoStore.list();
   },
 
   addPhoto: async (data: PhotoCreateInput): Promise<PhotoRecord> => {
@@ -181,11 +185,11 @@ export const api = {
       if (!res.success) throw new Error(res.error || 'Erro ao anexar foto.');
       return res.data!;
     }
-    throw new Error('Para salvar fotos com segurança, abra o aplicativo desktop.');
+    return browserPhotoStore.add(data);
   },
 
   updatePhotoNotes: async (id: string, notes: string): Promise<PhotoRecord> => {
-    if (!api.isElectron()) throw new Error('Para editar fotos, abra o aplicativo desktop.');
+    if (!api.isElectron()) return browserPhotoStore.updateNotes(id, notes);
     const res = await window.fitTrackAPI.updatePhotoNotes(id, notes);
     if (!res.success) throw new Error(res.error || 'Erro ao atualizar observações da foto.');
     return res.data!;
@@ -197,7 +201,7 @@ export const api = {
       if (!res.success) throw new Error(res.error || 'Erro ao excluir foto.');
       return;
     }
-    throw new Error('Para excluir fotos, abra o aplicativo desktop.');
+    await browserPhotoStore.delete(id);
   },
 
   // --- MEDIDAS ---
@@ -453,8 +457,13 @@ export const api = {
     const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
     const logs: Array<LoggedMealInput | HydrationLogInput & { kind: 'water' }> = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_LOGS) || '[]');
     const meals = logs.filter((entry): entry is LoggedMealInput => 'mealName' in entry && entry.date === today);
+    const dailyMeals: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const consumedDailyMeals = dailyMeals.filter(entry => entry.date === today && (entry.status === 'consumed' || entry.status === 'partial'));
     const waters = logs.filter((entry): entry is HydrationLogInput & { kind: 'water' } => 'kind' in entry && entry.kind === 'water' && entry.date === today);
-    const sum = (key: 'calories' | 'proteinG' | 'carbsG' | 'fatsG') => meals.length ? meals.reduce((total, meal) => total + meal[key], 0) : null;
+    const sum = (key: 'calories' | 'proteinG' | 'carbsG' | 'fatsG') =>
+      meals.length || consumedDailyMeals.length
+        ? meals.reduce((total, meal) => total + meal[key], 0) + consumedDailyMeals.reduce((total, meal) => total + meal[key], 0)
+        : null;
 
     return {
       currentWeightKg: deltas.currentWeightKg,
@@ -470,7 +479,7 @@ export const api = {
       proteinLoggedG: sum('proteinG'),
       carbsLoggedG: sum('carbsG'),
       fatsLoggedG: sum('fatsG'),
-      completedMeals: meals.length || null,
+      completedMeals: (meals.length + consumedDailyMeals.length) || null,
       totalPlannedMeals: profile?.mealsPerDay ?? null,
       trainingDaysCompleted: sessions.filter(s => s.completed).length,
       trainingDaysPlanned: profile?.trainingDaysPerWeek ?? null,
@@ -488,6 +497,47 @@ export const api = {
     logs.push(input);
     localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_LOGS, JSON.stringify(logs));
     return api.getDashboardSummary();
+  },
+
+  getDailyMeals: async (date: string): Promise<DailyMealEntry[]> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getDailyMeals(date);
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar o checklist alimentar.');
+      return res.data || [];
+    }
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    return entries.filter(entry => entry.date === date);
+  },
+
+  saveDailyMeal: async (input: DailyMealEntryInput): Promise<DailyMealEntry> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveDailyMeal(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao salvar o checklist alimentar.');
+      return res.data;
+    }
+    const now = new Date().toISOString();
+    const consumed = input.status === 'consumed' || input.status === 'partial';
+    const totals = input.items.reduce((sum, item) => {
+      const ratio = consumed && item.plannedAmountG > 0 ? item.consumedAmountG / item.plannedAmountG : 0;
+      sum.calories += item.calories * ratio;
+      sum.proteinG += item.proteinG * ratio;
+      sum.carbsG += item.carbsG * ratio;
+      sum.fatsG += item.fatsG * ratio;
+      return sum;
+    }, { calories: 0, proteinG: 0, carbsG: 0, fatsG: 0 });
+    const entry: DailyMealEntry = {
+      ...input,
+      id: `daily-meal-${input.date}-${input.slotId}`,
+      ...totals,
+      completedAt: consumed ? now : undefined,
+      updatedAt: now
+    };
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const index = entries.findIndex(existing => existing.date === input.date && existing.slotId === input.slotId);
+    if (index >= 0) entries[index] = entry;
+    else entries.push(entry);
+    localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(entries));
+    return entry;
   },
 
   addHydrationLog: async (input: HydrationLogInput): Promise<DashboardSummary> => {

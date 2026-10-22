@@ -92,6 +92,16 @@ npm test
 npm run build
 ```
 
+### Versão instalável para celular (PWA)
+
+O renderer pode ser servido como uma PWA instalável em Android e em navegadores iOS compatíveis. Gere os arquivos estáticos com `npm run build:renderer` e publique a pasta `dist/` em uma hospedagem HTTPS. No celular, abra o endereço publicado e use **Instalar aplicativo** ou **Adicionar à Tela de Início**. O service worker armazena a interface e os recursos já carregados para permitir reabertura offline.
+
+O modo navegador ainda salva os dados de perfil e registros no armazenamento local daquele aparelho; as fotos do shape ficam no IndexedDB do navegador. O desktop continua usando seu SQLite em `userData`. **Esses armazenamentos ainda não sincronizam entre si.** Não migre os dados existentes esperando compartilhamento até que uma conta/backend esteja configurado e a sincronização seja validada.
+
+### Checklist alimentar e preservação local
+
+No plano diário, marque os ingredientes efetivamente consumidos ou informe a quantidade real. O checklist grava por data e horário, atualiza calorias e macronutrientes sem contar refeições apenas planejadas e permite desfazer, adiar ou pular. No desktop, a próxima migração cria `fittrack.db.pre-v7.bak` ao lado do banco existente antes de aplicar a tabela do checklist. Na PWA, esses registros ficam no armazenamento local do navegador até uma sincronização autenticada ser configurada.
+
 ---
 
 ## 📊 Regras e Fórmulas Implementadas

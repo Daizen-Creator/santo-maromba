@@ -20,6 +20,8 @@ import {
   ExerciseMediaInput,
   ExerciseMediaRecord,
   LoggedMealInput,
+  DailyMealEntry,
+  DailyMealEntryInput,
   HydrationLogInput,
   AppUpdateStatus,
   CustomizationMediaInput,
@@ -75,6 +77,8 @@ export interface FitTrackAPI {
   calculateTargets: () => Promise<{ success: boolean; data?: NutritionTargets | null; error?: string }>;
   getDashboardSummary: () => Promise<{ success: boolean; data?: DashboardSummary; error?: string }>;
   addLoggedMeal: (input: LoggedMealInput) => Promise<{ success: boolean; data?: DashboardSummary; error?: string }>;
+  getDailyMeals: (date: string) => Promise<{ success: boolean; data?: DailyMealEntry[]; error?: string }>;
+  saveDailyMeal: (input: DailyMealEntryInput) => Promise<{ success: boolean; data?: DailyMealEntry; error?: string }>;
   addHydrationLog: (input: HydrationLogInput) => Promise<{ success: boolean; data?: DashboardSummary; error?: string }>;
   getAppVersion: () => Promise<{ success: boolean; data?: string }>;
   onUpdateStatus: (listener: (status: AppUpdateStatus) => void) => () => void;
@@ -132,6 +136,8 @@ const api: FitTrackAPI = {
   calculateTargets: () => ipcRenderer.invoke(IPC_CHANNELS.CALCULATE_TARGETS),
   getDashboardSummary: () => ipcRenderer.invoke(IPC_CHANNELS.GET_DASHBOARD_SUMMARY),
   addLoggedMeal: (input) => ipcRenderer.invoke(IPC_CHANNELS.ADD_LOGGED_MEAL, input),
+  getDailyMeals: (date) => ipcRenderer.invoke(IPC_CHANNELS.GET_DAILY_MEALS, date),
+  saveDailyMeal: (input) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_DAILY_MEAL, input),
   addHydrationLog: (input) => ipcRenderer.invoke(IPC_CHANNELS.ADD_HYDRATION_LOG, input),
   getAppVersion: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_VERSION),
   onUpdateStatus: (listener) => {

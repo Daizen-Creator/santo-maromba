@@ -61,4 +61,60 @@ describe('Registros reais do painel diário', () => {
     expect(restored.waterLoggedMl).toBe(850);
     expect(restored.completedMeals).toBe(2);
   });
+
+  it('salva o checklist por horário sem duplicar, contabiliza consumo parcial e conserva o estado ao reabrir', async () => {
+    const date = localDate();
+    const entry = {
+      date,
+      slotId: 'lunch',
+      mealName: 'Almoço',
+      scheduledTime: '13:00',
+      recipeId: 'recipe-test',
+      status: 'partial' as const,
+      items: [{
+        itemId: 'rice-0', foodId: 'rice', foodName: 'Arroz', plannedAmountG: 100, consumedAmountG: 50,
+        calories: 130, proteinG: 2.5, carbsG: 28, fatsG: 0.3
+      }]
+    };
+
+    const firstSave = service.saveDailyMeal(entry);
+    expect(firstSave.calories).toBe(65);
+    expect(firstSave.proteinG).toBe(1.25);
+    expect(service.getDashboardSummary().caloriesLogged).toBe(65);
+    expect(service.getDashboardSummary().completedMeals).toBe(1);
+
+    const revised = service.saveDailyMeal({ ...entry, status: 'consumed', items: [{ ...entry.items[0], consumedAmountG: 120 }] });
+    expect(revised.id).toBe(firstSave.id);
+    expect(service.getDailyMeals(date)).toHaveLength(1);
+    expect(service.getDashboardSummary().caloriesLogged).toBe(156);
+
+    db!.close();
+    db = null;
+    const reopened = await createDatabaseDriver(dbPath);
+    db = reopened;
+    await runMigrations(reopened);
+    service = new FitTrackService(reopened);
+
+    expect(service.getDailyMeals(date)[0].status).toBe('consumed');
+    expect(service.getDailyMeals(date)[0].items[0].consumedAmountG).toBe(120);
+    expect(service.getDashboardSummary().caloriesLogged).toBe(156);
+
+    service.saveDailyMeal({ ...entry, status: 'skipped', items: [{ ...entry.items[0], consumedAmountG: 0 }] });
+    expect(service.getDashboardSummary().caloriesLogged).toBeNull();
+    expect(service.getDashboardSummary().completedMeals).toBeNull();
+
+    const duplicateIngredientEntry = service.saveDailyMeal({
+      ...entry,
+      slotId: 'breakfast',
+      mealName: 'Café da manhã',
+      scheduledTime: '07:30',
+      status: 'partial',
+      items: [
+        { ...entry.items[0], itemId: 'rice-0', consumedAmountG: 50 },
+        { ...entry.items[0], itemId: 'rice-1', plannedAmountG: 50, consumedAmountG: 50 }
+      ]
+    });
+    expect(duplicateIngredientEntry.items).toHaveLength(2);
+    expect(duplicateIngredientEntry.calories).toBe(195);
+  });
 });

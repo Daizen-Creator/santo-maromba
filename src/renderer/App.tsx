@@ -29,6 +29,8 @@ import {
   WorkoutSession,
   ExerciseMediaInput,
   LoggedMealInput,
+  DailyMealEntry,
+  DailyMealEntryInput,
   VisualCustomization,
   CustomizationMediaInput,
   CustomizationMediaRecord
@@ -36,8 +38,10 @@ import {
 import { DailyWorkoutPlan, getNextScheduledWorkout } from '../domain/workout-engine';
 import { applyVisualTheme, DEFAULT_VISUAL_CUSTOMIZATION } from '../domain/visual-customization';
 import { Loader2 } from 'lucide-react';
+import { MobileNavigation } from './components/MobileNavigation';
 
 export const App: React.FC = () => {
+  const isDesktopApp = api.isElectron();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [shapeInitialTab, setShapeInitialTab] = useState<'calendar' | 'compare'>('calendar');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
@@ -47,6 +51,7 @@ export const App: React.FC = () => {
   const [weights, setWeights] = useState<WeightRecord[]>([]);
   const [analytics, setAnalytics] = useState<WeightAnalyticsPoint[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [dailyMealEntries, setDailyMealEntries] = useState<DailyMealEntry[]>([]);
 
   // Estados dos novos módulos
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
@@ -62,6 +67,11 @@ export const App: React.FC = () => {
   const [customizationMedia, setCustomizationMedia] = useState<CustomizationMediaRecord[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
+
+  const getTodayDate = () => {
+    const now = new Date();
+    return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+  };
 
   // Modais
   const [isWeightModalOpen, setIsWeightModalOpen] = useState<boolean>(false);
@@ -83,7 +93,8 @@ export const App: React.FC = () => {
         pantryData,
         exerciseData,
         sessionData,
-        splitData
+        splitData,
+        dailyMealData
       ] = await Promise.all([
         api.getProfile(),
         api.getWeightHistory(),
@@ -96,7 +107,8 @@ export const App: React.FC = () => {
         api.getPantry(),
         api.getExercises(),
         api.getWorkoutSessions(),
-        api.generateWorkoutSplit()
+        api.generateWorkoutSplit(),
+        api.getDailyMeals(getTodayDate())
       ]);
 
       setProfile(profData);
@@ -112,6 +124,7 @@ export const App: React.FC = () => {
       setExercises(exerciseData);
       setSessions(sessionData);
       setWorkoutSplit(splitData);
+      setDailyMealEntries(dailyMealData);
 
       if (profData && !profData.initialHistoryConfirmed) {
         setIsHistoryModalOpen(true);
@@ -226,6 +239,16 @@ export const App: React.FC = () => {
     setSummary(await api.addLoggedMeal(input));
   };
 
+  const handleSaveDailyMeal = async (input: DailyMealEntryInput) => {
+    await api.saveDailyMeal(input);
+    const [entries, updatedSummary] = await Promise.all([
+      api.getDailyMeals(input.date),
+      api.getDashboardSummary()
+    ]);
+    setDailyMealEntries(entries);
+    setSummary(updatedSummary);
+  };
+
   const handleAddWater = async (amountMl: number) => {
     const now = new Date();
     const date = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
@@ -337,9 +360,9 @@ export const App: React.FC = () => {
 
   if (loading && !profile) {
     return (
-      <div className="relative isolate flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground" style={applicationStyle}>
+      <div className="app-shell relative isolate flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground" style={applicationStyle}>
       {backgroundMedia?.mimeType === 'video/mp4' && <video src={backgroundMedia.mediaUrl} autoPlay muted loop playsInline className="pointer-events-none absolute inset-0 -z-10 h-full w-full" style={{ objectFit: visualCustomization.background.fit, opacity: visualCustomization.background.opacity }} />}
-        <WindowTitleBar />
+        {isDesktopApp && <WindowTitleBar />}
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -353,12 +376,12 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="relative isolate flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground" style={applicationStyle}>
+    <div className="app-shell relative isolate flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground" style={applicationStyle}>
       {backgroundMedia?.mimeType === 'video/mp4' && <video src={backgroundMedia.mediaUrl} autoPlay muted loop playsInline className="pointer-events-none absolute inset-0 -z-10 h-full w-full" style={{ objectFit: visualCustomization.background.fit, opacity: visualCustomization.background.opacity }} />}
-      <WindowTitleBar />
+      {isDesktopApp && <WindowTitleBar />}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Sidebar Navigation */}
-        <Sidebar
+        {isDesktopApp && <Sidebar
           currentTab={currentTab}
           onSelectTab={tab => {
             if (tab === 'shape') setShapeInitialTab('calendar');
@@ -367,10 +390,15 @@ export const App: React.FC = () => {
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
           profileName={profile?.name || 'Atleta'}
-        />
+        />}
 
         {/* Main Content Area */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {!isDesktopApp && (
+            <div className="border-b border-border/70 bg-card/60 px-4 py-2 text-center text-[11px] text-muted-foreground">
+              Seus dados estão salvos neste aparelho. A sincronização entre dispositivos ainda não foi configurada.
+            </div>
+          )}
           <Header
             title={title}
             subtitle={subtitle}
@@ -380,7 +408,7 @@ export const App: React.FC = () => {
             currentWeightKg={summary?.currentWeightKg}
           />
 
-          <main key={currentTab} className="view-enter flex-1 overflow-y-auto">
+          <main key={currentTab} className={`view-enter min-h-0 flex-1 overflow-y-auto ${isDesktopApp ? '' : 'mobile-main'}`}>
           {currentTab === 'dashboard' && (
             <DashboardView
               summary={summary}
@@ -415,13 +443,16 @@ export const App: React.FC = () => {
           {currentTab === 'nutrition' && (
             <NutritionView
               targets={summary?.nutritionTargets || null}
+              summary={summary}
               mealsPerDay={mealCount}
               foods={foods}
               recipes={recipes}
+              dailyMealEntries={dailyMealEntries}
               pantry={pantry}
               onGetSubstitutions={api.getSubstitutions}
               onUpdatePantry={handleUpdatePantry}
               onFindRecipesFromPantry={api.findRecipesFromPantry}
+              onSaveDailyMeal={handleSaveDailyMeal}
             />
           )}
 
@@ -487,6 +518,16 @@ export const App: React.FC = () => {
           </main>
         </div>
       </div>
+
+      {!isDesktopApp && (
+        <MobileNavigation
+          currentTab={currentTab}
+          onSelectTab={tab => {
+            if (tab === 'shape') setShapeInitialTab('calendar');
+            setCurrentTab(tab);
+          }}
+        />
+      )}
 
       {/* Weight Modal */}
       <WeightModal

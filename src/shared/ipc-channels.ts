@@ -15,6 +15,8 @@ export const IPC_CHANNELS = {
   CALCULATE_TARGETS: 'nutrition:calculate-targets',
   GET_DASHBOARD_SUMMARY: 'dashboard:get-summary',
   ADD_LOGGED_MEAL: 'nutrition:add-logged-meal',
+  GET_DAILY_MEALS: 'nutrition:get-daily-meals',
+  SAVE_DAILY_MEAL: 'nutrition:save-daily-meal',
   ADD_HYDRATION_LOG: 'hydration:add-log',
 
   // Photos & Physique

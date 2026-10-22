@@ -128,6 +128,41 @@ export interface HydrationLogInput {
   amountMl: number;
 }
 
+export type DailyMealStatus = 'pending' | 'preparing' | 'consumed' | 'partial' | 'deferred' | 'skipped' | 'cancelled';
+
+export interface DailyMealItemLog {
+  itemId: string;
+  foodId: string;
+  foodName: string;
+  plannedAmountG: number;
+  consumedAmountG: number;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatsG: number;
+}
+
+export interface DailyMealEntryInput {
+  date: string;
+  slotId: string;
+  mealName: string;
+  scheduledTime: string;
+  recipeId?: string;
+  status: DailyMealStatus;
+  items: DailyMealItemLog[];
+  note?: string;
+}
+
+export interface DailyMealEntry extends DailyMealEntryInput {
+  id: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatsG: number;
+  completedAt?: string;
+  updatedAt: string;
+}
+
 export interface DailyIntakeProgress {
   date: string;
   calories: number | null;
