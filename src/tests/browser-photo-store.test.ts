@@ -22,7 +22,7 @@ describe('BrowserPhotoStore — persistência local do PWA', () => {
     const databaseName = 'photos-reopen';
     const firstStore = new BrowserPhotoStore(databaseName, indexedDb);
     stores.push(firstStore);
-    const saved = await firstStore.add(photoInput);
+    const saved = await firstStore.add(photoInput, 82.4);
 
     firstStore.close();
     const reopenedStore = new BrowserPhotoStore(databaseName, indexedDb);
@@ -33,6 +33,7 @@ describe('BrowserPhotoStore — persistência local do PWA', () => {
     expect(reopened[0]).toMatchObject({
       id: saved.id,
       date: photoInput.date,
+      weightKgAtPhoto: 82.4,
       pose: photoInput.pose,
       notes: photoInput.notes
     });

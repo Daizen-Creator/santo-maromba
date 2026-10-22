@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.16. Estado após validação do incremento: **73 validadas, 50 parciais, 54 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.17. Estado após validação do incremento: **74 validadas, 49 parciais, 54 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -161,7 +161,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 105 | Navegar calendário mensal e ver dias com fotos. | SHAP | — | V · calendário mensal implementado; sem teste de UI dedicado |
 | 106 | Comparar duas fotos lado a lado ou sobrepostas. | SHAP | — | V · comparador implementado; persistência de fotos testada |
 | 107 | Mostrar instruções de iluminação/enquadramento. | SHAP | — | V · instruções na tela |
-| 108 | Mostrar peso corporal associado à data da foto. | SHAP | — | P · associação por data, sem snapshot imutável do peso |
+| 108 | Mostrar peso corporal associado à data da foto. | SHAP | — | V · peso de pesagem real no mesmo dia é salvo como snapshot imutável na foto; sem pesagem, permanece vazio; `photo-persistence.test.ts`, `photo-weight-snapshot-migration.test.ts`, `browser-photo-store.test.ts` |
 | 109 | Registrar medida da cintura com data. | SHAP | — | V · persistência de medidas |
 | 110 | Criar medidas corporais personalizadas. | SHAP | — | A · conjunto de campos fixos |
 | 111 | Comparar evolução de medidas em gráfico. | SHAP | — | V · gráfico filtrável usa somente valores de medições salvas; `measurement-trend.test.ts` |

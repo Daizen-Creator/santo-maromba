@@ -66,12 +66,13 @@ export class BrowserPhotoStore {
       .map(({ record, blob }) => ({ ...record, filePath: this.photoUrl(record.id, blob) }));
   }
 
-  async add(input: PhotoCreateInput): Promise<PhotoRecord> {
+  async add(input: PhotoCreateInput, weightKgAtPhoto?: number): Promise<PhotoRecord> {
     PhotoInputSchema.parse(input);
     const now = new Date().toISOString();
     const record: Omit<PhotoRecord, 'filePath'> = {
       id: crypto.randomUUID(),
       date: input.date,
+      weightKgAtPhoto,
       pose: input.pose,
       customPoseName: input.customPoseName?.trim() || undefined,
       lightingNotes: input.lightingNotes?.trim() || undefined,

@@ -156,6 +156,9 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
   const measB = useMemo(() => measurements.find(m => m.date === photoB?.date), [measurements, photoB]);
   const weightA = useMemo(() => weights.find(w => w.date === photoA?.date), [weights, photoA]);
   const weightB = useMemo(() => weights.find(w => w.date === photoB?.date), [weights, photoB]);
+  const photoWeightA = photoA?.weightKgAtPhoto ?? weightA?.weightKg;
+  const photoWeightB = photoB?.weightKgAtPhoto ?? weightB?.weightKg;
+  const photoDateWeight = useMemo(() => weights.filter(weight => weight.date === photoDate).slice(-1)[0], [photoDate, weights]);
   const viewedPhoto = photos.find(photo => photo.id === viewedPhotoId);
 
   useEffect(() => {
@@ -609,7 +612,7 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
                 {/* Lado A */}
                 <div className="space-y-2 text-center">
                   <span className="text-xs font-bold text-primary block">
-                    Antes: {photoA?.date || '—'} {weightA ? `(${weightA.weightKg} kg)` : ''}
+                    Antes: {photoA?.date || '—'} {photoWeightA !== undefined ? `(${photoWeightA.toFixed(1)} kg)` : ''}
                   </span>
                   <div className="rounded-xl overflow-hidden border border-border/70 max-h-[480px] flex items-center justify-center bg-black">
                     {photoA ? (
@@ -623,7 +626,7 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
                 {/* Lado B */}
                 <div className="space-y-2 text-center">
                   <span className="text-xs font-bold text-emerald-400 block">
-                    Depois: {photoB?.date || '—'} {weightB ? `(${weightB.weightKg} kg)` : ''}
+                    Depois: {photoB?.date || '—'} {photoWeightB !== undefined ? `(${photoWeightB.toFixed(1)} kg)` : ''}
                   </span>
                   <div className="rounded-xl overflow-hidden border border-border/70 max-h-[480px] flex items-center justify-center bg-black">
                     {photoB ? (
@@ -667,8 +670,8 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
               <div className="rounded-xl border border-border bg-card p-3">
                 <span className="text-muted-foreground block text-[11px]">Variação de Peso</span>
                 <span className="font-display text-lg font-bold text-foreground">
-                  {weightA && weightB
-                    ? `${(weightB.weightKg - weightA.weightKg > 0 ? '+' : '')}${(weightB.weightKg - weightA.weightKg).toFixed(1)} kg`
+                  {photoWeightA !== undefined && photoWeightB !== undefined
+                    ? `${(photoWeightB - photoWeightA > 0 ? '+' : '')}${(photoWeightB - photoWeightA).toFixed(1)} kg`
                     : 'N/A'}
                 </span>
               </div>
@@ -868,6 +871,11 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
                   className="w-full rounded-xl border border-border bg-secondary/50 p-2 text-foreground focus:border-primary focus:outline-none"
                   required
                 />
+                <p className="text-[10px] text-muted-foreground">
+                  {photoDateWeight
+                    ? `Peso registrado nesta data: ${photoDateWeight.weightKg.toFixed(1)} kg. Ele será salvo junto à foto.`
+                    : 'Não há pesagem registrada nesta data; a foto será salva sem peso associado.'}
+                </p>
               </div>
 
               <div className="space-y-1">

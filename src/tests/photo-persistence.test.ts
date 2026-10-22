@@ -40,6 +40,7 @@ describe('Persistência local de fotos do shape', () => {
   });
 
   it('mantém arquivo e metadados disponíveis após fechar e reabrir o SQLite', async () => {
+    const weight = service.addWeightRecord({ date: '2026-10-19', weightKg: 82.4, source: 'self_reported' });
     const added = service.addPhoto({
       date: '2026-10-19',
       pose: 'front_relaxed',
@@ -56,7 +57,10 @@ describe('Persistência local de fotos do shape', () => {
 
     const saved = service.getPhotosByDate('2026-10-19');
     expect(saved).toHaveLength(1);
-    expect(saved[0].id).toBe(added.id);
+    expect(saved[0]).toMatchObject({ id: added.id, weightKgAtPhoto: 82.4 });
+    service.updateWeightRecord(weight.id, { weightKg: 79.6 });
+    expect(service.getPhotosByDate('2026-10-19')[0].weightKgAtPhoto).toBe(82.4);
+    expect(service.getWeightHistory().find(record => record.date === '2026-10-19')?.weightKg).toBe(79.6);
     expect(Buffer.from(service.getPhotoImage(added.id).bytes)).toEqual(Buffer.from(TEST_PNG));
   });
 

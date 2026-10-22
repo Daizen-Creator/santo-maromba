@@ -4,6 +4,7 @@ import { PhotoPose, PhotoRecord } from '../../shared/types';
 export interface StoredPhotoInput {
   id: string;
   date: string;
+  weightKgAtPhoto?: number;
   pose: PhotoPose;
   customPoseName?: string;
   filePath: string;
@@ -41,12 +42,13 @@ export class PhotoRepository {
     const now = new Date().toISOString();
     this.db.execute(
       `INSERT INTO photos (
-        id, profile_id, date, pose, custom_pose_name, file_path, lighting_notes, notes, is_primary, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, profile_id, date, weight_kg_at_photo, pose, custom_pose_name, file_path, lighting_notes, notes, is_primary, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         photo.id,
         profileId,
         photo.date,
+        photo.weightKgAtPhoto ?? null,
         photo.pose,
         photo.customPoseName || null,
         photo.filePath,
@@ -61,6 +63,7 @@ export class PhotoRepository {
       id: photo.id,
       profileId,
       date: photo.date,
+      weightKgAtPhoto: photo.weightKgAtPhoto,
       pose: photo.pose,
       customPoseName: photo.customPoseName,
       filePath: photo.filePath,
@@ -102,6 +105,7 @@ export class PhotoRepository {
       id: row.id,
       profileId: row.profile_id,
       date: row.date,
+      weightKgAtPhoto: row.weight_kg_at_photo === null || row.weight_kg_at_photo === undefined ? undefined : Number(row.weight_kg_at_photo),
       pose: row.pose,
       customPoseName: row.custom_pose_name || undefined,
       filePath: row.file_path,

@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS photos (
   id TEXT PRIMARY KEY,
   profile_id TEXT NOT NULL,
   date TEXT NOT NULL, -- YYYY-MM-DD
+  weight_kg_at_photo REAL CHECK(weight_kg_at_photo IS NULL OR weight_kg_at_photo > 0),
   pose TEXT NOT NULL CHECK(pose IN ('front_relaxed', 'front_flexed', 'back', 'side_left', 'side_right', 'custom')),
   custom_pose_name TEXT,
   file_path TEXT NOT NULL,

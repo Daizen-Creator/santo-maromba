@@ -32,6 +32,10 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!measurementColumns.some(column => column.name === 'shoulder_circ_cm')) {
     db.exec('ALTER TABLE body_measurements ADD COLUMN shoulder_circ_cm REAL');
   }
+  const photoColumns = db.query<{ name: string }>('PRAGMA table_info(photos)');
+  if (!photoColumns.some(column => column.name === 'weight_kg_at_photo')) {
+    db.exec('ALTER TABLE photos ADD COLUMN weight_kg_at_photo REAL CHECK(weight_kg_at_photo IS NULL OR weight_kg_at_photo > 0)');
+  }
   const workoutSetColumns = db.query<{ name: string }>('PRAGMA table_info(workout_sets)');
   if (!workoutSetColumns.some(column => column.name === 'rpe')) {
     db.exec('ALTER TABLE workout_sets ADD COLUMN rpe REAL CHECK(rpe BETWEEN 1 AND 10)');
@@ -207,6 +211,14 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [14, 'Agenda de treino, descanso e deload do usuário', new Date().toISOString()]
+    );
+  }
+
+  const version15 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 15');
+  if (!version15) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [15, 'Snapshot do peso registrado na data da foto', new Date().toISOString()]
     );
   }
 }

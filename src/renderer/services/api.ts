@@ -212,7 +212,8 @@ export const api = {
       if (!res.success) throw new Error(res.error || 'Erro ao anexar foto.');
       return res.data!;
     }
-    return browserPhotoStore.add(data);
+    const weightKgAtPhoto = (await api.getWeightHistory()).filter(record => record.date === data.date).slice(-1)[0]?.weightKg;
+    return browserPhotoStore.add(data, weightKgAtPhoto);
   },
 
   updatePhotoNotes: async (id: string, notes: string): Promise<PhotoRecord> => {

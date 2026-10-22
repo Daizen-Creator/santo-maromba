@@ -153,9 +153,11 @@ export class FitTrackService {
     const id = `photo-${randomUUID()}`;
     const filePath = this.photoStorage.save(id, input.imageBytes, input.mimeType);
     try {
+      const weightKgAtPhoto = this.weightRepo.getAll().filter(record => record.date === input.date).slice(-1)[0]?.weightKg;
       const record = this.photoRepo.addPhoto({
         id,
         date: input.date,
+        weightKgAtPhoto,
         pose: input.pose,
         customPoseName: input.customPoseName,
         filePath,

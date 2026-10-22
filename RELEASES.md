@@ -132,13 +132,19 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Adiciona agenda persistente para treino, descanso e deload por data.
 - Uma sessão só aparece como perdida quando o dia de treino passou e não há sessão registrada; uma sessão parcial permanece identificada como parcial.
-- Validada com 126 testes, build Windows e abertura/migração em perfil isolado; publicação no GitHub está pendente.
+- Validada com 126 testes, build Windows e abertura/migração em perfil isolado; GitHub Actions 39739136757 publicou instalador, portátil, manifesto e blockmap.
 
 ## v1.1.16
 
 - Exibe gráfico histórico de medidas com filtro para cintura, braços, peitoral, ombros, pernas, peso e percentual de gordura.
 - A linha apresenta apenas medições registradas, sem estimar datas ou valores ausentes.
-- Validada pelo teste da série temporal e build React/Electron; empacotamento e publicação estão em andamento.
+- Validada com 128 testes, build Windows e abertura do app com SQLite isolado; GitHub Actions 39739654991 publicou instalador, portátil, manifesto e blockmap.
+
+## v1.1.17
+
+- Guarda na foto o peso realmente registrado na mesma data, preservando o valor histórico mesmo se a pesagem for editada depois.
+- Fotos sem pesagem na data continuam sem peso associado; o banco antigo recebe a nova coluna sem perder imagens ou metadados.
+- Persistência SQLite, migração de fotos antigas, reabertura offline e build React/Electron aprovadas; empacotamento e publicação estão em andamento.
 
 ## Publicar uma versão
 

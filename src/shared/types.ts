@@ -288,6 +288,7 @@ export interface PhotoRecord {
   id: string;
   profileId?: string;
   date: string; // YYYY-MM-DD
+  weightKgAtPhoto?: number;
   pose: PhotoPose;
   customPoseName?: string;
   filePath: string; // URL local restrita do protocolo fittrack-photo
