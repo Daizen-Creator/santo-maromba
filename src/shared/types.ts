@@ -557,6 +557,7 @@ export interface WorkoutSet {
   setNumber: number;
   weightKg: number;
   reps: number;
+  completed: boolean;
   rpe?: number; // Percepção de esforço 1 a 10
   isPr?: boolean;
   notes?: string;

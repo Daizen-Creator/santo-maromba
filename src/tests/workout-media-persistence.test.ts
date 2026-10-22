@@ -83,4 +83,29 @@ describe('Mídia local e progressão de cargas', () => {
     expect(volumePr.sets[0].isPr).toBe(true);
     expect(service.getWorkoutSessions()[0].sets[0].rpe).toBe(9);
   });
+
+  it('persiste sessões parciais e conclusão de cada série sem contar uma sessão parcial como PR', async () => {
+    const exerciseId = INITIAL_EXERCISES[0].id;
+    const partial = service.logWorkoutSession({
+      date: '2026-10-21', splitName: 'Teste parcial', completed: false,
+      durationMinutes: 18, perceivedExertion: 7,
+      sets: [
+        { exerciseId, setNumber: 1, weightKg: 28, reps: 8, completed: true },
+        { exerciseId, setNumber: 2, weightKg: 30, reps: 8, completed: false }
+      ]
+    });
+
+    expect(partial.completed).toBe(false);
+    expect(partial.sets.map(set => set.completed)).toEqual([true, false]);
+    expect(partial.sets.map(set => Boolean(set.isPr))).toEqual([true, false]);
+
+    db!.close();
+    db = await createDatabaseDriver(databasePath);
+    await runMigrations(db);
+    service = new FitTrackService(db, path.join(tempDirectory, 'photos'), mediaDirectory);
+    const reopened = service.getWorkoutSessions().find(session => session.id === partial.id)!;
+    expect(reopened.completed).toBe(false);
+    expect(reopened.sets.map(set => set.completed)).toEqual([true, false]);
+    expect(reopened.sets.map(set => Boolean(set.isPr))).toEqual([true, false]);
+  });
 });

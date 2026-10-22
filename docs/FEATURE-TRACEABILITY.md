@@ -16,7 +16,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | PERF | `src/renderer/views/ProfileView.tsx`; `src/database/repositories/profile-repository.ts`; `src/database/schema.sql`; `src/domain/nutrition-calculator.ts` | `src/tests/nutrition-calculator.test.ts`; `src/tests/weight-analytics.test.ts`; `src/tests/validation.test.ts` |
 | DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/meal-schedule.test.ts` |
 | NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-catalog.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
-| TREI | `src/renderer/views/WorkoutView.tsx`; `src/domain/workout-engine.ts`; `src/database/repositories/workout-repository.ts`; `src/database/repositories/exercise-media-repository.ts`; `src/database/schema.sql` | `src/tests/workout-engine.test.ts`; `src/tests/workout-media-persistence.test.ts` |
+| TREI | `src/renderer/views/WorkoutView.tsx`; `src/domain/workout-engine.ts`; `src/database/repositories/workout-repository.ts`; `src/database/repositories/exercise-media-repository.ts`; `src/database/schema.sql`; `src/database/migrations.ts` | `src/tests/workout-engine.test.ts`; `src/tests/workout-media-persistence.test.ts`; `src/tests/workout-migration.test.ts` |
 | SHAP | `src/renderer/views/ShapeCalendarView.tsx`; `src/renderer/views/ProjectionView.tsx`; `src/database/repositories/photo-repository.ts`; `src/database/repositories/measurement-repository.ts`; `src/services/photo-storage.ts`; `src/database/schema.sql` | `src/tests/photo-persistence.test.ts`; `src/tests/physique-projection.test.ts`; `src/tests/physique-projection-persistence.test.ts` |
 | DESP | `src/renderer/views/NutritionView.tsx`; `src/domain/substitution-engine.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/schema.sql` | `src/tests/substitution-engine.test.ts`; `src/tests/catalog-persistence.test.ts` |
 | DASH | `src/renderer/views/DashboardView.tsx`; `src/renderer/App.tsx`; repositories de nutrição, treino, peso e evolução | cobertura indireta pelas suítes de domínio; não há teste de dashboard ponta a ponta |
@@ -139,8 +139,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 88 | Iniciar cronômetro de descanso pelo intervalo do exercício. | TREI | — | P · intervalo está no plano; timer não localizado |
 | 89 | Registrar RPE ou RIR por série. | TREI | — | P · RPE existe; RIR não |
 | 90 | Salvar e reabrir observação do exercício/sessão. | TREI | — | P · campo parcial, fluxo de notas não cobre tudo |
-| 91 | Marcar cada série como concluída. | TREI | — | A · sem estado de conclusão por série |
-| 92 | Salvar sessão parcial sem declará-la completa. | TREI | — | P · registro aceita séries; UI sempre envia `completed: true` |
+| 91 | Marcar cada série como concluída. | TREI | — | V · checkbox salva o estado por série; migração v9 mantém séries antigas como concluídas; teste de reabertura |
+| 92 | Salvar sessão parcial sem declará-la completa. | TREI | — | V · ação dedicada persiste a sessão com status parcial, mantém séries concluídas e não marca PR para série não feita; teste de reabertura |
 | 93 | Comparar execução atual com sessão anterior. | TREI | — | A · histórico/PR existe, comparação dedicada não |
 | 94 | Detectar recorde pessoal automaticamente. | TREI | — | V · PRs no histórico/repositório |
 | 95 | Somar volume de treino por exercício/sessão. | TREI | — | V · volume calculado no motor/repositório |
@@ -295,14 +295,16 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- `npm test`: 67/67 testes aprovados localmente; inclui snapshots v7→v8, metadados de qualidade, fibra `NULL`, alimentos pessoais, favoritos e busca nutricional.
-- `npm run build`: build de renderer e Electron aprovado após a biblioteca pessoal e as ações de favoritos.
+- `npm test`: 70/70 testes aprovados localmente; inclui snapshots v7→v8, migração v9, alimentos pessoais, favoritos, busca nutricional e sessões parciais.
+- `npm run build`: build de renderer e Electron aprovado após a biblioteca nutricional e o registro de séries parciais.
 - Instalador NSIS e portable 1.0.4: publicados; smoke test do portable criou `fittrack.db` num perfil temporário isolado.
 - Portable 1.0.5: empacotado e smoke test de 12 segundos criou `fittrack.db` num perfil isolado.
+- Portable 1.0.6: abriu por 12 segundos e criou `fittrack.db` num perfil isolado.
 - GitHub Actions e release 1.0.4: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39721903982).
 - Release 1.0.4: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.4.
 - GitHub Actions e release 1.0.5: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39723144455).
 - Release 1.0.5: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.5.
+- Incremento 1.0.6: 70 testes, build e smoke test local aprovados; publicação ainda pendente.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
@@ -310,6 +312,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - IDs **31, 46, 47, 58 e 157** receberam tratamento de transparência/proveniência, ainda **parcial**: qualidade, origem declarada, referência, data e confiança têm campos persistentes; a interface marca valores estimados/não verificados.
 - IDs **CAT-02, CAT-04, CAT-12 e CAT-13** avançaram parcialmente. Os seeds ainda não têm referências rastreáveis por item, densidade, micronutrientes ou 500 cadastros verificados, então esses critérios permanecem incompletos.
 - IDs **61, 65 e 67** estão concluídos e validados: busca de receitas/alimentos; cadastro e edição de alimento pessoal com rótulo de origem e persistência; favoritos e filtros de favoritos para receitas e alimentos no SQLite/PWA.
+- IDs **91 e 92** estão concluídos e validados: marcação persistente por série e salvamento de sessão parcial, sem tratá-la como treino concluído.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas

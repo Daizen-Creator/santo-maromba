@@ -36,6 +36,10 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!workoutSetColumns.some(column => column.name === 'rpe')) {
     db.exec('ALTER TABLE workout_sets ADD COLUMN rpe REAL CHECK(rpe BETWEEN 1 AND 10)');
   }
+  const currentWorkoutSetColumns = db.query<{ name: string }>('PRAGMA table_info(workout_sets)');
+  if (!currentWorkoutSetColumns.some(column => column.name === 'completed')) {
+    db.exec('ALTER TABLE workout_sets ADD COLUMN completed INTEGER NOT NULL DEFAULT 1');
+  }
   const foodColumns = db.query<{ name: string }>('PRAGMA table_info(foods)');
   if (!foodColumns.some(column => column.name === 'substitute_group_id')) {
     db.exec('ALTER TABLE foods ADD COLUMN substitute_group_id TEXT');
@@ -149,6 +153,14 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [8, 'Proveniência e qualidade dos dados nutricionais', new Date().toISOString()]
+    );
+  }
+
+  const version9 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 9');
+  if (!version9) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [9, 'Conclusão individual de séries e sessões parciais de treino', new Date().toISOString()]
     );
   }
 }

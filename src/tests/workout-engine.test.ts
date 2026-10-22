@@ -37,7 +37,7 @@ describe('Motor de Treino e Divisões Semanais', () => {
 
   it('deve sugerir progressão de carga quando a meta de repetições for superada com folga', () => {
     const sets = [
-      { id: '1', exerciseId: 'ex-supino-reto', exerciseName: 'Supino', setNumber: 1, weightKg: 60, reps: 10, rpe: 7 }
+      { id: '1', exerciseId: 'ex-supino-reto', exerciseName: 'Supino', setNumber: 1, weightKg: 60, reps: 10, completed: true, rpe: 7 }
     ];
 
     const suggestion = engine.suggestProgression('ex-supino-reto', sets, 10);

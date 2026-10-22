@@ -63,6 +63,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
     setNumber: number;
     weightKg: number;
     reps: number;
+    completed: boolean;
     rpe?: number;
   }>>([]);
 
@@ -81,8 +82,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   const historyByExercise = useMemo(() => {
     const history = new Map<string, WorkoutSet[]>();
     for (const session of [...sessions].sort((a, b) => a.date.localeCompare(b.date))) {
-      if (!session.completed) continue;
       for (const set of session.sets) {
+        if (!set.completed) continue;
         const exerciseSets = history.get(set.exerciseId) || [];
         exerciseSets.push(set);
         history.set(set.exerciseId, exerciseSets);
@@ -107,7 +108,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
         exerciseName,
         setNumber: nextSetNumber,
         weightKg: 0,
-        reps: 0
+        reps: 0,
+        completed: false
       }
     ]);
   };
@@ -134,7 +136,13 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
     setActiveSets(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleFinishWorkout = async () => {
+  const handleFinishWorkout = async (completed: boolean) => {
+    if (!activeSets.some(set => set.completed) || (completed && activeSets.some(set => !set.completed))) {
+      setSessionValidationError(completed
+        ? 'Marque todas as séries concluídas ou salve a sessão como parcial.'
+        : 'Marque ao menos uma série concluída para registrar uma sessão parcial.');
+      return;
+    }
     if (sessionDuration < 1 || sessionRpe < 1 || sessionRpe > 10 || activeSets.some(set => set.weightKg <= 0 || set.reps < 1 || (set.rpe !== undefined && (set.rpe < 1 || set.rpe > 10)))) {
       setSessionValidationError('Informe a duração, o esforço percebido e uma carga e repetições reais para cada série.');
       return;
@@ -146,14 +154,16 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
       await onLogSession({
         date: (() => { const now = new Date(); return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-'); })(),
         splitName: todayPlan ? todayPlan.splitTitle : 'Treino Concluído',
-        completed: true,
+        completed,
         durationMinutes: sessionDuration,
         perceivedExertion: sessionRpe,
-        sets: activeSets.map(({ exerciseId, setNumber, weightKg, reps, rpe }) => ({
-          exerciseId, setNumber, weightKg, reps, rpe
+        sets: activeSets.map(({ exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe }) => ({
+          exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe
         }))
       });
-      setSessionSuccessMsg('Treino registrado com sucesso no histórico!');
+      setSessionSuccessMsg(completed
+        ? 'Treino concluído e salvo no histórico!'
+        : 'Sessão parcial salva no histórico; ela não conta como treino concluído.');
       setActiveSets([]);
       setSessionDuration(0);
       setSessionRpe(0);
@@ -272,6 +282,11 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                       </div>
 
                       <div className="flex items-center gap-3 self-end sm:self-auto">
+                        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <input type="checkbox" checked={set.completed} aria-label={`Marcar série ${set.setNumber} de ${set.exerciseName} como concluída`}
+                            onChange={event => setActiveSets(prev => prev.map((current, idx) => idx === sIdx ? { ...current, completed: event.target.checked } : current))} />
+                          Feita
+                        </label>
                         <div className="flex items-center gap-1.5">
                           <input
                             type="number"
@@ -377,14 +392,16 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                     />
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleFinishWorkout}
-                    disabled={savingSession || activeSets.length === 0}
-                    className="w-full sm:w-auto rounded-2xl bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50"
-                  >
-                    {savingSession ? 'Salvando...' : 'Concluir Treino e Salvar'}
-                  </button>
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                    <button type="button" onClick={() => void handleFinishWorkout(false)} disabled={savingSession || activeSets.length === 0}
+                      className="w-full rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-50 sm:w-auto">
+                      {savingSession ? 'Salvando…' : 'Salvar como parcial'}
+                    </button>
+                    <button type="button" onClick={() => void handleFinishWorkout(true)} disabled={savingSession || activeSets.length === 0}
+                      className="w-full rounded-2xl bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary-hover active:scale-95 disabled:opacity-50 sm:w-auto">
+                      {savingSession ? 'Salvando…' : 'Concluir treino'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -624,7 +641,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
       {activeTab === 'history' && (
         <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-5">
           <h3 className="font-display text-base font-bold text-foreground border-b border-border pb-3">
-            Histórico de Sessões Concluídas
+            Histórico de Sessões de Treino
           </h3>
 
           <div className="space-y-4">
@@ -636,16 +653,16 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
               sessions.map(s => (
                 <div key={s.id} className="rounded-2xl border border-border bg-secondary/30 p-4 space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <strong className="text-foreground">{s.splitName}</strong>
+                    <strong className="text-foreground">{s.splitName} <span className={`ml-2 text-[10px] ${s.completed ? 'text-emerald-300' : 'text-amber-200'}`}>{s.completed ? 'Concluído' : 'Parcial'}</span></strong>
                     <span className="text-muted-foreground">{s.date} • {s.durationMinutes} min</span>
                   </div>
                   <div className="text-[11px] text-muted-foreground">
-                    {s.sets.length} séries registradas • RPE: {s.perceivedExertion}/10
+                    {s.sets.filter(set => set.completed).length}/{s.sets.length} séries concluídas • RPE: {s.perceivedExertion}/10
                   </div>
                   <div className="flex flex-wrap gap-2 pt-1">
                     {s.sets.map(set => (
                       <span key={set.id} className={`rounded-lg border px-2 py-1 text-[10px] ${set.isPr ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-border bg-card/60 text-muted-foreground'}`}>
-                        {set.exerciseName}: {set.weightKg} kg × {set.reps}{set.rpe ? ` · RPE ${set.rpe}` : ''}{set.isPr ? ' · PR' : ''}
+                        {set.exerciseName}: {set.weightKg} kg × {set.reps}{set.rpe ? ` · RPE ${set.rpe}` : ''}{!set.completed ? ' · não concluída' : ''}{set.isPr ? ' · PR' : ''}
                       </span>
                     ))}
                   </div>

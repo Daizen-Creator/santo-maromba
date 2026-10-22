@@ -239,6 +239,7 @@ CREATE TABLE IF NOT EXISTS workout_sets (
   set_number INTEGER NOT NULL,
   weight_kg REAL NOT NULL,
   reps INTEGER NOT NULL,
+  completed INTEGER NOT NULL DEFAULT 1,
   rpe REAL CHECK(rpe BETWEEN 1 AND 10),
   is_pr INTEGER NOT NULL DEFAULT 0,
   notes TEXT,

@@ -5,7 +5,8 @@ import {
   PhotoInputSchema,
   PhotoNotesUpdateSchema,
   ProfileInputSchema,
-  WeightRecordInputSchema
+  WeightRecordInputSchema,
+  WorkoutSessionInputSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
@@ -56,6 +57,18 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
         mealsPerDay: 8 // Fora da faixa de 3 a 6
       })
     ).toThrow();
+  });
+
+  it('mantém compatibilidade de séries antigas e valida o estado concluído', () => {
+    const parsed = WorkoutSessionInputSchema.parse({
+      date: '2026-10-21', splitName: 'Treino A', completed: true,
+      sets: [{ exerciseId: 'ex-supino', setNumber: 1, weightKg: 20, reps: 8 }]
+    });
+    expect(parsed.sets[0].completed).toBe(true);
+    expect(WorkoutSessionInputSchema.parse({
+      date: '2026-10-21', splitName: 'Treino parcial', completed: false,
+      sets: [{ exerciseId: 'ex-supino', setNumber: 1, weightKg: 20, reps: 8, completed: false }]
+    }).sets[0].completed).toBe(false);
   });
 
   it('deve validar registros de peso com formato correto', () => {

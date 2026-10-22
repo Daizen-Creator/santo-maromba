@@ -198,6 +198,7 @@ export const WorkoutSessionInputSchema = z.object({
     setNumber: z.number().int().min(1).max(100),
     weightKg: z.number().min(0.1).max(1000),
     reps: z.number().int().min(1).max(500),
+    completed: z.boolean().default(true),
     rpe: z.number().min(1).max(10).optional(),
     notes: z.string().trim().max(200).optional()
   }).strict()).min(1).max(100)

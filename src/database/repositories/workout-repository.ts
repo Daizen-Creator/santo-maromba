@@ -100,6 +100,7 @@ export class WorkoutRepository {
         setNumber: Number(set.set_number),
         weightKg: Number(set.weight_kg),
         reps: Number(set.reps),
+        completed: Boolean(set.completed),
         rpe: set.rpe === null || set.rpe === undefined ? undefined : Number(set.rpe),
         isPr: Boolean(set.is_pr),
         notes: set.notes || undefined
@@ -131,6 +132,7 @@ export class WorkoutRepository {
       setNumber: number;
       weightKg: number;
       reps: number;
+      completed?: boolean;
       rpe?: number;
       isPr?: boolean;
       notes?: string;
@@ -141,7 +143,7 @@ export class WorkoutRepository {
     const bestSets = this.db.query<any>(
       `SELECT ws.exercise_id, ws.weight_kg, ws.reps
        FROM workout_sets ws JOIN workout_sessions s ON s.id = ws.session_id
-       WHERE s.completed = 1 ORDER BY ws.weight_kg DESC, ws.reps DESC`
+       WHERE ws.completed = 1 ORDER BY ws.weight_kg DESC, ws.reps DESC`
     );
     const bestSetByExercise = new Map<string, { weightKg: number; reps: number }>();
     for (const row of bestSets) {
@@ -152,7 +154,7 @@ export class WorkoutRepository {
     const bestVolumes = this.db.query<any>(
       `SELECT ws.exercise_id, ws.session_id, SUM(ws.weight_kg * ws.reps) AS volume
        FROM workout_sets ws JOIN workout_sessions s ON s.id = ws.session_id
-       WHERE s.completed = 1 GROUP BY ws.exercise_id, ws.session_id`
+       WHERE ws.completed = 1 GROUP BY ws.exercise_id, ws.session_id`
     );
     const bestVolumeByExercise = new Map<string, number>();
     for (const row of bestVolumes) {
@@ -163,6 +165,7 @@ export class WorkoutRepository {
     }
     const currentVolumeByExercise = new Map<string, number>();
     for (const set of session.sets) {
+      if (set.completed === false) continue;
       currentVolumeByExercise.set(
         set.exerciseId,
         (currentVolumeByExercise.get(set.exerciseId) || 0) + set.weightKg * set.reps
@@ -194,16 +197,18 @@ export class WorkoutRepository {
       for (const set of session.sets) {
         const setId = `set-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
         const bestSet = bestSetByExercise.get(set.exerciseId);
-        const loadOrRepPr = !bestSet || set.weightKg > bestSet.weightKg
-          || (set.weightKg === bestSet.weightKg && set.reps > bestSet.reps);
-        const isVolumePr = !firstSetByExercise.has(set.exerciseId) && volumePrExerciseIds.has(set.exerciseId);
-        firstSetByExercise.add(set.exerciseId);
+        const eligibleForPr = set.completed !== false;
+        const loadOrRepPr = eligibleForPr && (!bestSet || set.weightKg > bestSet.weightKg
+          || (set.weightKg === bestSet.weightKg && set.reps > bestSet.reps));
+        const isFirstCompletedSet = eligibleForPr && !firstSetByExercise.has(set.exerciseId);
+        const isVolumePr = isFirstCompletedSet && volumePrExerciseIds.has(set.exerciseId);
+        if (eligibleForPr) firstSetByExercise.add(set.exerciseId);
         const isPr = loadOrRepPr || isVolumePr;
-        if (loadOrRepPr) bestSetByExercise.set(set.exerciseId, { weightKg: set.weightKg, reps: set.reps });
+        if (eligibleForPr && loadOrRepPr) bestSetByExercise.set(set.exerciseId, { weightKg: set.weightKg, reps: set.reps });
         this.db.execute(
           `INSERT INTO workout_sets (
-            id, session_id, exercise_id, set_number, weight_kg, reps, rpe, is_pr, notes, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, session_id, exercise_id, set_number, weight_kg, reps, completed, rpe, is_pr, notes, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             setId,
             sessionId,
@@ -211,6 +216,7 @@ export class WorkoutRepository {
             set.setNumber,
             set.weightKg,
             set.reps,
+            set.completed === false ? 0 : 1,
             set.rpe ?? null,
             isPr ? 1 : 0,
             set.notes || null,
@@ -241,6 +247,7 @@ export class WorkoutRepository {
       setNumber: Number(r.set_number),
       weightKg: Number(r.weight_kg),
       reps: Number(r.reps),
+      completed: Boolean(r.completed),
       rpe: r.rpe === null || r.rpe === undefined ? undefined : Number(r.rpe),
       isPr: Boolean(r.is_pr),
       notes: r.notes || undefined
