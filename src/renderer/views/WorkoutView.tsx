@@ -17,6 +17,7 @@ import { Exercise, ExerciseMediaInput, MuscleGroup, WorkoutSession, WorkoutSet }
 import { DailyWorkoutPlan, getNextScheduledWorkout, WorkoutEngine } from '../../domain/workout-engine';
 import { YouTubePlayer } from '../components/YouTubePlayer';
 import { formatRestTime, remainingRestSeconds } from '../../domain/rest-timer';
+import { compareWorkoutSetWithHistory } from '../../domain/workout-comparison';
 
 const OFFLINE_EXERCISE_IMAGE: Record<MuscleGroup, string> = {
   peitoral: './catalog-assets/exercise-peitoral.png',
@@ -112,7 +113,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
 
   const historyByExercise = useMemo(() => {
     const history = new Map<string, WorkoutSet[]>();
-    for (const session of [...sessions].sort((a, b) => a.date.localeCompare(b.date))) {
+    for (const session of [...sessions].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))) {
       for (const set of session.sets) {
         if (!set.completed) continue;
         const exerciseSets = history.get(set.exerciseId) || [];
@@ -310,7 +311,10 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                 </span>
 
                 <div className="space-y-2.5">
-                  {activeSets.map((set, sIdx) => (
+                  {activeSets.map((set, sIdx) => {
+                    const comparison = compareWorkoutSetWithHistory(set, historyByExercise.get(set.exerciseId) || []);
+                    const formatDelta = (value: number, unit: string) => `${value > 0 ? '+' : ''}${value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}${unit}`;
+                    return (
                     <div
                       key={sIdx}
                       className="rounded-2xl border border-border bg-secondary/30 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
@@ -323,6 +327,11 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                           <strong className="text-foreground block">{set.exerciseName}</strong>
                           <span className="text-[11px] text-muted-foreground">
                             Carga: {set.weightKg > 0 ? `${set.weightKg} kg` : 'não informada'} • Reps: {set.reps > 0 ? set.reps : 'não informadas'}{set.rpe ? ` • RPE ${set.rpe}` : ''}{set.rir !== undefined ? ` • RIR ${set.rir}` : ''}
+                          </span>
+                          <span className="block text-[10px] text-sky-300" aria-live="polite">
+                            {comparison
+                              ? `Anterior: ${comparison.previous.weightKg} kg × ${comparison.previous.reps}${comparison.weightDeltaKg !== undefined && comparison.repsDelta !== undefined && comparison.volumeDelta !== undefined ? ` · Atual: ${set.weightKg} kg × ${set.reps} (${formatDelta(comparison.weightDeltaKg, ' kg')}; ${formatDelta(comparison.repsDelta, ' reps')}; volume ${formatDelta(comparison.volumeDelta, ' kg·reps')})` : ''}`
+                              : 'Sem série anterior registrada'}
                           </span>
                           <input
                             type="text"
@@ -419,7 +428,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Adicionar Séries de Exercícios Recomendados */}
