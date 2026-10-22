@@ -25,6 +25,17 @@ describe('Motor de Treino e Divisões Semanais', () => {
     expect(split.some(p => p.splitTitle.includes('Recuperação Ativa'))).toBe(true);
   });
 
+  it('gera uma rotina doméstica de três dias sem prescrever halteres', () => {
+    const homePlans = engine.generateHomeSplit();
+    const catalogIds = new Set(INITIAL_EXERCISES.map(exercise => exercise.id));
+
+    expect(homePlans).toHaveLength(3);
+    expect(homePlans.every(plan => plan.exercises.length > 0)).toBe(true);
+    expect(homePlans.every(plan => plan.exercises.every(item => catalogIds.has(item.exercise.id)))).toBe(true);
+    expect(homePlans.flatMap(plan => plan.exercises).some(item => item.recommendedWeightKg !== undefined)).toBe(false);
+    expect(homePlans[1].recoveryNotes).toContain('barra fixa');
+  });
+
   it('deve reduzir o volume inicial em retornos após interrupção longa (1 a 2 meses)', () => {
     const normalSplit = engine.generateSplit(5, false);
     const returningSplit = engine.generateSplit(5, true);

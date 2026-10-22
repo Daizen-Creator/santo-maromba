@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.12. Estado após validação do incremento: **69 validadas, 53 parciais, 55 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.13. Estado após validação do incremento: **70 validadas, 52 parciais, 55 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -145,7 +145,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 94 | Detectar recorde pessoal automaticamente. | TREI | — | V · PRs no histórico/repositório |
 | 95 | Somar volume de treino por exercício/sessão. | TREI | — | V · volume calculado no motor/repositório |
 | 96 | Oferecer alternativa compatível ao exercício. | TREI | — | V · engine conhece grupos/músculos |
-| 97 | Gerar treino em casa sem halteres. | TREI | — | P · biblioteca contém exercícios corporais, sem filtro/plano dedicado |
+| 97 | Gerar treino em casa sem halteres. | TREI | — | V · rotina de três dias usa apenas exercícios da biblioteca local, sem peso externo prescrito, com requisitos de apoio explícitos; `workout-engine.test.ts` |
 | 98 | Salvar e reaplicar modelos de treino. | TREI | — | A · sem modelos de usuário |
 | 99 | Medir duração efetiva da sessão. | TREI | — | V · duração persistida |
 | 100 | Agendar deload e distinguir descanso de sessão perdida. | TREI | — | P · recuperação ativa existe, deload não |

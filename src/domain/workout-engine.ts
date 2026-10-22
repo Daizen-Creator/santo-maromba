@@ -212,6 +212,59 @@ export class WorkoutEngine {
     return plans;
   }
 
+  /** Gera uma rotina de três dias com peso corporal e apoios domésticos, sem prescrever halteres. */
+  generateHomeSplit(): DailyWorkoutPlan[] {
+    const buildExercises = (specs: Array<{ id: string; sets: number; repRange: string; restSeconds: number }>) =>
+      specs.flatMap(spec => {
+        const exercise = this.exercises.find(item => item.id === spec.id);
+        return exercise ? [{ exercise, sets: spec.sets, repRange: spec.repRange, restSeconds: spec.restSeconds }] : [];
+      });
+
+    const plans: DailyWorkoutPlan[] = [
+      {
+        dayName: 'Segunda-feira',
+        splitTitle: 'Casa A — Empurrar, pernas e core',
+        focusMuscles: 'Peitoral, tríceps, quadríceps, panturrilhas e abdômen',
+        recoveryNotes: 'Sem halteres ou cargas externas. Use somente banco/apoio firme e colchonete; pare se sentir dor articular.',
+        exercises: buildExercises([
+          { id: 'ex-flexao-inclinada', sets: 3, repRange: '8 - 12', restSeconds: 90 },
+          { id: 'ex-agachamento-bulgaro', sets: 3, repRange: '8 - 12 por perna', restSeconds: 90 },
+          { id: 'ex-mergulho-banco', sets: 2, repRange: '8 - 12', restSeconds: 60 },
+          { id: 'ex-panturrilha-unilateral', sets: 3, repRange: '12 - 20 por perna', restSeconds: 60 },
+          { id: 'ex-prancha', sets: 3, repRange: '20 - 40 s', restSeconds: 45 }
+        ])
+      },
+      {
+        dayName: 'Quarta-feira',
+        splitTitle: 'Casa B — Puxar, posterior e core',
+        focusMuscles: 'Costas, bíceps, posteriores de coxa e abdômen',
+        recoveryNotes: 'Sem halteres. A puxada precisa de barra fixa presa com segurança; não improvise ancoragens. No nórdico, use assistência e amplitude controlada.',
+        exercises: buildExercises([
+          { id: 'ex-barra-fixa-pronada', sets: 3, repRange: '4 - 8', restSeconds: 120 },
+          { id: 'ex-nordic-curl', sets: 2, repRange: '4 - 8 com assistência', restSeconds: 120 },
+          { id: 'ex-agachamento-bulgaro', sets: 3, repRange: '8 - 12 por perna', restSeconds: 90 },
+          { id: 'ex-crunch-reverso', sets: 3, repRange: '10 - 15', restSeconds: 45 },
+          { id: 'ex-prancha-lateral', sets: 2, repRange: '20 - 30 s por lado', restSeconds: 45 }
+        ])
+      },
+      {
+        dayName: 'Sexta-feira',
+        splitTitle: 'Casa C — Corpo inteiro',
+        focusMuscles: 'Peitoral, costas, pernas, panturrilhas e core',
+        recoveryNotes: 'Sem halteres ou cargas externas. Barra fixa e apoios devem estar firmes; faça as variações fáceis se a técnica começar a falhar.',
+        exercises: buildExercises([
+          { id: 'ex-flexao-maos-elevadas', sets: 3, repRange: '10 - 15', restSeconds: 75 },
+          { id: 'ex-barra-fixa-pronada', sets: 3, repRange: '4 - 8', restSeconds: 120 },
+          { id: 'ex-panturrilha-unilateral', sets: 3, repRange: '12 - 20 por perna', restSeconds: 60 },
+          { id: 'ex-abdominal-bicicleta', sets: 3, repRange: '10 - 16 por lado', restSeconds: 45 },
+          { id: 'ex-hollow-hold', sets: 2, repRange: '15 - 30 s', restSeconds: 45 }
+        ])
+      }
+    ];
+
+    return plans.filter(plan => plan.exercises.length > 0);
+  }
+
   /**
    * Sugere progressão de carga inteligente baseada no histórico de repetições
    */

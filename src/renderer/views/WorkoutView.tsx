@@ -51,9 +51,15 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   onDeleteExerciseMedia
 }) => {
   const [activeTab, setActiveTab] = useState<'today' | 'split' | 'exercises' | 'history'>('today');
+  const [homeTrainingMode, setHomeTrainingMode] = useState(false);
+  const progressionEngine = useMemo(() => new WorkoutEngine(exercises), [exercises]);
+  const activeWorkoutSplit = useMemo(
+    () => homeTrainingMode ? progressionEngine.generateHomeSplit() : workoutSplit,
+    [homeTrainingMode, progressionEngine, workoutSplit]
+  );
 
   // Treino Ativo do Dia
-  const upcomingWorkout = useMemo(() => getNextScheduledWorkout(workoutSplit), [workoutSplit]);
+  const upcomingWorkout = useMemo(() => getNextScheduledWorkout(activeWorkoutSplit), [activeWorkoutSplit]);
   const todayPlan = upcomingWorkout?.plan || null;
   const scheduledDayLabel = upcomingWorkout
     ? upcomingWorkout.daysUntil === 0
@@ -123,8 +129,6 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
     }
     return history;
   }, [sessions]);
-  const progressionEngine = useMemo(() => new WorkoutEngine(exercises), [exercises]);
-
   const filteredExercises = exercises.filter(ex => {
     const matchMuscle = selectedMuscle === 'all' || ex.primaryMuscle === selectedMuscle;
     const matchSearch = ex.name.toLowerCase().includes(searchExercise.toLowerCase());
@@ -527,16 +531,35 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
       {activeTab === 'split' && (
         <div className="space-y-5">
           <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-3">
-            <h3 className="font-display text-base font-bold text-foreground">
-              Estrutura Semanal Programada
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Divisão calculada para respeitar o tempo de supercompensação das fibras musculares e fadiga do SNC.
-            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="font-display text-base font-bold text-foreground">
+                  {homeTrainingMode ? 'Rotina semanal em casa' : 'Estrutura semanal programada'}
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {homeTrainingMode
+                    ? 'Divisão de três dias sem halteres, gerada a partir da biblioteca local.'
+                    : 'Divisão calculada para respeitar o tempo de recuperação entre as sessões.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-pressed={homeTrainingMode}
+                onClick={() => setHomeTrainingMode(current => !current)}
+                className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+              >
+                {homeTrainingMode ? 'Voltar à divisão semanal' : 'Gerar treino em casa sem halteres'}
+              </button>
+            </div>
+            {homeTrainingMode && (
+              <p role="status" className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-100/80">
+                Alguns movimentos precisam de barra fixa, colchonete ou banco/apoio firme; confira as instruções e não improvise ancoragens.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {workoutSplit.map((plan, pIdx) => (
+            {activeWorkoutSplit.map((plan, pIdx) => (
               <div key={pIdx} className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-4 flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between border-b border-border pb-2">

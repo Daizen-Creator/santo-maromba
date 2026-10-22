@@ -115,6 +115,11 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Compara cada série registrada com a última série concluída do mesmo exercício e posição.
 - Mostra carga, repetições e volume anteriores; quando os valores atuais são preenchidos, calcula as diferenças sem projetar dados ausentes.
 - Validada com 113 testes, build Windows e abertura do app portátil com criação do SQLite; GitHub Actions 39735293188 publicou instalador, portátil, manifesto e blockmap.
+
+## v1.1.13
+
+- Gera uma divisão de treino doméstico em três dias sem prescrever halteres ou cargas externas.
+- A rotina usa exercícios da biblioteca instalada e informa os apoios necessários e as precauções para barra fixa.
 - Validada com 110 testes, build Windows e abertura do app portátil com criação do SQLite; GitHub Actions 39734571772 publicou instalador, portátil, manifesto e blockmap.
 
 ## Publicar uma versão
