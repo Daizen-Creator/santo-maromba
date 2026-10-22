@@ -102,6 +102,7 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Registra RIR (repetições em reserva) opcional junto ao RPE de cada série.
 - Migra o histórico existente sem apagar séries anteriores e mantém o novo valor após fechar e reabrir o aplicativo.
+- Validada com 110 testes, build Windows e abertura do app portátil com criação do SQLite; GitHub Actions 39733978630 publicou instalador, portátil, manifesto e blockmap.
 
 ## Publicar uma versão
 
