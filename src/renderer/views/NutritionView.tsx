@@ -20,6 +20,7 @@ import { searchRecipes } from '../../domain/nutrition-catalog';
 import { getIngredientPerServing, getRecipeNutritionPerServing } from '../../domain/recipe-portions';
 import { DAILY_MEAL_STATUSES, summarizeDailyMealStatuses } from '../../domain/meal-status-summary';
 import { calculateConsumedFromLeftovers, calculateLeftoverAmount } from '../../domain/meal-leftovers';
+import { compareMealNutrition } from '../../domain/meal-nutrition-comparison';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -516,6 +517,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               const checklistItems = itemsForMeal(recipe, substitution);
               const recipePortion = recipe ? getRecipeNutritionPerServing(recipe) : null;
               const amounts = getCurrentAmounts(slot.id, checklistItems);
+              const nutritionComparison = compareMealNutrition(entry?.items?.length ? entry.items : checklistItems, entry);
               const statusLabels: Record<DailyMealStatus, string> = {
                 pending: 'Pendente', preparing: 'Em preparo', consumed: 'Consumida', partial: 'Parcial',
                 deferred: 'Adiada', skipped: 'Não consumida', cancelled: 'Cancelada'
@@ -637,6 +639,32 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${entry?.status === 'consumed' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : entry?.status === 'partial' ? 'border-amber-500/30 bg-amber-500/10 text-amber-200' : 'border-border text-muted-foreground'}`}>
                       {statusLabels[entry?.status || 'pending']}
                     </span>
+                  </div>
+
+                  <div className="mb-3 rounded-lg border border-border/60 bg-background/35 p-3" aria-label={`Macros planejados e consumidos de ${slot.title}`}>
+                    <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                      <h5 className="text-[11px] font-semibold text-foreground">Planejado x consumido</h5>
+                      <span className="text-[9px] text-muted-foreground">consumo considera somente registros salvos</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {[
+                        { label: 'Calorias', planned: `${Math.round(nutritionComparison.planned.calories)} kcal`, actual: nutritionComparison.consumed ? `${Math.round(nutritionComparison.consumed.calories)} kcal` : 'Sem registro' },
+                        { label: 'Proteína', planned: `${nutritionComparison.planned.proteinG.toFixed(1)} g`, actual: nutritionComparison.consumed ? `${nutritionComparison.consumed.proteinG.toFixed(1)} g` : 'Sem registro' },
+                        { label: 'Carboidratos', planned: `${nutritionComparison.planned.carbsG.toFixed(1)} g`, actual: nutritionComparison.consumed ? `${nutritionComparison.consumed.carbsG.toFixed(1)} g` : 'Sem registro' },
+                        { label: 'Gorduras', planned: `${nutritionComparison.planned.fatsG.toFixed(1)} g`, actual: nutritionComparison.consumed ? `${nutritionComparison.consumed.fatsG.toFixed(1)} g` : 'Sem registro' }
+                      ].map(metric => (
+                        <div key={metric.label} className="rounded-lg bg-secondary/30 px-2.5 py-2">
+                          <span className="block text-[9px] text-muted-foreground">{metric.label}</span>
+                          <span className="mt-1 block text-[10px] text-muted-foreground">Plano: <strong className="text-foreground">{metric.planned}</strong></span>
+                          <span className="block text-[10px] text-muted-foreground">Real salvo: <strong className={nutritionComparison.consumed ? 'text-emerald-300' : 'text-muted-foreground'}>{metric.actual}</strong></span>
+                        </div>
+                      ))}
+                    </div>
+                    {nutritionComparison.difference && (
+                      <p className="mt-2 text-[10px] text-muted-foreground">
+                        Variação de calorias: <strong className="text-foreground">{nutritionComparison.difference.calories > 0 ? '+' : ''}{Math.round(nutritionComparison.difference.calories)} kcal</strong> em relação ao plano.
+                      </p>
+                    )}
                   </div>
 
                   {checklistItems.length > 0 ? (

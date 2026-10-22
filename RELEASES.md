@@ -75,6 +75,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Combina refeições lançadas rapidamente com itens consumidos ou parciais no checklist, no SQLite e na PWA local.
 - Dias sem registro ficam fora da média e são identificados como dados ausentes.
 
+## v1.1.6
+
+- Compara macros planejados e consumidos por refeição no checklist diário.
+- Mostra a diferença do consumo salvo para cada macro e calorias.
+- Refeições pendentes ou sem registro não são apresentadas como consumo real igual a zero.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.
