@@ -173,6 +173,16 @@ export interface DailyMealHistoryQuery {
   search?: string;
 }
 
+export interface DailyMealCopyInput {
+  sourceDate: string;
+  targetDate: string;
+}
+
+export interface DailyMealCopyResult extends DailyMealCopyInput {
+  copiedCount: number;
+  skippedCount: number;
+}
+
 export interface RecentlyUsedFood {
   foodId: string;
   foodName: string;

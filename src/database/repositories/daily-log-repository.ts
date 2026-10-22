@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { DailyIntakeProgress, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, RecentlyUsedFood } from '../../shared/types';
+import { DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, RecentlyUsedFood } from '../../shared/types';
 import { getRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 
@@ -117,6 +117,35 @@ export class DailyLogRepository {
       }
     }
     return filterDailyMealHistory(entries, query);
+  }
+
+  copyMeals(input: DailyMealCopyInput): DailyMealCopyResult {
+    const sourceMeals = this.getMeals(input.sourceDate);
+    let copiedCount = 0;
+    let skippedCount = 0;
+    this.db.transaction(() => {
+      for (const meal of sourceMeals) {
+        const targetExists = this.db.queryOne<{ present: number }>(
+          'SELECT 1 AS present FROM daily_meal_entries WHERE date = ? AND slot_id = ?',
+          [input.targetDate, meal.slotId]
+        );
+        if (targetExists) {
+          skippedCount += 1;
+          continue;
+        }
+        this.saveMeal({
+          date: input.targetDate,
+          slotId: meal.slotId,
+          mealName: meal.mealName,
+          scheduledTime: meal.scheduledTime,
+          recipeId: meal.recipeId,
+          status: 'pending',
+          items: meal.items.map(item => ({ ...item, consumedAmountG: 0 }))
+        });
+        copiedCount += 1;
+      }
+    });
+    return { ...input, copiedCount, skippedCount };
   }
 
   saveMeal(input: DailyMealEntryInput): DailyMealEntry {

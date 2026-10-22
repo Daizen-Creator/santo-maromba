@@ -3,6 +3,7 @@ import {
   InitialHistoryConfirmationSchema,
   CustomFoodInputSchema,
   DailyMealHistoryQuerySchema,
+  DailyMealCopyInputSchema,
   PhotoInputSchema,
   PhotoNotesUpdateSchema,
   ProfileInputSchema,
@@ -26,6 +27,12 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(() => DailyMealHistoryQuerySchema.parse({ fromDate: '2026-10-23', toDate: '2026-10-22' })).toThrow();
     expect(() => DailyMealHistoryQuerySchema.parse({ fromDate: 'data', toDate: '2026-10-22' })).toThrow();
     expect(() => DailyMealHistoryQuerySchema.parse({ fromDate: '2026-10-01', toDate: '2026-10-22', search: 'x'.repeat(101) })).toThrow();
+  });
+
+  it('valida datas diferentes para cópia de refeições', () => {
+    expect(DailyMealCopyInputSchema.parse({ sourceDate: '2026-10-21', targetDate: '2026-10-22' }))
+      .toEqual({ sourceDate: '2026-10-21', targetDate: '2026-10-22' });
+    expect(() => DailyMealCopyInputSchema.parse({ sourceDate: '2026-10-22', targetDate: '2026-10-22' })).toThrow();
   });
 
   it('valida cadastro nutricional por 100 g e rejeita macros negativos', () => {

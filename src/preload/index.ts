@@ -23,6 +23,8 @@ import {
   DailyMealEntry,
   DailyMealEntryInput,
   DailyMealHistoryQuery,
+  DailyMealCopyInput,
+  DailyMealCopyResult,
   RecentlyUsedFood,
   HydrationLogInput,
   AppUpdateStatus,
@@ -87,6 +89,7 @@ export interface FitTrackAPI {
   addLoggedMeal: (input: LoggedMealInput) => Promise<{ success: boolean; data?: DashboardSummary; error?: string }>;
   getDailyMeals: (date: string) => Promise<{ success: boolean; data?: DailyMealEntry[]; error?: string }>;
   getMealHistory: (query: DailyMealHistoryQuery) => Promise<{ success: boolean; data?: DailyMealEntry[]; error?: string }>;
+  copyDailyMeals: (input: DailyMealCopyInput) => Promise<{ success: boolean; data?: DailyMealCopyResult; error?: string }>;
   getRecentlyUsedFoods: () => Promise<{ success: boolean; data?: RecentlyUsedFood[]; error?: string }>;
   saveDailyMeal: (input: DailyMealEntryInput) => Promise<{ success: boolean; data?: DailyMealEntry; error?: string }>;
   addHydrationLog: (input: HydrationLogInput) => Promise<{ success: boolean; data?: DashboardSummary; error?: string }>;
@@ -153,6 +156,7 @@ const api: FitTrackAPI = {
   addLoggedMeal: (input) => ipcRenderer.invoke(IPC_CHANNELS.ADD_LOGGED_MEAL, input),
   getDailyMeals: (date) => ipcRenderer.invoke(IPC_CHANNELS.GET_DAILY_MEALS, date),
   getMealHistory: (query) => ipcRenderer.invoke(IPC_CHANNELS.GET_MEAL_HISTORY, query),
+  copyDailyMeals: (input) => ipcRenderer.invoke(IPC_CHANNELS.COPY_DAILY_MEALS, input),
   getRecentlyUsedFoods: () => ipcRenderer.invoke(IPC_CHANNELS.GET_RECENTLY_USED_FOODS),
   saveDailyMeal: (input) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_DAILY_MEAL, input),
   addHydrationLog: (input) => ipcRenderer.invoke(IPC_CHANNELS.ADD_HYDRATION_LOG, input),

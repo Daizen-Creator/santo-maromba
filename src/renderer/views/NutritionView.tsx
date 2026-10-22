@@ -13,7 +13,7 @@ import {
   Plus,
   Star
 } from 'lucide-react';
-import { CustomFoodInput, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SubstitutionOption } from '../../shared/types';
+import { CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
@@ -46,6 +46,7 @@ interface NutritionViewProps {
   onSaveCustomFood: (input: CustomFoodInput, id?: string) => Promise<FoodItem>;
   onGetRecentlyUsedFoods: () => Promise<RecentlyUsedFood[]>;
   onGetMealHistory: (query: DailyMealHistoryQuery) => Promise<DailyMealEntry[]>;
+  onCopyDailyMeals: (input: DailyMealCopyInput) => Promise<DailyMealCopyResult>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
   onSetRecipeServings: (id: string, servings: number) => Promise<void>;
   onSetFoodFavorite: (id: string, isFavorite: boolean) => Promise<void>;
@@ -66,6 +67,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onSaveCustomFood,
   onGetRecentlyUsedFoods,
   onGetMealHistory,
+  onCopyDailyMeals,
   onSetRecipeFavorite,
   onSetRecipeServings,
   onSetFoodFavorite
@@ -111,6 +113,14 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [historyEntries, setHistoryEntries] = useState<DailyMealEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [copySourceDate, setCopySourceDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    return formatDateInput(date);
+  });
+  const [copyTargetDate, setCopyTargetDate] = useState(() => formatDateInput(new Date()));
+  const [copyResultMessage, setCopyResultMessage] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState<string | null>(null);
 
   const today = new Date();
   const todayString = formatDateInput(today);
@@ -182,6 +192,21 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
       setHistoryEntries([]);
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  const copyMealsFromDay = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCopyError(null);
+    setCopyResultMessage(null);
+    try {
+      const result = await onCopyDailyMeals({ sourceDate: copySourceDate, targetDate: copyTargetDate });
+      setCopyResultMessage(`${result.copiedCount} refeição(ões) copiada(s); ${result.skippedCount} slot(s) existente(s) preservado(s).`);
+      setHistoryFromDate(copyTargetDate);
+      setHistoryToDate(copyTargetDate);
+      setHistoryEntries(await onGetMealHistory({ fromDate: copyTargetDate, toDate: copyTargetDate }));
+    } catch (error) {
+      setCopyError(error instanceof Error ? error.message : 'Não foi possível copiar as refeições.');
     }
   };
 
@@ -876,6 +901,22 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
       {activeTab === 'history' && (
         <section className="space-y-5" aria-label="Histórico alimentar">
+          <form onSubmit={copyMealsFromDay} className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <label className="space-y-1 text-xs text-muted-foreground">
+              Copiar refeições de
+              <input type="date" value={copySourceDate} onChange={event => setCopySourceDate(event.target.value)} className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" />
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              Para o dia
+              <input type="date" value={copyTargetDate} onChange={event => setCopyTargetDate(event.target.value)} className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" />
+            </label>
+            <button type="submit" className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs font-semibold text-primary transition hover:bg-primary/15">
+              Copiar para horários vazios
+            </button>
+            {copyResultMessage && <p role="status" className="sm:col-span-3 text-xs text-emerald-300">{copyResultMessage}</p>}
+            {copyError && <p role="alert" className="sm:col-span-3 text-xs text-red-300">{copyError}</p>}
+            <p className="sm:col-span-3 text-[10px] text-muted-foreground">O registro do dia de destino permanece intacto; quantidades consumidas e estados não são copiados.</p>
+          </form>
           <form onSubmit={searchMealHistory} className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_2fr_auto] lg:items-end">
             <label className="space-y-1 text-xs text-muted-foreground">
               De

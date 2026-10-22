@@ -256,3 +256,10 @@ export const DailyMealHistoryQuerySchema = z.object({
   message: 'A data inicial deve ser anterior ou igual à data final.',
   path: ['toDate']
 });
+export const DailyMealCopyInputSchema = z.object({
+  sourceDate: DailyMealDateSchema,
+  targetDate: DailyMealDateSchema
+}).strict().refine(input => input.sourceDate !== input.targetDate, {
+  message: 'Escolha datas diferentes para copiar as refeições.',
+  path: ['targetDate']
+});

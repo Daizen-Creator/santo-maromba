@@ -44,6 +44,12 @@ describe('Checklist alimentar na versão web', () => {
     expect(await api.getMealHistory({ fromDate: input.date, toDate: input.date, search: 'arroz' }))
       .toMatchObject([{ date: input.date, mealName: 'Almoço' }]);
     expect(await api.getMealHistory({ fromDate: input.date, toDate: input.date, search: 'feijão' })).toEqual([]);
+    const copied = await api.copyDailyMeals({ sourceDate: input.date, targetDate: '2026-10-23' });
+    expect(copied).toMatchObject({ copiedCount: 1, skippedCount: 0 });
+    expect(await api.getDailyMeals('2026-10-23')).toMatchObject([
+      { status: 'pending', items: [{ foodId: 'rice', consumedAmountG: 0 }] }
+    ]);
+    await expect(api.copyDailyMeals({ sourceDate: input.date, targetDate: input.date })).rejects.toThrow();
   });
 
   it('mantém origem e qualidade nutricional nos ingredientes do catálogo web', async () => {

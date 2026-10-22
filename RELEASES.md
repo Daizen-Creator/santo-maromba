@@ -46,6 +46,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Permite delimitar o período consultado e mostra quantidades planejadas/consumidas e macros salvos.
 - O desktop consulta o SQLite por IPC validado; a PWA pesquisa o histórico local do próprio dispositivo.
 
+## v1.1.1
+
+- Permite copiar refeições registradas para outra data a partir do histórico alimentar.
+- A cópia cria refeições pendentes com consumo zerado e preserva qualquer slot já ocupado no destino.
+- O desktop usa transação SQLite; a versão web grava o conjunto copiado no armazenamento local de uma só vez.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

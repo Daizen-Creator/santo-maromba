@@ -22,6 +22,8 @@ import {
   DailyMealEntry,
   DailyMealEntryInput,
   DailyMealHistoryQuery,
+  DailyMealCopyInput,
+  DailyMealCopyResult,
   RecentlyUsedFood,
   HydrationLogInput,
   CustomizationMediaInput,
@@ -42,7 +44,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealHistoryQuerySchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 
@@ -676,6 +678,45 @@ export const api = {
     else entries.push(entry);
     localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(entries));
     return entry;
+  },
+
+  copyDailyMeals: async (rawInput: DailyMealCopyInput): Promise<DailyMealCopyResult> => {
+    const input = DailyMealCopyInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.copyDailyMeals(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao copiar refeições.');
+      return res.data;
+    }
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const source = entries.filter(entry => entry.date === input.sourceDate);
+    const occupiedSlots = new Set(entries.filter(entry => entry.date === input.targetDate).map(entry => entry.slotId));
+    let copiedCount = 0;
+    let skippedCount = 0;
+    const copied: DailyMealEntry[] = [];
+    for (const meal of source) {
+      if (occupiedSlots.has(meal.slotId)) {
+        skippedCount += 1;
+        continue;
+      }
+      copied.push({
+        ...meal,
+        date: input.targetDate,
+        id: `daily-meal-${input.targetDate}-${meal.slotId}`,
+        status: 'pending',
+        items: meal.items.map(item => ({ ...item, consumedAmountG: 0 })),
+        calories: 0,
+        proteinG: 0,
+        carbsG: 0,
+        fatsG: 0,
+        note: undefined,
+        completedAt: undefined,
+        updatedAt: new Date().toISOString()
+      });
+      occupiedSlots.add(meal.slotId);
+      copiedCount += 1;
+    }
+    if (copied.length) localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify([...entries, ...copied]));
+    return { ...input, copiedCount, skippedCount };
   },
 
   addHydrationLog: async (input: HydrationLogInput): Promise<DashboardSummary> => {
