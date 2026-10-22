@@ -150,7 +150,7 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Permite criar medidas corporais personalizadas com unidade própria e registrar valor, data e nota opcional.
 - Atualiza a medição da mesma data sem criar duplicatas e mantém o histórico no SQLite do desktop e no armazenamento offline da PWA.
-- Persistência após reabrir SQLite/PWA, validação de entradas e abertura do app em perfil isolado aprovadas; 132 testes, build e empacotamento Windows aprovados; publicação no GitHub pendente.
+- Persistência após reabrir SQLite/PWA, validação de entradas e abertura do app em perfil isolado aprovadas; 132 testes, build e empacotamento Windows aprovados; GitHub Actions 39741151028 publicou instalador, portátil, manifesto e blockmap.
 
 ## Publicar uma versão
 
