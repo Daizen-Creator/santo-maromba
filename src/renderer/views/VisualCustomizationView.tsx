@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { confirmVisualMediaDeletion } from '../../domain/visual-media-delete-confirmation';
 import { Check, Download, ImagePlus, Layers, Palette, RotateCcw, Trash2, Upload } from 'lucide-react';
 import {
   CustomizationMediaInput,
@@ -143,6 +144,8 @@ export const VisualCustomizationView: React.FC<VisualCustomizationViewProps> = (
   };
 
   const deleteMedia = async (id: string) => {
+    const mediaFile = media.find(item => item.id === id);
+    if (!mediaFile || !confirmVisualMediaDeletion(mediaFile.fileName)) return;
     setError(null);
     setNotice(null);
     try {

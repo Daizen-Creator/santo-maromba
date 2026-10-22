@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.57. Estado após validação dos incrementos: **123 validadas, 29 parciais, 25 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.58. Estado após validação dos incrementos: **124 validadas, 28 parciais, 25 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -218,7 +218,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 152 | Explicar sugestão com registros e cálculo que a sustentam. | NENHUM | provedor de IA/contexto | B · sem assistente explicativo |
 | 153 | Planejar amanhã a partir de metas e estoque. | NENHUM; DESP | provedor de IA para conversa | P · motor de despensa parcial, sem planejamento amanhã |
 | 154 | Substituir ingrediente e recalcular a receita antes de salvar. | NUTR; DESP | — | P · motor substitui; confirmação e edição de receita limitadas |
-| 155 | Pedir confirmação antes de apagar dados. | SHAP; DIAR | — | P · fotos confirmam; demais exclusões não implementadas |
+| 155 | Pedir confirmação antes de apagar dados. | `VisualCustomizationView.tsx`; confirmação de fotos, pesagens, diário, marcos e preparos; SQLite/arquivos | — | V · exclusão persistente de mídia visual confirma o nome do arquivo e a remoção das referências; cancelar não inicia a operação; mídias de exercício e demais registros já confirmam ou usam fluxo de restauração; `visual-media-delete-confirmation.test.ts`, testes de persistência |
 | 156 | Informar origem do dado usado na resposta. | NUTR; NENHUM | proveniência + assistente | P · fonte textual existe, não aparece na resposta/UI |
 | 157 | Identificar valores estimados e separados dos confirmados. | NUTR; NENHUM | proveniência estruturada | P · catálogo/checklist rotula estimados e não verificados; assistente ausente |
 | 158 | Oferecer ditado/resposta por voz com controle do usuário. | NENHUM | serviço de voz/dispositivo | B · integração não configurada |
