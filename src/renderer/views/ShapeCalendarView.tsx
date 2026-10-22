@@ -11,7 +11,7 @@ import {
   Clock,
   Columns
 } from 'lucide-react';
-import { BodyMeasurementRecord, PhotoCreateInput, PhotoPose, PhotoRecord, WeightRecord, WorkoutSession } from '../../shared/types';
+import { BodyMeasurementRecord, CustomBodyMeasurements, CustomMeasurementDefinition, CustomMeasurementRecord, PhotoCreateInput, PhotoPose, PhotoRecord, SaveCustomMeasurementDefinitionInput, SaveCustomMeasurementInput, WeightRecord, WorkoutSession } from '../../shared/types';
 import { buildMeasurementTrend, MEASUREMENT_METRICS, MeasurementMetric } from '../../domain/measurement-trend';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -41,6 +41,9 @@ interface ShapeCalendarViewProps {
   onUpdatePhotoNotes: (id: string, notes: string) => Promise<void>;
   onDeletePhoto: (id: string) => Promise<void>;
   onSaveMeasurement: (data: any) => Promise<void>;
+  onGetCustomMeasurements: () => Promise<CustomBodyMeasurements>;
+  onSaveCustomMeasurementDefinition: (input: SaveCustomMeasurementDefinitionInput) => Promise<CustomMeasurementDefinition>;
+  onSaveCustomMeasurement: (input: SaveCustomMeasurementInput) => Promise<CustomMeasurementRecord>;
   initialTab?: 'calendar' | 'compare';
 }
 
@@ -53,13 +56,71 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
   onUpdatePhotoNotes,
   onDeletePhoto,
   onSaveMeasurement,
+  onGetCustomMeasurements,
+  onSaveCustomMeasurementDefinition,
+  onSaveCustomMeasurement,
   initialTab = 'calendar'
 }) => {
   const [activeTab, setActiveTab] = useState<'calendar' | 'compare' | 'timeline' | 'measurements'>(initialTab);
   const [measurementMetric, setMeasurementMetric] = useState<MeasurementMetric>('waistCircCm');
   const measurementTrend = useMemo(() => buildMeasurementTrend(measurements, measurementMetric), [measurements, measurementMetric]);
+  const [customMeasurements, setCustomMeasurements] = useState<CustomBodyMeasurements>({ definitions: [], records: [] });
+  const [customMeasureName, setCustomMeasureName] = useState('');
+  const [customMeasureUnit, setCustomMeasureUnit] = useState('cm');
+  const [customMeasureDate, setCustomMeasureDate] = useState(localDateString());
+  const [customMeasureValues, setCustomMeasureValues] = useState<Record<string, string>>({});
+  const [customMeasureNotes, setCustomMeasureNotes] = useState<Record<string, string>>({});
+  const [customMeasureSaving, setCustomMeasureSaving] = useState<string | null>(null);
+  const [customMeasureMessage, setCustomMeasureMessage] = useState<string | null>(null);
+  const [customMeasureError, setCustomMeasureError] = useState<string | null>(null);
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
+
+  useEffect(() => {
+    let active = true;
+    onGetCustomMeasurements()
+      .then(data => { if (active) setCustomMeasurements(data); })
+      .catch(error => { if (active) setCustomMeasureError(error instanceof Error ? error.message : 'Não foi possível carregar medidas personalizadas.'); });
+    return () => { active = false; };
+  }, [onGetCustomMeasurements]);
+
+  const handleSaveCustomDefinition = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCustomMeasureError(null);
+    setCustomMeasureMessage(null);
+    try {
+      const definition = await onSaveCustomMeasurementDefinition({ name: customMeasureName, unit: customMeasureUnit });
+      setCustomMeasurements(current => ({ ...current, definitions: [...current.definitions, definition].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')) }));
+      setCustomMeasureName('');
+      setCustomMeasureMessage(`Medida “${definition.name}” criada. Agora registre valores por data.`);
+    } catch (error) {
+      setCustomMeasureError(error instanceof Error ? error.message : 'Não foi possível criar a medida personalizada.');
+    }
+  };
+
+  const handleSaveCustomValue = async (event: React.FormEvent<HTMLFormElement>, definition: CustomMeasurementDefinition, valueKey: string) => {
+    event.preventDefault();
+    setCustomMeasureError(null);
+    setCustomMeasureMessage(null);
+    setCustomMeasureSaving(valueKey);
+    try {
+      const saved = await onSaveCustomMeasurement({
+        definitionId: definition.id,
+        date: customMeasureDate,
+        value: Number(customMeasureValues[valueKey]),
+        notes: customMeasureNotes[valueKey] || undefined
+      });
+      setCustomMeasurements(current => ({
+        ...current,
+        records: [saved, ...current.records.filter(item => !(item.definitionId === saved.definitionId && item.date === saved.date))]
+      }));
+      setCustomMeasureMessage(`${definition.name} salva para ${saved.date}.`);
+    } catch (error) {
+      setCustomMeasureError(error instanceof Error ? error.message : 'Não foi possível salvar o valor da medida.');
+    } finally {
+      setCustomMeasureSaving(null);
+    }
+  };
 
   // Navegação do Calendário
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -845,6 +906,85 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
               </tbody>
             </table>
           </div>
+
+          <section className="space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4">
+            <div>
+              <h4 className="text-sm font-bold text-foreground">Medidas personalizadas</h4>
+              <p className="mt-1 text-[11px] text-muted-foreground">Crie campos como pescoço ou antebraço e registre cada valor em uma data. Os dados ficam salvos neste aparelho.</p>
+            </div>
+
+            <form onSubmit={handleSaveCustomDefinition} className="grid gap-2 sm:grid-cols-[1fr_120px_auto]">
+              <label className="sr-only" htmlFor="custom-measure-name">Nome da nova medida</label>
+              <input id="custom-measure-name" required maxLength={60} value={customMeasureName}
+                onChange={event => setCustomMeasureName(event.target.value)} placeholder="Nome da medida (ex.: Pescoço)"
+                className="min-w-0 rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70" />
+              <label className="sr-only" htmlFor="custom-measure-unit">Unidade da nova medida</label>
+              <input id="custom-measure-unit" required maxLength={10} value={customMeasureUnit}
+                onChange={event => setCustomMeasureUnit(event.target.value)} placeholder="Unidade"
+                className="rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70" />
+              <button type="submit" className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15">
+                Criar medida
+              </button>
+            </form>
+
+            {customMeasurements.definitions.length > 0 && (
+              <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground sm:max-w-xs">
+                <span>Data do registro personalizado</span>
+                <input type="date" value={customMeasureDate} onChange={event => setCustomMeasureDate(event.target.value)}
+                  className="rounded-xl border border-border bg-card px-3 py-2 text-foreground" />
+              </label>
+            )}
+
+            {customMeasurements.definitions.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-border p-4 text-xs text-muted-foreground">Nenhuma medida personalizada criada.</p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {customMeasurements.definitions.map(definition => {
+                  const key = `${definition.id}:${customMeasureDate}`;
+                  const existing = customMeasurements.records.find(record => record.definitionId === definition.id && record.date === customMeasureDate);
+                  const history = customMeasurements.records.filter(record => record.definitionId === definition.id).sort((a, b) => b.date.localeCompare(a.date));
+                  return (
+                    <article key={definition.id} className="space-y-3 rounded-xl border border-border/70 bg-card p-3">
+                      <header className="flex items-start justify-between gap-2">
+                        <div>
+                          <h5 className="text-xs font-bold text-foreground">{definition.name}</h5>
+                          <p className="text-[10px] text-muted-foreground">Unidade: {definition.unit}</p>
+                        </div>
+                        {history[0] && <span className="text-right text-[10px] text-muted-foreground">Último: {history[0].value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} {definition.unit}<br />{history[0].date}</span>}
+                      </header>
+                      <form onSubmit={event => void handleSaveCustomValue(event, definition, key)} className="flex flex-col gap-2 sm:flex-row">
+                        <label className="sr-only" htmlFor={`custom-value-${key}`}>Valor de {definition.name} para {customMeasureDate}</label>
+                        <input id={`custom-value-${key}`} required type="number" min="0.1" max="10000" step="any"
+                          value={customMeasureValues[key] ?? (existing ? String(existing.value) : '')}
+                          onChange={event => setCustomMeasureValues(current => ({ ...current, [key]: event.target.value }))}
+                          placeholder={`Valor (${definition.unit})`}
+                          className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70" />
+                        <input aria-label={`Observação para ${definition.name}`} maxLength={200}
+                          value={customMeasureNotes[key] ?? existing?.notes ?? ''}
+                          onChange={event => setCustomMeasureNotes(current => ({ ...current, [key]: event.target.value }))}
+                          placeholder="Nota opcional"
+                          className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70" />
+                        <button type="submit" disabled={customMeasureSaving === key}
+                          className="rounded-lg bg-primary px-3 py-2 text-[11px] font-semibold text-primary-foreground disabled:opacity-50">
+                          {customMeasureSaving === key ? 'Salvando…' : existing ? 'Atualizar' : 'Salvar'}
+                        </button>
+                      </form>
+                      {history.length > 1 && (
+                        <details className="text-[10px] text-muted-foreground">
+                          <summary className="cursor-pointer">Histórico ({history.length})</summary>
+                          <ul className="mt-2 space-y-1">
+                            {history.slice(0, 8).map(record => <li key={record.id}>{record.date}: {record.value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} {definition.unit}{record.notes ? ` · ${record.notes}` : ''}</li>)}
+                          </ul>
+                        </details>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+            {customMeasureMessage && <p role="status" className="text-xs text-emerald-300">{customMeasureMessage}</p>}
+            {customMeasureError && <p role="alert" className="text-xs text-destructive">{customMeasureError}</p>}
+          </section>
         </div>
       )}
 

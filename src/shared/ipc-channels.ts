@@ -66,6 +66,11 @@ export const IPC_CHANNELS = {
   GET_WORKOUT_SCHEDULE: 'workout:get-schedule',
   SAVE_WORKOUT_SCHEDULE: 'workout:save-schedule',
 
+  // Custom body measurements
+  GET_CUSTOM_MEASUREMENTS: 'measurements:get-custom',
+  SAVE_CUSTOM_MEASUREMENT_DEFINITION: 'measurements:save-custom-definition',
+  SAVE_CUSTOM_MEASUREMENT: 'measurements:save-custom-value',
+
   // System
   GET_VISUAL_CUSTOMIZATION: 'visual:get-customization',
   SAVE_VISUAL_CUSTOMIZATION: 'visual:save-customization',

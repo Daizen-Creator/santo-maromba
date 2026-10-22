@@ -7,6 +7,7 @@ import { PhotoRepository } from '../database/repositories/photo-repository';
 import { MeasurementRepository } from '../database/repositories/measurement-repository';
 import { NutritionRepository } from '../database/repositories/nutrition-repository';
 import { WorkoutRepository } from '../database/repositories/workout-repository';
+import { CustomMeasurementRepository } from '../database/repositories/custom-measurement-repository';
 import { ExerciseMediaRepository } from '../database/repositories/exercise-media-repository';
 import { PhysiqueProjectionRepository } from '../database/repositories/physique-projection-repository';
 import { DailyLogRepository } from '../database/repositories/daily-log-repository';
@@ -41,6 +42,11 @@ import {
   WorkoutTemplate,
   WorkoutScheduleEntry,
   SaveWorkoutScheduleInput,
+  CustomBodyMeasurements,
+  CustomMeasurementDefinition,
+  CustomMeasurementRecord,
+  SaveCustomMeasurementDefinitionInput,
+  SaveCustomMeasurementInput,
   PhysiqueProjectionInput,
   PhysiqueProjectionSnapshot,
   ExerciseMediaInput,
@@ -76,6 +82,7 @@ export class FitTrackService {
   private measurementRepo: MeasurementRepository;
   private nutritionRepo: NutritionRepository;
   private workoutRepo: WorkoutRepository;
+  private customMeasurementRepo: CustomMeasurementRepository;
   private projectionRepo: PhysiqueProjectionRepository;
   private exerciseMediaRepo: ExerciseMediaRepository;
   private dailyLogRepo: DailyLogRepository;
@@ -101,6 +108,7 @@ export class FitTrackService {
     this.measurementRepo = new MeasurementRepository(db);
     this.nutritionRepo = seededCatalogs.nutritionRepository;
     this.workoutRepo = seededCatalogs.workoutRepository;
+    this.customMeasurementRepo = new CustomMeasurementRepository(db);
     this.projectionRepo = new PhysiqueProjectionRepository(db);
     this.exerciseMediaRepo = new ExerciseMediaRepository(db);
     this.dailyLogRepo = new DailyLogRepository(db);
@@ -230,6 +238,18 @@ export class FitTrackService {
     notes?: string;
   }): BodyMeasurementRecord {
     return this.measurementRepo.saveMeasurement(data);
+  }
+
+  getCustomMeasurements(): CustomBodyMeasurements {
+    return this.customMeasurementRepo.getAll();
+  }
+
+  saveCustomMeasurementDefinition(input: SaveCustomMeasurementDefinitionInput): CustomMeasurementDefinition {
+    return this.customMeasurementRepo.saveDefinition(input);
+  }
+
+  saveCustomMeasurement(input: SaveCustomMeasurementInput): CustomMeasurementRecord {
+    return this.customMeasurementRepo.saveValue(input);
   }
 
   savePhysiqueProjection(input: PhysiqueProjectionInput): PhysiqueProjectionSnapshot {

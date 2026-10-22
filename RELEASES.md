@@ -144,7 +144,13 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Guarda na foto o peso realmente registrado na mesma data, preservando o valor histórico mesmo se a pesagem for editada depois.
 - Fotos sem pesagem na data continuam sem peso associado; o banco antigo recebe a nova coluna sem perder imagens ou metadados.
-- Persistência SQLite, migração de fotos antigas, reabertura offline e build React/Electron aprovadas; empacotamento e publicação estão em andamento.
+- Validada com 129 testes, build React/Electron, empacotamento Windows e abertura em perfil isolado; GitHub Actions 39740243462 publicou instalador, portátil, manifesto e blockmap.
+
+## v1.1.18
+
+- Permite criar medidas corporais personalizadas com unidade própria e registrar valor, data e nota opcional.
+- Atualiza a medição da mesma data sem criar duplicatas e mantém o histórico no SQLite do desktop e no armazenamento offline da PWA.
+- Persistência após reabrir SQLite/PWA, validação de entradas e abertura do app em perfil isolado aprovadas; 132 testes, build e empacotamento Windows aprovados; publicação no GitHub pendente.
 
 ## Publicar uma versão
 

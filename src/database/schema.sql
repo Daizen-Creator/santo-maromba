@@ -271,6 +271,26 @@ CREATE TABLE IF NOT EXISTS workout_schedule (
 );
 CREATE INDEX IF NOT EXISTS idx_workout_schedule_date ON workout_schedule(date);
 
+CREATE TABLE IF NOT EXISTS custom_measurement_definitions (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  unit TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS custom_measurements (
+  id TEXT PRIMARY KEY,
+  definition_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  value REAL NOT NULL CHECK(value > 0 AND value <= 10000),
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(definition_id, date),
+  FOREIGN KEY (definition_id) REFERENCES custom_measurement_definitions(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_custom_measurements_date ON custom_measurements(date DESC);
+
 CREATE TABLE IF NOT EXISTS exercise_media (
   id TEXT PRIMARY KEY,
   exercise_id TEXT NOT NULL,

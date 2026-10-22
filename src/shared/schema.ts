@@ -241,6 +241,18 @@ export const SaveWorkoutScheduleInputSchema = z.object({
   notes: z.string().trim().max(400).optional()
 }).strict();
 
+export const SaveCustomMeasurementDefinitionInputSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  unit: z.string().trim().min(1).max(10).regex(/^[\p{L}\p{N}%°./ -]+$/u, 'Informe uma unidade simples, como cm ou kg.')
+}).strict();
+
+export const SaveCustomMeasurementInputSchema = z.object({
+  definitionId: z.string().min(1).max(160).regex(/^[a-zA-Z0-9_-]+$/),
+  date: z.string().refine(isRealCalendarDate, 'Informe uma data válida para a medida.'),
+  value: z.number().min(0.1).max(10000),
+  notes: z.string().trim().max(200).optional()
+}).strict();
+
 export const LoggedMealInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),
   mealName: z.string().trim().min(1).max(80),

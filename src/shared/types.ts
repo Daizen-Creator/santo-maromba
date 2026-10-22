@@ -328,6 +328,40 @@ export interface BodyMeasurementRecord {
   createdAt: string;
 }
 
+export interface CustomMeasurementDefinition {
+  id: string;
+  name: string;
+  unit: string;
+  createdAt: string;
+}
+
+export interface CustomMeasurementRecord {
+  id: string;
+  definitionId: string;
+  date: string;
+  value: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomBodyMeasurements {
+  definitions: CustomMeasurementDefinition[];
+  records: CustomMeasurementRecord[];
+}
+
+export interface SaveCustomMeasurementDefinitionInput {
+  name: string;
+  unit: string;
+}
+
+export interface SaveCustomMeasurementInput {
+  definitionId: string;
+  date: string;
+  value: number;
+  notes?: string;
+}
+
 // ============================================================================
 // MÓDULO — PROJEÇÃO FÍSICA (estimativas, nunca medições reais)
 // ============================================================================

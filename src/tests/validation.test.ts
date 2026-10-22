@@ -14,7 +14,9 @@ import {
   RecipeServingsInputSchema,
   WorkoutSessionInputSchema,
   SaveWorkoutTemplateInputSchema,
-  SaveWorkoutScheduleInputSchema
+  SaveWorkoutScheduleInputSchema,
+  SaveCustomMeasurementDefinitionInputSchema,
+  SaveCustomMeasurementInputSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
@@ -140,6 +142,18 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(SaveWorkoutScheduleInputSchema.parse({ date: '2026-10-22', kind: 'deload' }).kind).toBe('deload');
     expect(() => SaveWorkoutScheduleInputSchema.parse({ date: '2026-02-30', kind: 'rest' })).toThrow();
     expect(() => SaveWorkoutScheduleInputSchema.parse({ date: '2026-10-22', kind: 'missed' })).toThrow();
+  });
+
+  it('valida medidas corporais personalizadas, unidades e registros por data', () => {
+    expect(SaveCustomMeasurementDefinitionInputSchema.parse({ name: '  Pescoço ', unit: ' cm ' }))
+      .toEqual({ name: 'Pescoço', unit: 'cm' });
+    expect(SaveCustomMeasurementInputSchema.parse({
+      definitionId: 'custom-measure-neck', date: '2026-10-22', value: 38.5, notes: 'Após acordar'
+    }).value).toBe(38.5);
+    expect(() => SaveCustomMeasurementDefinitionInputSchema.parse({ name: '   ', unit: 'cm' })).toThrow();
+    expect(() => SaveCustomMeasurementDefinitionInputSchema.parse({ name: 'Altura', unit: 'cm; DROP TABLE' })).toThrow();
+    expect(() => SaveCustomMeasurementInputSchema.parse({ definitionId: 'neck', date: '2026-02-30', value: 38 })).toThrow();
+    expect(() => SaveCustomMeasurementInputSchema.parse({ definitionId: 'neck', date: '2026-10-22', value: 0 })).toThrow();
   });
 
   it('deve validar registros de peso com formato correto', () => {

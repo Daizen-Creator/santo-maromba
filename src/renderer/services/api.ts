@@ -1,5 +1,10 @@
 import {
   BodyMeasurementRecord,
+  CustomBodyMeasurements,
+  CustomMeasurementDefinition,
+  CustomMeasurementRecord,
+  SaveCustomMeasurementDefinitionInput,
+  SaveCustomMeasurementInput,
   CustomFoodInput,
   DashboardSummary,
   Exercise,
@@ -55,7 +60,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
@@ -64,6 +69,8 @@ import { calculateNutritionDistribution } from '../../domain/nutrition-distribut
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
 const LOCAL_STORAGE_KEY_MEASUREMENTS = 'fittrack_measurements';
+const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENT_DEFINITIONS = 'fittrack_custom_measurement_definitions';
+const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENTS = 'fittrack_custom_measurements';
 const LOCAL_STORAGE_KEY_PANTRY = 'fittrack_pantry';
 const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
 const LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES = 'fittrack_workout_templates';
@@ -275,6 +282,78 @@ export const api = {
     }
     localStorage.setItem(LOCAL_STORAGE_KEY_MEASUREMENTS, JSON.stringify(list));
     return updatedRec;
+  },
+
+  getCustomMeasurements: async (): Promise<CustomBodyMeasurements> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getCustomMeasurements();
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar medidas personalizadas.');
+      return res.data || { definitions: [], records: [] };
+    }
+    try {
+      const definitionsRaw = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENT_DEFINITIONS) || '[]');
+      const recordsRaw = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENTS) || '[]');
+      if (!Array.isArray(definitionsRaw) || !Array.isArray(recordsRaw)) return { definitions: [], records: [] };
+      const definitions: CustomMeasurementDefinition[] = definitionsRaw.flatMap(item => {
+        const parsed = SaveCustomMeasurementDefinitionInputSchema.safeParse({ name: item?.name, unit: item?.unit });
+        if (!parsed.success || typeof item?.id !== 'string' || typeof item?.createdAt !== 'string') return [];
+        return [{ id: item.id, ...parsed.data, createdAt: item.createdAt }];
+      });
+      const definitionIds = new Set(definitions.map(item => item.id));
+      const records: CustomMeasurementRecord[] = recordsRaw.flatMap(item => {
+        const parsed = SaveCustomMeasurementInputSchema.safeParse({
+          definitionId: item?.definitionId, date: item?.date, value: item?.value, notes: item?.notes
+        });
+        if (!parsed.success || !definitionIds.has(parsed.data.definitionId) || typeof item?.id !== 'string' || typeof item?.createdAt !== 'string' || typeof item?.updatedAt !== 'string') return [];
+        return [{ id: item.id, ...parsed.data, createdAt: item.createdAt, updatedAt: item.updatedAt }];
+      });
+      return { definitions, records };
+    } catch {
+      return { definitions: [], records: [] };
+    }
+  },
+
+  saveCustomMeasurementDefinition: async (rawInput: SaveCustomMeasurementDefinitionInput): Promise<CustomMeasurementDefinition> => {
+    const input = SaveCustomMeasurementDefinitionInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveCustomMeasurementDefinition(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao criar medida personalizada.');
+      return res.data;
+    }
+    const current = await api.getCustomMeasurements();
+    const normalizedName = input.name.normalize('NFC').toLocaleLowerCase('pt-BR');
+    if (current.definitions.some(item => item.name.normalize('NFC').toLocaleLowerCase('pt-BR') === normalizedName)) {
+      throw new Error('Já existe uma medida personalizada com esse nome.');
+    }
+    const definition: CustomMeasurementDefinition = {
+      id: `custom-measure-${globalThis.crypto.randomUUID()}`,
+      ...input,
+      createdAt: new Date().toISOString()
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENT_DEFINITIONS, JSON.stringify([...current.definitions, definition]));
+    return definition;
+  },
+
+  saveCustomMeasurement: async (rawInput: SaveCustomMeasurementInput): Promise<CustomMeasurementRecord> => {
+    const input = SaveCustomMeasurementInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveCustomMeasurement(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao salvar medida personalizada.');
+      return res.data;
+    }
+    const current = await api.getCustomMeasurements();
+    if (!current.definitions.some(definition => definition.id === input.definitionId)) throw new Error('A medida personalizada selecionada não existe.');
+    const existing = current.records.find(record => record.definitionId === input.definitionId && record.date === input.date);
+    const now = new Date().toISOString();
+    const record: CustomMeasurementRecord = {
+      id: existing?.id || `custom-measure-value-${globalThis.crypto.randomUUID()}`,
+      ...input,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now
+    };
+    const records = [record, ...current.records.filter(item => !(item.definitionId === input.definitionId && item.date === input.date))];
+    localStorage.setItem(LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENTS, JSON.stringify(records));
+    return record;
   },
 
   getPhysiqueProjections: async (): Promise<PhysiqueProjectionSnapshot[]> => {

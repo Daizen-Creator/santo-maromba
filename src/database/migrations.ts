@@ -221,4 +221,12 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [15, 'Snapshot do peso registrado na data da foto', new Date().toISOString()]
     );
   }
+
+  const version16 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 16');
+  if (!version16) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [16, 'Definições e histórico de medidas corporais personalizadas', new Date().toISOString()]
+    );
+  }
 }

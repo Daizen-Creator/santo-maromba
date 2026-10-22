@@ -478,6 +478,9 @@ export const App: React.FC = () => {
               onUpdatePhotoNotes={handleUpdatePhotoNotes}
               onDeletePhoto={handleDeletePhoto}
               onSaveMeasurement={handleSaveMeasurement}
+              onGetCustomMeasurements={api.getCustomMeasurements}
+              onSaveCustomMeasurementDefinition={api.saveCustomMeasurementDefinition}
+              onSaveCustomMeasurement={api.saveCustomMeasurement}
               initialTab={shapeInitialTab}
             />
           )}

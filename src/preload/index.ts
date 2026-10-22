@@ -19,6 +19,11 @@ import {
   SaveWorkoutTemplateInput,
   WorkoutScheduleEntry,
   SaveWorkoutScheduleInput,
+  CustomBodyMeasurements,
+  CustomMeasurementDefinition,
+  CustomMeasurementRecord,
+  SaveCustomMeasurementDefinitionInput,
+  SaveCustomMeasurementInput,
   PhysiqueProjectionInput,
   PhysiqueProjectionSnapshot,
   ExerciseMediaInput,
@@ -68,6 +73,9 @@ export interface FitTrackAPI {
   // Medidas
   getMeasurements: () => Promise<{ success: boolean; data?: BodyMeasurementRecord[]; error?: string }>;
   saveMeasurement: (data: any) => Promise<{ success: boolean; data?: BodyMeasurementRecord; error?: string }>;
+  getCustomMeasurements: () => Promise<{ success: boolean; data?: CustomBodyMeasurements; error?: string }>;
+  saveCustomMeasurementDefinition: (input: SaveCustomMeasurementDefinitionInput) => Promise<{ success: boolean; data?: CustomMeasurementDefinition; error?: string }>;
+  saveCustomMeasurement: (input: SaveCustomMeasurementInput) => Promise<{ success: boolean; data?: CustomMeasurementRecord; error?: string }>;
 
   // Projeções físicas
   savePhysiqueProjection: (input: PhysiqueProjectionInput) => Promise<{ success: boolean; data?: PhysiqueProjectionSnapshot; error?: string }>;
@@ -148,6 +156,9 @@ const api: FitTrackAPI = {
 
   getMeasurements: () => ipcRenderer.invoke(IPC_CHANNELS.GET_MEASUREMENTS),
   saveMeasurement: (data) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_MEASUREMENT, data),
+  getCustomMeasurements: () => ipcRenderer.invoke(IPC_CHANNELS.GET_CUSTOM_MEASUREMENTS),
+  saveCustomMeasurementDefinition: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_CUSTOM_MEASUREMENT_DEFINITION, input),
+  saveCustomMeasurement: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_CUSTOM_MEASUREMENT, input),
 
   savePhysiqueProjection: (input) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_PHYSIQUE_PROJECTION, input),
   getPhysiqueProjections: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PHYSIQUE_PROJECTIONS),
