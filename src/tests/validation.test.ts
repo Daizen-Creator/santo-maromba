@@ -110,7 +110,8 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(parsed.sets[0].completed).toBe(true);
     expect(WorkoutSessionInputSchema.parse({
       date: '2026-10-21', splitName: 'Treino A', completed: true,
-      sets: [{ exerciseId: 'ex-supino', setNumber: 1, weightKg: 20, reps: 8, rir: 0 }]
+      notes: 'Sono e disposição bons.',
+      sets: [{ exerciseId: 'ex-supino', setNumber: 1, weightKg: 20, reps: 8, rir: 0, notes: 'Cadência controlada.' }]
     }).sets[0].rir).toBe(0);
     expect(() => WorkoutSessionInputSchema.parse({
       date: '2026-10-21', splitName: 'Treino A', completed: true,

@@ -70,7 +70,8 @@ describe('Mídia local e progressão de cargas', () => {
     const exerciseId = INITIAL_EXERCISES[0].id;
     const first = service.logWorkoutSession({
       date: '2026-10-19', splitName: 'Teste A', completed: true,
-      sets: [{ exerciseId, setNumber: 1, weightKg: 20, reps: 5, rpe: 8, rir: 2.5 }]
+      notes: 'Sessão sem desconforto.',
+      sets: [{ exerciseId, setNumber: 1, weightKg: 20, reps: 5, rpe: 8, rir: 2.5, notes: 'Pegada confortável.' }]
     });
     expect(first.sets[0].isPr).toBe(true);
     expect(first.sets[0].rpe).toBe(8);
@@ -78,7 +79,8 @@ describe('Mídia local e progressão de cargas', () => {
 
     const volumePr = service.logWorkoutSession({
       date: '2026-10-20', splitName: 'Teste A', completed: true,
-      sets: [{ exerciseId, setNumber: 1, weightKg: 10, reps: 12, rpe: 9, rir: 0 }]
+      notes: 'Dormiu bem antes do treino.',
+      sets: [{ exerciseId, setNumber: 1, weightKg: 10, reps: 12, rpe: 9, rir: 0, notes: 'Última série até a falha.' }]
     });
     expect(volumePr.sets[0].weightKg).toBe(10);
     expect(volumePr.sets[0].isPr).toBe(true);
@@ -91,6 +93,10 @@ describe('Mídia local e progressão de cargas', () => {
     const reopenedSets = service.getWorkoutSessions().flatMap(session => session.sets);
     expect(reopenedSets.find(set => set.rpe === 9)?.rir).toBe(0);
     expect(reopenedSets.find(set => set.rpe === 8)?.rir).toBe(2.5);
+    const reopenedSessions = service.getWorkoutSessions();
+    expect(reopenedSessions.find(session => session.date === '2026-10-19')?.notes).toBe('Sessão sem desconforto.');
+    expect(reopenedSessions.flatMap(session => session.sets).find(set => set.rpe === 8)?.notes).toBe('Pegada confortável.');
+    expect(reopenedSessions.find(session => session.date === '2026-10-20')?.sets[0].notes).toBe('Última série até a falha.');
   });
 
   it('persiste sessões parciais e conclusão de cada série sem contar uma sessão parcial como PR', async () => {

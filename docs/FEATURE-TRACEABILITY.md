@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.10. Estado após validação do incremento: **67 validadas, 55 parciais, 55 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.11. Estado após validação do incremento: **68 validadas, 54 parciais, 55 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -138,7 +138,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 87 | Registrar carga separada por série. | TREI | — | V · persistência de cargas |
 | 88 | Iniciar cronômetro de descanso pelo intervalo do exercício. | TREI | — | V · timer visual usa o intervalo do plano e encerra com aviso; `rest-timer.test.ts` |
 | 89 | Registrar RPE ou RIR por série. | TREI | — | V · RPE e RIR são validados, salvos no SQLite e reabertos; `workout-media-persistence.test.ts`, `workout-migration.test.ts`, `validation.test.ts` |
-| 90 | Salvar e reabrir observação do exercício/sessão. | TREI | — | P · campo parcial, fluxo de notas não cobre tudo |
+| 90 | Salvar e reabrir observação do exercício/sessão. | TREI | — | V · notas por série e sessão validadas, persistidas no SQLite e exibidas no histórico; `workout-media-persistence.test.ts`, `validation.test.ts` |
 | 91 | Marcar cada série como concluída. | TREI | — | V · checkbox salva o estado por série; migração v9 mantém séries antigas como concluídas; teste de reabertura |
 | 92 | Salvar sessão parcial sem declará-la completa. | TREI | — | V · ação dedicada persiste a sessão com status parcial, mantém séries concluídas e não marca PR para série não feita; teste de reabertura |
 | 93 | Comparar execução atual com sessão anterior. | TREI | — | A · histórico/PR existe, comparação dedicada não |

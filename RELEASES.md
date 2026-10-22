@@ -104,6 +104,11 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Migra o histórico existente sem apagar séries anteriores e mantém o novo valor após fechar e reabrir o aplicativo.
 - Validada com 110 testes, build Windows e abertura do app portátil com criação do SQLite; GitHub Actions 39733978630 publicou instalador, portátil, manifesto e blockmap.
 
+## v1.1.11
+
+- Registra observações individuais por série e uma nota geral da sessão durante o treino.
+- Exibe as notas no histórico e valida que ambas permanecem após fechar e reabrir o banco local.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

@@ -68,10 +68,12 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
     completed: boolean;
     rpe?: number;
     rir?: number;
+    notes?: string;
   }>>([]);
 
   const [sessionDuration, setSessionDuration] = useState<number>(0);
   const [sessionRpe, setSessionRpe] = useState<number>(0);
+  const [sessionNotes, setSessionNotes] = useState('');
   const [savingSession, setSavingSession] = useState<boolean>(false);
   const [sessionSuccessMsg, setSessionSuccessMsg] = useState<string | null>(null);
   const [sessionValidationError, setSessionValidationError] = useState<string | null>(null);
@@ -186,8 +188,9 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
         completed,
         durationMinutes: sessionDuration,
         perceivedExertion: sessionRpe,
-        sets: activeSets.map(({ exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir }) => ({
-          exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir
+        notes: sessionNotes.trim() || undefined,
+        sets: activeSets.map(({ exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir, notes }) => ({
+          exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir, notes: notes?.trim() || undefined
         }))
       });
       setSessionSuccessMsg(completed
@@ -196,6 +199,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
       setActiveSets([]);
       setSessionDuration(0);
       setSessionRpe(0);
+      setSessionNotes('');
       setTimeout(() => setSessionSuccessMsg(null), 4000);
     } catch (error: any) {
       setSessionValidationError(error.message || 'Não foi possível salvar o treino.');
@@ -286,6 +290,19 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                 </div>
               </div>
 
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground">Observações do treino</span>
+                <textarea
+                  value={sessionNotes}
+                  maxLength={500}
+                  rows={2}
+                  aria-label="Observações do treino"
+                  placeholder="Como foi a sessão? Anote desconfortos ou ajustes para a próxima vez."
+                  onChange={event => setSessionNotes(event.target.value)}
+                  className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70"
+                />
+              </label>
+
               {/* Registro de Séries */}
               <div className="space-y-4">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
@@ -298,15 +315,24 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                       key={sIdx}
                       className="rounded-2xl border border-border bg-secondary/30 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary font-bold text-foreground">
                           #{set.setNumber}
                         </span>
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <strong className="text-foreground block">{set.exerciseName}</strong>
                           <span className="text-[11px] text-muted-foreground">
                             Carga: {set.weightKg > 0 ? `${set.weightKg} kg` : 'não informada'} • Reps: {set.reps > 0 ? set.reps : 'não informadas'}{set.rpe ? ` • RPE ${set.rpe}` : ''}{set.rir !== undefined ? ` • RIR ${set.rir}` : ''}
                           </span>
+                          <input
+                            type="text"
+                            value={set.notes ?? ''}
+                            maxLength={200}
+                            aria-label={`Observação da série ${set.setNumber} de ${set.exerciseName}`}
+                            placeholder="Observação desta série"
+                            onChange={event => setActiveSets(prev => prev.map((current, idx) => idx === sIdx ? { ...current, notes: event.target.value } : current))}
+                            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/70"
+                          />
                         </div>
                       </div>
 
@@ -728,11 +754,13 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                   <div className="text-[11px] text-muted-foreground">
                     {s.sets.filter(set => set.completed).length}/{s.sets.length} séries concluídas • RPE: {s.perceivedExertion}/10
                   </div>
+                  {s.notes && <p className="rounded-lg border border-border/70 bg-background/60 px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">Treino: {s.notes}</p>}
                   <div className="flex flex-wrap gap-2 pt-1">
                     {s.sets.map(set => (
-                      <span key={set.id} className={`rounded-lg border px-2 py-1 text-[10px] ${set.isPr ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-border bg-card/60 text-muted-foreground'}`}>
-                        {set.exerciseName}: {set.weightKg} kg × {set.reps}{set.rpe ? ` · RPE ${set.rpe}` : ''}{set.rir !== undefined ? ` · RIR ${set.rir}` : ''}{!set.completed ? ' · não concluída' : ''}{set.isPr ? ' · PR' : ''}
-                      </span>
+                      <div key={set.id} className={`max-w-full rounded-lg border px-2 py-1 text-[10px] ${set.isPr ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-border bg-card/60 text-muted-foreground'}`}>
+                        <span>{set.exerciseName}: {set.weightKg} kg × {set.reps}{set.rpe ? ` · RPE ${set.rpe}` : ''}{set.rir !== undefined ? ` · RIR ${set.rir}` : ''}{!set.completed ? ' · não concluída' : ''}{set.isPr ? ' · PR' : ''}</span>
+                        {set.notes && <span className="mt-1 block whitespace-pre-wrap">Nota: {set.notes}</span>}
+                      </div>
                     ))}
                   </div>
                 </div>
