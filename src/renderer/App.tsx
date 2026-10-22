@@ -294,6 +294,18 @@ export const App: React.FC = () => {
     return result;
   };
 
+  const handleApplyWeeklyMealTemplate = async (input: { templateId: string; weekStartDate: string }) => {
+    const result = await api.applyMealTemplateToWeek(input);
+    if (result.dates.includes(getTodayDate())) await refreshTodayMealsAfterPlanChange(getTodayDate());
+    return result;
+  };
+
+  const handleReorderDailyMeals = async (input: { date: string; slotIds: string[] }) => {
+    const meals = await api.reorderDailyMeals(input);
+    if (input.date === getTodayDate()) setDailyMealEntries(meals);
+    return meals;
+  };
+
   const handleSaveCustomFood = async (input: CustomFoodInput, id?: string): Promise<FoodItem> => {
     const saved = await api.saveCustomFood(input, id);
     setFoods(await api.getFoods());
@@ -558,6 +570,8 @@ export const App: React.FC = () => {
               onGetMealTemplates={api.getMealTemplates}
               onSaveMealTemplate={api.saveMealTemplate}
               onApplyMealTemplate={handleApplyMealTemplate}
+              onApplyWeeklyMealTemplate={handleApplyWeeklyMealTemplate}
+              onReorderDailyMeals={handleReorderDailyMeals}
               onSetRecipeFavorite={handleSetRecipeFavorite}
               onSetRecipeServings={handleSetRecipeServings}
               onSetRecipeFinalWeight={handleSetRecipeFinalWeight}

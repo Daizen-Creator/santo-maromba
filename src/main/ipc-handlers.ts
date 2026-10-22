@@ -28,6 +28,8 @@ import {
   DailyMealCopyInputSchema,
   SaveMealTemplateInputSchema,
   ApplyMealTemplateInputSchema,
+  ApplyWeeklyMealTemplateInputSchema,
+  ReorderDailyMealsInputSchema,
   DailyMealEntryInputSchema,
   DailyMealIdentityInputSchema,
   DailyMealRestoreInputSchema,
@@ -626,6 +628,24 @@ export function registerIpcHandlers(
       return { success: true, data: service.applyMealTemplate(ApplyMealTemplateInputSchema.parse(rawInput)) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível aplicar o modelo de refeições.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.APPLY_WEEKLY_MEAL_TEMPLATE, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.applyMealTemplateToWeek(ApplyWeeklyMealTemplateInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível montar o plano semanal de refeições.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.REORDER_DAILY_MEALS, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.reorderDailyMeals(ReorderDailyMealsInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível reordenar as refeições.' };
     }
   });
 

@@ -171,6 +171,7 @@ export interface DailyMealItemLog {
 export interface DailyMealEntryInput {
   date: string;
   slotId: string;
+  sortOrder?: number;
   mealName: string;
   mealTurn?: MealTurn;
   scheduledTime: string;
@@ -303,6 +304,23 @@ export interface ApplyMealTemplateResult {
   targetDate: string;
   copiedCount: number;
   skippedCount: number;
+}
+
+export interface ApplyWeeklyMealTemplateInput {
+  templateId: string;
+  weekStartDate: string;
+}
+
+export interface ApplyWeeklyMealTemplateResult extends ApplyWeeklyMealTemplateInput {
+  templateName: string;
+  dates: string[];
+  copiedCount: number;
+  skippedCount: number;
+}
+
+export interface ReorderDailyMealsInput {
+  date: string;
+  slotIds: string[];
 }
 
 export interface RecentlyUsedFood {

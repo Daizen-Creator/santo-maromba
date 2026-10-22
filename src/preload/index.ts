@@ -49,6 +49,9 @@ import {
   SaveMealTemplateInput,
   ApplyMealTemplateInput,
   ApplyMealTemplateResult,
+  ApplyWeeklyMealTemplateInput,
+  ApplyWeeklyMealTemplateResult,
+  ReorderDailyMealsInput,
   RecentlyUsedFood,
   FoodPortionPreference,
   SaveFoodPortionPreferenceInput,
@@ -140,6 +143,8 @@ export interface FitTrackAPI {
   getMealTemplates: () => Promise<{ success: boolean; data?: MealTemplate[]; error?: string }>;
   saveMealTemplate: (input: SaveMealTemplateInput) => Promise<{ success: boolean; data?: MealTemplate; error?: string }>;
   applyMealTemplate: (input: ApplyMealTemplateInput) => Promise<{ success: boolean; data?: ApplyMealTemplateResult; error?: string }>;
+  applyMealTemplateToWeek: (input: ApplyWeeklyMealTemplateInput) => Promise<{ success: boolean; data?: ApplyWeeklyMealTemplateResult; error?: string }>;
+  reorderDailyMeals: (input: ReorderDailyMealsInput) => Promise<{ success: boolean; data?: DailyMealEntry[]; error?: string }>;
   getRecentlyUsedFoods: () => Promise<{ success: boolean; data?: RecentlyUsedFood[]; error?: string }>;
   saveDailyMeal: (input: DailyMealEntryInput) => Promise<{ success: boolean; data?: DailyMealEntry; error?: string }>;
   deleteDailyMeal: (input: DailyMealIdentityInput) => Promise<{ success: boolean; data?: DailyMealEntry; error?: string }>;
@@ -234,6 +239,8 @@ const api: FitTrackAPI = {
   getMealTemplates: () => ipcRenderer.invoke(IPC_CHANNELS.GET_MEAL_TEMPLATES),
   saveMealTemplate: (input) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_MEAL_TEMPLATE, input),
   applyMealTemplate: (input) => ipcRenderer.invoke(IPC_CHANNELS.APPLY_MEAL_TEMPLATE, input),
+  applyMealTemplateToWeek: input => ipcRenderer.invoke(IPC_CHANNELS.APPLY_WEEKLY_MEAL_TEMPLATE, input),
+  reorderDailyMeals: input => ipcRenderer.invoke(IPC_CHANNELS.REORDER_DAILY_MEALS, input),
   getRecentlyUsedFoods: () => ipcRenderer.invoke(IPC_CHANNELS.GET_RECENTLY_USED_FOODS),
   saveDailyMeal: (input) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_DAILY_MEAL, input),
   deleteDailyMeal: (input) => ipcRenderer.invoke(IPC_CHANNELS.DELETE_DAILY_MEAL, input),

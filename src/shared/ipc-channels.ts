@@ -25,6 +25,8 @@ export const IPC_CHANNELS = {
   GET_MEAL_TEMPLATES: 'nutrition:get-meal-templates',
   SAVE_MEAL_TEMPLATE: 'nutrition:save-meal-template',
   APPLY_MEAL_TEMPLATE: 'nutrition:apply-meal-template',
+  APPLY_WEEKLY_MEAL_TEMPLATE: 'nutrition:apply-weekly-meal-template',
+  REORDER_DAILY_MEALS: 'nutrition:reorder-daily-meals',
   SAVE_DAILY_MEAL: 'nutrition:save-daily-meal',
   DELETE_DAILY_MEAL: 'nutrition:delete-daily-meal',
   RESTORE_DAILY_MEAL: 'nutrition:restore-daily-meal',

@@ -77,6 +77,9 @@ import {
   SaveMealTemplateInput,
   ApplyMealTemplateInput,
   ApplyMealTemplateResult,
+  ApplyWeeklyMealTemplateInput,
+  ApplyWeeklyMealTemplateResult,
+  ReorderDailyMealsInput,
   HydrationLogInput,
   VisualCustomization,
   CustomizationMediaInput,
@@ -505,6 +508,14 @@ export class FitTrackService {
 
   applyMealTemplate(input: ApplyMealTemplateInput): ApplyMealTemplateResult {
     return this.dailyLogRepo.applyMealTemplate(input);
+  }
+
+  applyMealTemplateToWeek(input: ApplyWeeklyMealTemplateInput): ApplyWeeklyMealTemplateResult {
+    return this.dailyLogRepo.applyMealTemplateToWeek(input);
+  }
+
+  reorderDailyMeals(input: ReorderDailyMealsInput): DailyMealEntry[] {
+    return this.dailyLogRepo.reorderMeals(input);
   }
 
   saveDailyMeal(input: DailyMealEntryInput): DailyMealEntry {

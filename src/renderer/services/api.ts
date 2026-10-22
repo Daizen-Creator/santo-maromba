@@ -48,6 +48,9 @@ import {
   SaveMealTemplateInput,
   ApplyMealTemplateInput,
   ApplyMealTemplateResult,
+  ApplyWeeklyMealTemplateInput,
+  ApplyWeeklyMealTemplateResult,
+  ReorderDailyMealsInput,
   RecentlyUsedFood,
   FoodPortionPreference,
   SaveFoodPortionPreferenceInput,
@@ -75,12 +78,14 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
 import { calculateNutritionDistribution } from '../../domain/nutrition-distribution';
+import { sortDailyMealEntries } from '../../domain/daily-meal-order';
+import { getWorkoutWeekDates } from '../../domain/workout-week-calendar';
 import { inferMealTurn } from '../../domain/meal-turn';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
 
@@ -1035,10 +1040,10 @@ export const api = {
       return res.data || [];
     }
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
-    return entries.filter(entry => entry.date === date).map(entry => ({
+    return sortDailyMealEntries(entries.filter(entry => entry.date === date).map(entry => ({
       ...entry,
       mealTurn: entry.mealTurn || inferMealTurn(entry.slotId, entry.mealName)
-    }));
+    })));
   },
 
   getRecentlyUsedFoods: async (): Promise<RecentlyUsedFood[]> => {
@@ -1147,6 +1152,7 @@ export const api = {
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
     const index = entries.findIndex(existing => existing.date === input.date && existing.slotId === input.slotId);
     const previous = index >= 0 ? entries[index] : null;
+    if (entry.sortOrder === undefined && previous?.sortOrder !== undefined) entry.sortOrder = previous.sortOrder;
     if (consumed && previous && (previous.status === 'consumed' || previous.status === 'partial') && previous.completedAt) {
       entry.completedAt = previous.completedAt;
     }
@@ -1227,8 +1233,9 @@ export const api = {
       return res.data;
     }
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
-    const source = entries.filter(entry => entry.date === input.sourceDate);
-    const occupiedSlots = new Set(entries.filter(entry => entry.date === input.targetDate).map(entry => entry.slotId));
+    const source = sortDailyMealEntries(entries.filter(entry => entry.date === input.sourceDate));
+    const existingTarget = sortDailyMealEntries(entries.filter(entry => entry.date === input.targetDate));
+    const occupiedSlots = new Set(existingTarget.map(entry => entry.slotId));
     let copiedCount = 0;
     let skippedCount = 0;
     const copied: DailyMealEntry[] = [];
@@ -1254,8 +1261,37 @@ export const api = {
       occupiedSlots.add(meal.slotId);
       copiedCount += 1;
     }
-    if (copied.length) localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify([...entries, ...copied]));
+    if (copied.length) {
+      const order = new Map([...existingTarget, ...copied].map((entry, index) => [entry.slotId, index]));
+      const updated = [...entries, ...copied].map(entry => entry.date === input.targetDate
+        ? { ...entry, sortOrder: order.get(entry.slotId) }
+        : entry);
+      localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(updated));
+    }
     return { ...input, copiedCount, skippedCount };
+  },
+
+  reorderDailyMeals: async (rawInput: ReorderDailyMealsInput): Promise<DailyMealEntry[]> => {
+    const input = ReorderDailyMealsInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.reorderDailyMeals(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao reordenar as refeições.');
+      return res.data;
+    }
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const dateEntries = entries.filter(entry => entry.date === input.date);
+    const existingSlots = new Set(dateEntries.map(entry => entry.slotId));
+    if (input.slotIds.length !== dateEntries.length || new Set(input.slotIds).size !== dateEntries.length
+      || input.slotIds.some(slotId => !existingSlots.has(slotId))) {
+      throw new Error('A lista mudou desde que você abriu a semana. Recarregue e tente novamente.');
+    }
+    const order = new Map(input.slotIds.map((slotId, index) => [slotId, index]));
+    const now = new Date().toISOString();
+    const updated = entries.map(entry => entry.date === input.date
+      ? { ...entry, sortOrder: order.get(entry.slotId), updatedAt: now }
+      : entry);
+    localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(updated));
+    return sortDailyMealEntries(updated.filter(entry => entry.date === input.date));
   },
 
   getMealTemplates: async (): Promise<MealTemplate[]> => {
@@ -1308,7 +1344,8 @@ export const api = {
     const template = (await api.getMealTemplates()).find(candidate => candidate.id === input.templateId);
     if (!template) throw new Error('Modelo de refeições não encontrado.');
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
-    const occupiedSlots = new Set(entries.filter(entry => entry.date === input.targetDate).map(entry => entry.slotId));
+    const existingTarget = sortDailyMealEntries(entries.filter(entry => entry.date === input.targetDate));
+    const occupiedSlots = new Set(existingTarget.map(entry => entry.slotId));
     const now = new Date().toISOString();
     const added: DailyMealEntry[] = [];
     let skippedCount = 0;
@@ -1334,7 +1371,13 @@ export const api = {
       });
       occupiedSlots.add(meal.slotId);
     }
-    if (added.length) localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify([...entries, ...added]));
+    if (added.length) {
+      const order = new Map([...existingTarget, ...added].map((entry, index) => [entry.slotId, index]));
+      const updated = [...entries, ...added].map(entry => entry.date === input.targetDate
+        ? { ...entry, sortOrder: order.get(entry.slotId) }
+        : entry);
+      localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(updated));
+    }
     return {
       templateId: template.id,
       templateName: template.name,
@@ -1342,6 +1385,59 @@ export const api = {
       copiedCount: added.length,
       skippedCount
     };
+  },
+
+  applyMealTemplateToWeek: async (rawInput: ApplyWeeklyMealTemplateInput): Promise<ApplyWeeklyMealTemplateResult> => {
+    const input = ApplyWeeklyMealTemplateInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.applyMealTemplateToWeek(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao montar o plano semanal de refeições.');
+      return res.data;
+    }
+    const template = (await api.getMealTemplates()).find(candidate => candidate.id === input.templateId);
+    if (!template) throw new Error('Modelo de refeições não encontrado.');
+    const dates = getWorkoutWeekDates(input.weekStartDate);
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    let updated = [...entries];
+    let copiedCount = 0;
+    let skippedCount = 0;
+    const now = new Date().toISOString();
+    for (const date of dates) {
+      const existingTarget = sortDailyMealEntries(updated.filter(entry => entry.date === date));
+      const occupiedSlots = new Set(existingTarget.map(entry => entry.slotId));
+      const added: DailyMealEntry[] = [];
+      for (const meal of template.meals) {
+        if (occupiedSlots.has(meal.slotId)) {
+          skippedCount += 1;
+          continue;
+        }
+        added.push({
+          id: `daily-meal-${date}-${meal.slotId}`,
+          date,
+          slotId: meal.slotId,
+          mealName: meal.mealName,
+          scheduledTime: meal.scheduledTime,
+          recipeId: meal.recipeId,
+          status: 'pending',
+          items: meal.items.map(item => ({ ...item, consumedAmountG: 0 })),
+          calories: 0,
+          proteinG: 0,
+          carbsG: 0,
+          fatsG: 0,
+          updatedAt: now
+        });
+        occupiedSlots.add(meal.slotId);
+        copiedCount += 1;
+      }
+      if (added.length) {
+        const order = new Map([...existingTarget, ...added].map((entry, index) => [entry.slotId, index]));
+        updated = [...updated, ...added].map(entry => entry.date === date
+          ? { ...entry, sortOrder: order.get(entry.slotId), updatedAt: now }
+          : entry);
+      }
+    }
+    if (copiedCount) localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(updated));
+    return { ...input, weekStartDate: dates[0], templateName: template.name, dates, copiedCount, skippedCount };
   },
 
   addHydrationLog: async (input: HydrationLogInput): Promise<DashboardSummary> => {

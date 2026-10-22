@@ -48,6 +48,9 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       WHEN slot_id = 'supper' OR lower(meal_name) LIKE '%ceia%' THEN 'supper'
       ELSE 'snack' END`);
   }
+  if (!dailyMealColumns.some(column => column.name === 'sort_order')) {
+    db.exec('ALTER TABLE daily_meal_entries ADD COLUMN sort_order INTEGER CHECK(sort_order IS NULL OR sort_order BETWEEN 0 AND 500)');
+  }
 
   // Campos de catálogo adicionados depois da versão 1 são migrados sem apagar dados existentes.
   const recipeColumns = db.query<{ name: string }>('PRAGMA table_info(recipes)');
@@ -412,6 +415,13 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [29, 'Indicadores estruturados de desconforto e recuperação por treino', new Date().toISOString()]
+    );
+  }
+  const version30 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 30');
+  if (!version30) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [30, 'Planejamento semanal e ordem persistente das refeições', new Date().toISOString()]
     );
   }
 }

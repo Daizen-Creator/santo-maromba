@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.39. Estado após validação dos incrementos: **98 validadas, 37 parciais, 42 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.40. Estado após validação dos incrementos: **100 validadas, 37 parciais, 40 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -179,8 +179,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 | ID | Comportamento verificável (critério de aceitação) | Arquivos | Dependência | Estado / teste |
 |---:|---|---|---|---|
-| 121 | Gerar e salvar plano de refeições semanal. | NUTR; DESP | — | A · sem planejador semanal |
-| 122 | Reordenar refeições do plano e persistir ordem. | NUTR; DIAR | — | A · sem editor do plano |
+| 121 | Aplicar um modelo aos sete dias da semana, preencher apenas horários vazios e manter o plano salvo após reiniciar. | `WeeklyMealPlanner.tsx`; `NutritionView.tsx`; `App.tsx`; `api.ts`; `fittrack-service.ts`; `daily-log-repository.ts`; handlers/preload IPC | SQLite ou armazenamento local PWA | V · preserva refeições existentes/consumidas; `weekly-meal-plan-persistence.test.ts`, `daily-meal-api.test.ts` |
+| 122 | Mover refeições para cima/baixo e manter a ordem ao recarregar a data e reabrir o SQLite. | `WeeklyMealPlanner.tsx`; `daily-meal-order.ts`; tipos/schema/canais IPC; `daily-log-repository.ts`; `migrations.ts` | SQLite ou armazenamento local PWA | V · valida a lista contra o estado atual e persiste ordem; `daily-meal-order.test.ts`, `weekly-meal-plan-persistence.test.ts` |
 | 123 | Sugerir receitas usando itens existentes na despensa. | DESP | — | P · ranking por estoque, inclui receitas sem correspondência |
 | 124 | Excluir receitas com ingredientes indisponíveis. | DESP | — | A · filtro de disponibilidade estrito ausente |
 | 125 | Montar lista de compras a partir do plano. | DESP | — | A · sem lista de compras |
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.39: 203/203 testes, build e empacotamento Windows aprovados; publicação GitHub pendente.
+- Incremento 1.1.40: 208/208 testes, build e empacotamento Windows aprovados; executável inicia por 12 segundos em perfil isolado e cria o SQLite; publicação pendente de validação do workflow.
+- Incremento 1.1.39: 203/203 testes, build e empacotamento Windows aprovados; instalador NSIS, portable e manifesto publicados pelo workflow 39771708883.
 - Incremento 1.1.38: 201/201 testes, build, instalador NSIS, portable, manifesto e abertura isolada com criação do SQLite publicados pelo workflow 39770953506.
 - Incremento 1.1.37: 199/199 testes, build, instalador NSIS, portable e manifesto publicados com sucesso pelo workflow 39769501594.
 - Incremento 1.1.36: 196/196 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso pelo workflow 39768989851.

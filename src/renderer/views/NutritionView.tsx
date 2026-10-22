@@ -16,7 +16,7 @@ import {
   ImagePlus,
   X
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecipeFeedbackInput, RecentlyUsedFood, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -32,6 +32,7 @@ import { useMeasurementUnits } from '../hooks/use-measurement-units';
 import { NaturalMealParseResult, parseNaturalMealDescription } from '../../domain/natural-meal-parser';
 import { getMealTurnLabel, MEAL_TURN_OPTIONS } from '../../domain/meal-turn';
 import { createPlannedMealFoodItem, removePlannedMealFoodItem } from '../../domain/meal-composition';
+import { WeeklyMealPlanner } from '../components/WeeklyMealPlanner';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -84,6 +85,8 @@ interface NutritionViewProps {
   onGetMealTemplates: () => Promise<MealTemplate[]>;
   onSaveMealTemplate: (input: SaveMealTemplateInput) => Promise<MealTemplate>;
   onApplyMealTemplate: (input: ApplyMealTemplateInput) => Promise<ApplyMealTemplateResult>;
+  onApplyWeeklyMealTemplate: (input: { templateId: string; weekStartDate: string }) => Promise<ApplyWeeklyMealTemplateResult>;
+  onReorderDailyMeals: (input: ReorderDailyMealsInput) => Promise<DailyMealEntry[]>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
   onSetRecipeServings: (id: string, servings: number) => Promise<void>;
   onSetRecipeFinalWeight: (id: string, finalWeightG: number | null) => Promise<void>;
@@ -123,6 +126,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onGetMealTemplates,
   onSaveMealTemplate,
   onApplyMealTemplate,
+  onApplyWeeklyMealTemplate,
+  onReorderDailyMeals,
   onSetRecipeFavorite,
   onSetRecipeServings,
   onSetRecipeFinalWeight,
@@ -1808,6 +1813,14 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
       {activeTab === 'history' && (
         <section className="space-y-5" aria-label="Histórico alimentar">
+          <WeeklyMealPlanner
+            templates={mealTemplates}
+            selectedTemplateId={selectedTemplateId}
+            onSelectTemplate={setSelectedTemplateId}
+            onGetMealHistory={onGetMealHistory}
+            onApplyTemplate={onApplyWeeklyMealTemplate}
+            onReorderMeals={onReorderDailyMeals}
+          />
           {mealPhotoError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealPhotoError}</p>}
           <form onSubmit={copyMealsFromDay} className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <label className="space-y-1 text-xs text-muted-foreground">

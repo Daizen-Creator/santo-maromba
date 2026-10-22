@@ -1,8 +1,10 @@
 import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealRestoreInput, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, NutritionAnalytics, NutritionAnalyticsQuery, NutritionMealDistributionEntry, RecentlyUsedFood, SaveMealTemplateInput } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateInput, ApplyWeeklyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealRestoreInput, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, NutritionAnalytics, NutritionAnalyticsQuery, NutritionMealDistributionEntry, RecentlyUsedFood, ReorderDailyMealsInput, SaveMealTemplateInput } from '../../shared/types';
 import { getRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
+import { sortDailyMealEntries } from '../../domain/daily-meal-order';
+import { getWorkoutWeekDates } from '../../domain/workout-week-calendar';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
 import { calculateNutritionDistribution } from '../../domain/nutrition-distribution';
 import { inferMealTurn } from '../../domain/meal-turn';
@@ -31,12 +33,14 @@ export class DailyLogRepository {
 
   getMeals(date: string): DailyMealEntry[] {
     const rows = this.db.query<any>(
-      `SELECT * FROM daily_meal_entries WHERE date = ? ORDER BY scheduled_time, slot_id`, [date]
+      `SELECT * FROM daily_meal_entries WHERE date = ?
+       ORDER BY CASE WHEN sort_order IS NULL THEN 1 ELSE 0 END, sort_order, scheduled_time, slot_id`, [date]
     );
     return rows.map(row => ({
       id: row.id,
       date: row.date,
       slotId: row.slot_id,
+      sortOrder: row.sort_order == null ? undefined : Number(row.sort_order),
       mealName: row.meal_name,
       mealTurn: row.meal_turn || inferMealTurn(row.slot_id, row.meal_name),
       scheduledTime: row.scheduled_time,
@@ -104,6 +108,7 @@ export class DailyLogRepository {
           id: row.id,
           date: row.date,
           slotId: row.slot_id,
+          sortOrder: row.sort_order == null ? undefined : Number(row.sort_order),
           mealName: row.meal_name,
           mealTurn: row.meal_turn || inferMealTurn(row.slot_id, row.meal_name),
           scheduledTime: row.scheduled_time,
@@ -159,6 +164,8 @@ export class DailyLogRepository {
 
   copyMeals(input: DailyMealCopyInput): DailyMealCopyResult {
     const sourceMeals = this.getMeals(input.sourceDate);
+    const existingOrder = sortDailyMealEntries(this.getMeals(input.targetDate)).map(meal => meal.slotId);
+    const copiedOrder: string[] = [];
     let copiedCount = 0;
     let skippedCount = 0;
     this.db.transaction(() => {
@@ -174,6 +181,7 @@ export class DailyLogRepository {
         this.saveMeal({
           date: input.targetDate,
           slotId: meal.slotId,
+          sortOrder: meal.sortOrder,
           mealName: meal.mealName,
           mealTurn: meal.mealTurn || inferMealTurn(meal.slotId, meal.mealName),
           scheduledTime: meal.scheduledTime,
@@ -181,10 +189,33 @@ export class DailyLogRepository {
           status: 'pending',
           items: meal.items.map(item => ({ ...item, consumedAmountG: 0 }))
         });
+        copiedOrder.push(meal.slotId);
         copiedCount += 1;
       }
+      if (copiedOrder.length) this.setMealOrder(input.targetDate, [...existingOrder, ...copiedOrder]);
     });
     return { ...input, copiedCount, skippedCount };
+  }
+
+  reorderMeals(input: ReorderDailyMealsInput): DailyMealEntry[] {
+    const entries = this.getMeals(input.date);
+    const currentSlots = new Set(entries.map(entry => entry.slotId));
+    if (input.slotIds.length !== entries.length || new Set(input.slotIds).size !== entries.length
+      || input.slotIds.some(slotId => !currentSlots.has(slotId))) {
+      throw new Error('A lista mudou desde que você abriu a semana. Recarregue e tente novamente.');
+    }
+    this.db.transaction(() => this.setMealOrder(input.date, input.slotIds));
+    return this.getMeals(input.date);
+  }
+
+  private setMealOrder(date: string, slotIds: string[]): void {
+    const now = new Date().toISOString();
+    slotIds.forEach((slotId, sortOrder) => {
+      this.db.execute(
+        'UPDATE daily_meal_entries SET sort_order = ?, updated_at = ? WHERE date = ? AND slot_id = ?',
+        [sortOrder, now, date, slotId]
+      );
+    });
   }
 
   getMealTemplates(): MealTemplate[] {
@@ -239,6 +270,8 @@ export class DailyLogRepository {
   applyMealTemplate(input: ApplyMealTemplateInput): ApplyMealTemplateResult {
     const template = this.getMealTemplates().find(item => item.id === input.templateId);
     if (!template) throw new Error('Modelo de refeições não encontrado.');
+    const existingOrder = sortDailyMealEntries(this.getMeals(input.targetDate)).map(meal => meal.slotId);
+    const addedOrder: string[] = [];
     let copiedCount = 0;
     let skippedCount = 0;
     this.db.transaction(() => {
@@ -261,8 +294,10 @@ export class DailyLogRepository {
           status: 'pending',
           items: meal.items.map(item => ({ ...item, consumedAmountG: 0 }))
         });
+        addedOrder.push(meal.slotId);
         copiedCount += 1;
       }
+      if (addedOrder.length) this.setMealOrder(input.targetDate, [...existingOrder, ...addedOrder]);
     });
     return {
       templateId: template.id,
@@ -271,6 +306,44 @@ export class DailyLogRepository {
       copiedCount,
       skippedCount
     };
+  }
+
+  applyMealTemplateToWeek(input: ApplyWeeklyMealTemplateInput): ApplyWeeklyMealTemplateResult {
+    const template = this.getMealTemplates().find(item => item.id === input.templateId);
+    if (!template) throw new Error('Modelo de refeições não encontrado.');
+    const dates = getWorkoutWeekDates(input.weekStartDate);
+    let copiedCount = 0;
+    let skippedCount = 0;
+    this.db.transaction(() => {
+      for (const date of dates) {
+        const existingOrder = sortDailyMealEntries(this.getMeals(date)).map(meal => meal.slotId);
+        const addedOrder: string[] = [];
+        for (const meal of template.meals) {
+          const occupied = this.db.queryOne<{ present: number }>(
+            'SELECT 1 AS present FROM daily_meal_entries WHERE date = ? AND slot_id = ?',
+            [date, meal.slotId]
+          );
+          if (occupied) {
+            skippedCount += 1;
+            continue;
+          }
+          this.saveMeal({
+            date,
+            slotId: meal.slotId,
+            mealName: meal.mealName,
+            mealTurn: meal.mealTurn || inferMealTurn(meal.slotId, meal.mealName),
+            scheduledTime: meal.scheduledTime,
+            recipeId: meal.recipeId,
+            status: 'pending',
+            items: meal.items.map(item => ({ ...item, consumedAmountG: 0 }))
+          });
+          addedOrder.push(meal.slotId);
+          copiedCount += 1;
+        }
+        if (addedOrder.length) this.setMealOrder(date, [...existingOrder, ...addedOrder]);
+      }
+    });
+    return { ...input, weekStartDate: dates[0], templateName: template.name, dates, copiedCount, skippedCount };
   }
 
   saveMeal(input: DailyMealEntryInput): DailyMealEntry {
@@ -291,11 +364,12 @@ export class DailyLogRepository {
 
     this.db.execute(
       `INSERT INTO daily_meal_entries (
-        id, date, slot_id, meal_name, meal_turn, scheduled_time, recipe_id, status, items_json,
+        id, date, slot_id, sort_order, meal_name, meal_turn, scheduled_time, recipe_id, status, items_json,
         calories, protein_g, carbs_g, fats_g, note, completed_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(date, slot_id) DO UPDATE SET
         meal_name = excluded.meal_name, scheduled_time = excluded.scheduled_time,
+        sort_order = COALESCE(excluded.sort_order, daily_meal_entries.sort_order),
         meal_turn = excluded.meal_turn,
         recipe_id = excluded.recipe_id, status = excluded.status, items_json = excluded.items_json,
         calories = excluded.calories, protein_g = excluded.protein_g, carbs_g = excluded.carbs_g,
@@ -307,7 +381,7 @@ export class DailyLogRepository {
           ELSE excluded.completed_at
         END,
         updated_at = excluded.updated_at`,
-      [id, input.date, input.slotId, input.mealName.trim(), input.mealTurn || inferMealTurn(input.slotId, input.mealName), input.scheduledTime, input.recipeId || null,
+      [id, input.date, input.slotId, input.sortOrder ?? null, input.mealName.trim(), input.mealTurn || inferMealTurn(input.slotId, input.mealName), input.scheduledTime, input.recipeId || null,
         input.status, JSON.stringify(input.items), totals.calories, totals.proteinG, totals.carbsG,
         totals.fatsG, input.note?.trim() || null, completedAt, now]
     );
@@ -330,10 +404,10 @@ export class DailyLogRepository {
     const mealTurn = input.mealTurn || inferMealTurn(input.slotId, input.mealName);
     this.db.execute(
       `INSERT INTO daily_meal_entries (
-        id, date, slot_id, meal_name, meal_turn, scheduled_time, recipe_id, status, items_json,
+        id, date, slot_id, sort_order, meal_name, meal_turn, scheduled_time, recipe_id, status, items_json,
         calories, protein_g, carbs_g, fats_g, note, completed_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [input.id, input.date, input.slotId, input.mealName, mealTurn, input.scheduledTime, input.recipeId || null,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [input.id, input.date, input.slotId, input.sortOrder ?? null, input.mealName, mealTurn, input.scheduledTime, input.recipeId || null,
         input.status, JSON.stringify(input.items), input.calories, input.proteinG, input.carbsG, input.fatsG,
         input.note || null, input.completedAt || null, input.updatedAt]
     );

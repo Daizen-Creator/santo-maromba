@@ -375,6 +375,7 @@ export const HydrationLogInputSchema = z.object({
 export const DailyMealEntryInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),
   slotId: z.string().trim().min(1).max(80).regex(/^[\w-]+$/),
+  sortOrder: z.number().int().min(0).max(500).optional(),
   mealName: z.string().trim().min(1).max(80),
   mealTurn: z.enum(['breakfast', 'lunch', 'snack', 'pre_workout', 'post_workout', 'dinner', 'supper']).optional(),
   scheduledTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
@@ -449,3 +450,14 @@ export const ApplyMealTemplateInputSchema = z.object({
   templateId: CustomFoodIdSchema,
   targetDate: DailyMealDateSchema
 }).strict();
+export const ApplyWeeklyMealTemplateInputSchema = z.object({
+  templateId: CustomFoodIdSchema,
+  weekStartDate: DailyMealDateSchema
+}).strict();
+export const ReorderDailyMealsInputSchema = z.object({
+  date: DailyMealDateSchema,
+  slotIds: z.array(z.string().trim().min(1).max(80).regex(/^[\w-]+$/)).min(2).max(100)
+}).strict().refine(input => new Set(input.slotIds).size === input.slotIds.length, {
+  message: 'Cada refeição deve aparecer uma vez na nova ordem.',
+  path: ['slotIds']
+});

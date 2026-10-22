@@ -216,6 +216,7 @@ CREATE TABLE IF NOT EXISTS daily_meal_entries (
   id TEXT PRIMARY KEY,
   date TEXT NOT NULL,
   slot_id TEXT NOT NULL,
+  sort_order INTEGER CHECK(sort_order IS NULL OR sort_order BETWEEN 0 AND 500),
   meal_name TEXT NOT NULL,
   meal_turn TEXT NOT NULL DEFAULT 'snack' CHECK(meal_turn IN ('breakfast', 'lunch', 'snack', 'pre_workout', 'post_workout', 'dinner', 'supper')),
   scheduled_time TEXT NOT NULL,

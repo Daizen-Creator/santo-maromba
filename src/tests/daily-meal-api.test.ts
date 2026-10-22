@@ -105,6 +105,29 @@ describe('Checklist alimentar na versão web', () => {
     expect(await api.getDailyMeals('2026-10-21')).toMatchObject([{ mealName: 'Já planejado' }]);
   });
 
+  it('aplica modelo aos sete dias offline e salva a reordenação por data', async () => {
+    const sourceDate = '2026-10-12';
+    const food = { itemId: 'oat', foodId: 'oat', foodName: 'Aveia', plannedAmountG: 50, consumedAmountG: 0, calories: 190, proteinG: 7, carbsG: 32, fatsG: 4 };
+    await api.saveDailyMeal({ date: sourceDate, slotId: 'dinner', sortOrder: 0, mealName: 'Jantar', scheduledTime: '20:00', status: 'pending', items: [food] });
+    await api.saveDailyMeal({ date: sourceDate, slotId: 'breakfast', sortOrder: 1, mealName: 'Café', scheduledTime: '08:00', status: 'pending', items: [food] });
+    const template = await api.saveMealTemplate({ name: 'Semana simples', sourceDate });
+    await api.saveDailyMeal({
+      date: '2026-10-21', slotId: 'breakfast', mealName: 'Café já consumido', scheduledTime: '07:30', status: 'consumed',
+      items: [{ ...food, consumedAmountG: 50 }], note: 'registro pessoal'
+    });
+
+    const applied = await api.applyMealTemplateToWeek({ templateId: template.id, weekStartDate: '2026-10-19' });
+    expect(applied).toMatchObject({ copiedCount: 13, skippedCount: 1, dates: ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25'] });
+    const reordered = await api.reorderDailyMeals({ date: '2026-10-21', slotIds: ['dinner', 'breakfast'] });
+    expect(reordered.map(meal => meal.slotId)).toEqual(['dinner', 'breakfast']);
+    expect((await api.getDailyMeals('2026-10-21')).map(meal => meal.slotId)).toEqual(['dinner', 'breakfast']);
+    expect(await api.getDailyMeals('2026-10-21')).toMatchObject([
+      { slotId: 'dinner', status: 'pending', sortOrder: 0 },
+      { slotId: 'breakfast', status: 'consumed', note: 'registro pessoal', sortOrder: 1 }
+    ]);
+    await expect(api.reorderDailyMeals({ date: '2026-10-21', slotIds: ['dinner', 'dinner'] })).rejects.toThrow();
+  });
+
   it('calcula médias web com registros reais e exclui água e refeições pendentes', async () => {
     const date = '2026-10-20';
     await api.addLoggedMeal({ date, mealName: 'Lanche', calories: 200, proteinG: 10, carbsG: 20, fatsG: 5 });
