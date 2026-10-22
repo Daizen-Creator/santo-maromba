@@ -195,6 +195,27 @@ export interface DailyMealIdentityInput {
   slotId: string;
 }
 
+export interface MealPhotoRecord {
+  id: string;
+  mealEntryId: string;
+  date: string;
+  slotId: string;
+  filePath: string;
+  createdAt: string;
+}
+
+export interface MealPhotoInput {
+  mealEntryId: string;
+  date: string;
+  slotId: string;
+  imageBytes: Uint8Array;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+}
+
+export interface MealPhotoIdentityInput {
+  mealEntryId: string;
+}
+
 export type DailyMealRestoreInput = DailyMealEntry;
 
 export interface DailyMealHistoryQuery {

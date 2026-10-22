@@ -12,9 +12,11 @@ import {
   SkipForward,
   Plus,
   Star,
-  Trash2
+  Trash2,
+  ImagePlus,
+  X
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -75,6 +77,9 @@ interface NutritionViewProps {
   onGetFoodPortionPreferences: () => Promise<FoodPortionPreference[]>;
   onSaveFoodPortionPreference: (input: SaveFoodPortionPreferenceInput) => Promise<FoodPortionPreference | null>;
   onGetMealHistory: (query: DailyMealHistoryQuery) => Promise<DailyMealEntry[]>;
+  onGetMealPhotos: (date: string) => Promise<MealPhotoRecord[]>;
+  onAddMealPhoto: (input: MealPhotoInput) => Promise<MealPhotoRecord>;
+  onDeleteMealPhoto: (input: { mealEntryId: string }) => Promise<void>;
   onCopyDailyMeals: (input: DailyMealCopyInput) => Promise<DailyMealCopyResult>;
   onGetMealTemplates: () => Promise<MealTemplate[]>;
   onSaveMealTemplate: (input: SaveMealTemplateInput) => Promise<MealTemplate>;
@@ -109,6 +114,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onGetFoodPortionPreferences,
   onSaveFoodPortionPreference,
   onGetMealHistory,
+  onGetMealPhotos,
+  onAddMealPhoto,
+  onDeleteMealPhoto,
   onCopyDailyMeals,
   onGetMealTemplates,
   onSaveMealTemplate,
@@ -176,6 +184,10 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [historyToDate, setHistoryToDate] = useState(() => formatDateInput(new Date()));
   const [historySearch, setHistorySearch] = useState('');
   const [historyEntries, setHistoryEntries] = useState<DailyMealEntry[]>([]);
+  const [mealPhotos, setMealPhotos] = useState<Record<string, MealPhotoRecord>>({});
+  const [mealPhotoBusy, setMealPhotoBusy] = useState<string | null>(null);
+  const [mealPhotoError, setMealPhotoError] = useState<string | null>(null);
+  const [expandedMealPhoto, setExpandedMealPhoto] = useState<MealPhotoRecord | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [mealDeleteTarget, setMealDeleteTarget] = useState<DailyMealEntry | null>(null);
@@ -202,6 +214,102 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const today = new Date();
   const todayString = formatDateInput(today);
   const nutritionBalance = calculateNutritionBalance(targets, summary);
+  const mealPhotoKey = (mealEntryId: string) => mealEntryId;
+
+  useEffect(() => {
+    let active = true;
+    void onGetMealPhotos(todayString).then(photos => {
+      if (!active) return;
+      setMealPhotos(current => ({
+        ...Object.fromEntries(Object.entries(current).filter(([, photo]) => photo.date !== todayString)),
+        ...Object.fromEntries(photos.map(photo => [mealPhotoKey(photo.mealEntryId), photo]))
+      }));
+      setMealPhotoError(null);
+    }).catch(error => {
+      if (active) setMealPhotoError(error instanceof Error ? error.message : 'Não foi possível carregar as fotos das refeições.');
+    });
+    return () => { active = false; };
+  }, [todayString, onGetMealPhotos]);
+
+  useEffect(() => {
+    const dates = [...new Set(historyEntries.map(entry => entry.date))];
+    if (!dates.length) return;
+    let active = true;
+    void Promise.all(dates.map(date => onGetMealPhotos(date))).then(groups => {
+      if (!active) return;
+      setMealPhotos(current => {
+        const next = { ...current };
+        dates.forEach(date => Object.entries(next).filter(([, photo]) => photo.date === date).forEach(([key]) => delete next[key]));
+        groups.flat().forEach(photo => { next[mealPhotoKey(photo.mealEntryId)] = photo; });
+        return next;
+      });
+    }).catch(error => {
+      if (active) setMealPhotoError(error instanceof Error ? error.message : 'Não foi possível carregar as fotos do histórico.');
+    });
+    return () => { active = false; };
+  }, [historyEntries, onGetMealPhotos]);
+
+  const attachMealPhoto = async (mealEntryId: string | undefined, date: string, slotId: string, file?: File) => {
+    if (!mealEntryId || !file) return;
+    const key = mealPhotoKey(mealEntryId);
+    setMealPhotoBusy(key);
+    setMealPhotoError(null);
+    try {
+      const photo = await onAddMealPhoto({
+        mealEntryId,
+        date,
+        slotId,
+        imageBytes: new Uint8Array(await file.arrayBuffer()),
+        mimeType: file.type as MealPhotoInput['mimeType']
+      });
+      setMealPhotos(current => ({ ...current, [key]: photo }));
+    } catch (error) {
+      setMealPhotoError(error instanceof Error ? error.message : 'Não foi possível salvar a foto da refeição.');
+    } finally {
+      setMealPhotoBusy(null);
+    }
+  };
+
+  const removeMealPhoto = async (mealEntryId: string) => {
+    if (!window.confirm('Remover a foto desta refeição?')) return;
+    const key = mealPhotoKey(mealEntryId);
+    setMealPhotoBusy(key);
+    setMealPhotoError(null);
+    try {
+      await onDeleteMealPhoto({ mealEntryId });
+      setMealPhotos(current => { const next = { ...current }; delete next[key]; return next; });
+    } catch (error) {
+      setMealPhotoError(error instanceof Error ? error.message : 'Não foi possível remover a foto da refeição.');
+    } finally {
+      setMealPhotoBusy(null);
+    }
+  };
+
+  const renderMealPhotoAttachment = (date: string, slotId: string, mealName: string, mealEntryId?: string) => {
+    const key = mealEntryId ? mealPhotoKey(mealEntryId) : `${date}/${slotId}`;
+    const photo = mealEntryId ? mealPhotos[key] : undefined;
+    return (
+      <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-background/35 p-3" aria-label={`Foto de ${mealName}`}>
+        <label className={`inline-flex min-h-9 items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/15 ${mealEntryId ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
+          <ImagePlus className="h-4 w-4" />
+          {mealPhotoBusy === key ? 'Salvando foto…' : photo ? 'Trocar foto' : 'Anexar foto'}
+          <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={!mealEntryId || mealPhotoBusy === key}
+            aria-label={`Anexar foto de ${mealName}`} onChange={event => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = '';
+              void attachMealPhoto(mealEntryId, date, slotId, file);
+            }} />
+        </label>
+        {!mealEntryId && <p className="text-[10px] text-muted-foreground">Salve o registro da refeição para anexar uma foto.</p>}
+        {photo && <>
+          <button type="button" aria-label={`Ampliar foto de ${mealName}`} onClick={() => setExpandedMealPhoto(photo)} className="overflow-hidden rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary">
+            <img src={photo.filePath} alt={`Foto anexada a ${mealName} em ${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR')}`} className="h-14 w-20 object-cover" />
+          </button>
+          <button type="button" disabled={mealPhotoBusy === key || !mealEntryId} onClick={() => mealEntryId && void removeMealPhoto(mealEntryId)} className="rounded-lg border border-border px-2.5 py-2 text-[10px] text-muted-foreground hover:border-destructive/40 hover:text-destructive disabled:opacity-50">Remover foto</button>
+        </>}
+      </div>
+    );
+  };
 
   const refreshRecentFoods = async () => {
     try {
@@ -909,6 +1017,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             )}
           </section>
           {mealSaveError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealSaveError}</p>}
+          {mealPhotoError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealPhotoError}</p>}
 
           {/* Blocos calculados na hora a partir do perfil e das metas atuais */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -1226,6 +1335,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                   {entry && (entry.status === 'consumed' || entry.status === 'partial') && (
                     <p className="mt-3 text-[11px] text-emerald-300">Registrado às {new Date(entry.completedAt || entry.updatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · {Math.round(entry.calories)} kcal · {entry.proteinG.toFixed(1)}g proteína consumida.</p>
                   )}
+                  {renderMealPhotoAttachment(todayString, slot.id, slot.title, entry?.id)}
                 </section>
               </article>
               );
@@ -1548,6 +1658,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
       {activeTab === 'history' && (
         <section className="space-y-5" aria-label="Histórico alimentar">
+          {mealPhotoError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealPhotoError}</p>}
           <form onSubmit={copyMealsFromDay} className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <label className="space-y-1 text-xs text-muted-foreground">
               Copiar refeições de
@@ -1674,6 +1785,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <span>{entry.fatsG.toFixed(1)} g gordura</span>
                   </div>
                   {entry.note && <p className="mt-2 text-xs text-muted-foreground">{entry.note}</p>}
+                  {renderMealPhotoAttachment(entry.date, entry.slotId, entry.mealName, entry.id)}
                 </article>
               ))}
             </div>
@@ -1945,6 +2057,15 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {expandedMealPhoto && (
+        <div role="presentation" onClick={() => setExpandedMealPhoto(null)} className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-4">
+          <div role="dialog" aria-modal="true" aria-label="Foto da refeição ampliada" onClick={event => event.stopPropagation()} className="relative max-h-[92vh] max-w-5xl rounded-2xl border border-border bg-card p-3 shadow-2xl">
+            <button type="button" aria-label="Fechar foto ampliada" onClick={() => setExpandedMealPhoto(null)} className="absolute right-5 top-5 z-10 rounded-full bg-black/70 p-2 text-white hover:bg-black"><X className="h-4 w-4" /></button>
+            <img src={expandedMealPhoto.filePath} alt={`Foto da refeição de ${new Date(`${expandedMealPhoto.date}T12:00:00`).toLocaleDateString('pt-BR')}`} className="max-h-[84vh] max-w-full rounded-xl object-contain" />
+            <p className="px-1 pt-2 text-xs text-muted-foreground">{new Date(`${expandedMealPhoto.date}T12:00:00`).toLocaleDateString('pt-BR')}</p>
           </div>
         </div>
       )}

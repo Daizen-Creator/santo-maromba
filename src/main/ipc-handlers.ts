@@ -31,6 +31,8 @@ import {
   DailyMealEntryInputSchema,
   DailyMealIdentityInputSchema,
   DailyMealRestoreInputSchema,
+  MealPhotoIdentitySchema,
+  MealPhotoInputSchema,
   CustomFoodInputSchema,
   CustomFoodUpdateInputSchema,
   RecipeFavoriteInputSchema,
@@ -47,9 +49,10 @@ export function registerIpcHandlers(
   db: IDatabase,
   photoDirectory?: string,
   exerciseMediaDirectory?: string,
-  customizationMediaDirectory?: string
+  customizationMediaDirectory?: string,
+  mealPhotoDirectory?: string
 ): FitTrackService {
-  const service = new FitTrackService(db, photoDirectory, exerciseMediaDirectory, customizationMediaDirectory);
+  const service = new FitTrackService(db, photoDirectory, exerciseMediaDirectory, customizationMediaDirectory, mealPhotoDirectory);
 
   const getCallingWindow = (event: Electron.IpcMainInvokeEvent): BrowserWindow => {
     const window = BrowserWindow.fromWebContents(event.sender);
@@ -631,6 +634,35 @@ export function registerIpcHandlers(
       return { success: true, data: service.restoreDailyMeal(DailyMealRestoreInputSchema.parse(rawInput)) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível desfazer a exclusão do lançamento.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_MEAL_PHOTOS, async (event, rawDate) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getMealPhotos(DailyMealDateSchema.parse(rawDate)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível carregar as fotos das refeições.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ADD_MEAL_PHOTO, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.addMealPhoto(MealPhotoInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar a foto da refeição.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DELETE_MEAL_PHOTO, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      const input = MealPhotoIdentitySchema.parse(rawInput);
+      service.deleteMealPhoto(input.mealEntryId);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível excluir a foto da refeição.' };
     }
   });
 

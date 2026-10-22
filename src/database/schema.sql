@@ -229,6 +229,17 @@ CREATE TABLE IF NOT EXISTS daily_meal_entries (
 
 CREATE INDEX IF NOT EXISTS idx_daily_meals_date ON daily_meal_entries(date, status);
 
+CREATE TABLE IF NOT EXISTS meal_photos (
+  id TEXT PRIMARY KEY,
+  meal_entry_id TEXT NOT NULL UNIQUE,
+  date TEXT NOT NULL,
+  slot_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(date, slot_id)
+);
+CREATE INDEX IF NOT EXISTS idx_meal_photos_date ON meal_photos(date);
+
 -- 11. Biblioteca de Exercícios
 CREATE TABLE IF NOT EXISTS exercises (
   id TEXT PRIMARY KEY,

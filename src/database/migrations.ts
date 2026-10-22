@@ -344,4 +344,21 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [24, 'Categoria de período alimentar em lançamentos e checklist', new Date().toISOString()]
     );
   }
+  db.exec(`CREATE TABLE IF NOT EXISTS meal_photos (
+    id TEXT PRIMARY KEY,
+    meal_entry_id TEXT NOT NULL UNIQUE,
+    date TEXT NOT NULL,
+    slot_id TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(date, slot_id)
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_meal_photos_date ON meal_photos(date)');
+  const version25 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 25');
+  if (!version25) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [25, 'Fotos locais vinculadas ao checklist de refeições', new Date().toISOString()]
+    );
+  }
 }

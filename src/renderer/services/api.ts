@@ -34,6 +34,9 @@ import {
   DailyMealEntryInput,
   DailyMealIdentityInput,
   DailyMealRestoreInput,
+  MealPhotoInput,
+  MealPhotoIdentityInput,
+  MealPhotoRecord,
   DailyMealHistoryQuery,
   DailyMealCopyInput,
   DailyMealCopyResult,
@@ -70,7 +73,8 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema } from '../../shared/schema';
+import { browserMealPhotoStore } from './browser-meal-photo-store';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -1120,6 +1124,36 @@ export const api = {
     };
     localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify([...entries, restored]));
     return restored;
+  },
+
+  getMealPhotos: async (rawDate: string): Promise<MealPhotoRecord[]> => {
+    const date = DailyMealDateSchema.parse(rawDate);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getMealPhotos(date);
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar fotos de refeições.');
+      return res.data || [];
+    }
+    return browserMealPhotoStore.list(date);
+  },
+
+  addMealPhoto: async (rawInput: MealPhotoInput): Promise<MealPhotoRecord> => {
+    const input = MealPhotoInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.addMealPhoto(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao salvar foto da refeição.');
+      return res.data;
+    }
+    return browserMealPhotoStore.add(input);
+  },
+
+  deleteMealPhoto: async (rawInput: MealPhotoIdentityInput): Promise<void> => {
+    const input = MealPhotoIdentitySchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.deleteMealPhoto(input);
+      if (!res.success) throw new Error(res.error || 'Erro ao excluir foto da refeição.');
+      return;
+    }
+    await browserMealPhotoStore.delete(input.mealEntryId);
   },
 
   copyDailyMeals: async (rawInput: DailyMealCopyInput): Promise<DailyMealCopyResult> => {

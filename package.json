@@ -1,6 +1,6 @@
 {
   "name": "fittrack-personal",
-  "version": "1.1.32",
+  "version": "1.1.33",
   "description": "Santo Maromba — treino, nutrição e evolução física offline",
   "main": "dist-electron/main/index.js",
   "scripts": {

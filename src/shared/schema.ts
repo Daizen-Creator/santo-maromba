@@ -177,6 +177,18 @@ export const PhotoNotesUpdateSchema = z.object({
 
 export const PhotoIdSchema = z.string().min(1).max(160).regex(/^[a-zA-Z0-9_-]+$/);
 
+export const MealPhotoIdentitySchema = z.object({
+  mealEntryId: z.string().trim().min(1).max(180).regex(/^[a-zA-Z0-9_-]+$/)
+}).strict();
+
+export const MealPhotoInputSchema = z.object({
+  mealEntryId: z.string().trim().min(1).max(180).regex(/^[a-zA-Z0-9_-]+$/),
+  date: z.string().refine(isRealCalendarDate, 'Informe uma data válida para a refeição.'),
+  slotId: z.string().trim().min(1).max(80).regex(/^[\w-]+$/),
+  imageBytes: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength > 0 && bytes.byteLength <= 15 * 1024 * 1024, 'A foto deve ter até 15 MB.'),
+  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp'])
+}).strict();
+
 export const InitialHistoryConfirmationSchema = z.object({
   confirmedHeightCm: z.number().min(100).max(250),
   confirmedBirthDate: z.string().refine(isRealCalendarDate, 'Informe uma data de nascimento válida.'),

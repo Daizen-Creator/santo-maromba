@@ -540,6 +540,9 @@ export const App: React.FC = () => {
               onGetFoodPortionPreferences={api.getFoodPortionPreferences}
               onSaveFoodPortionPreference={api.saveFoodPortionPreference}
               onGetMealHistory={api.getMealHistory}
+              onGetMealPhotos={api.getMealPhotos}
+              onAddMealPhoto={api.addMealPhoto}
+              onDeleteMealPhoto={api.deleteMealPhoto}
               onCopyDailyMeals={handleCopyDailyMeals}
               onGetMealTemplates={api.getMealTemplates}
               onSaveMealTemplate={api.saveMealTemplate}

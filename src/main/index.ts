@@ -12,6 +12,9 @@ protocol.registerSchemesAsPrivileged([{
   scheme: 'fittrack-exercise',
   privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
 }, {
+  scheme: 'fittrack-meal-photo',
+  privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
+}, {
   scheme: 'fittrack-customization',
   privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
 }]);
@@ -112,7 +115,8 @@ app.whenReady().then(async () => {
     const photoDirectory = path.join(app.getPath('userData'), 'photos');
     const exerciseMediaDirectory = path.join(app.getPath('userData'), 'exercise_media');
     const customizationMediaDirectory = path.join(app.getPath('userData'), 'customization_media');
-    const service = registerIpcHandlers(db, photoDirectory, exerciseMediaDirectory, customizationMediaDirectory);
+    const mealPhotoDirectory = path.join(app.getPath('userData'), 'meal_photos');
+    const service = registerIpcHandlers(db, photoDirectory, exerciseMediaDirectory, customizationMediaDirectory, mealPhotoDirectory);
     service.migrateLegacyPhotoFiles();
     protocol.handle('fittrack-photo', async request => {
       try {
@@ -123,6 +127,17 @@ app.whenReady().then(async () => {
         });
       } catch {
         return new Response('Foto não encontrada.', { status: 404 });
+      }
+    });
+    protocol.handle('fittrack-meal-photo', async request => {
+      try {
+        const photoId = decodeURIComponent(new URL(request.url).hostname);
+        const image = service.getMealPhotoImage(photoId);
+        return new Response(new Uint8Array(image.bytes), {
+          headers: { 'Content-Type': image.mimeType, 'Cache-Control': 'no-store' }
+        });
+      } catch {
+        return new Response('Foto da refeição não encontrada.', { status: 404 });
       }
     });
     protocol.handle('fittrack-exercise', async request => {

@@ -13,6 +13,7 @@ import { PhysiqueProjectionRepository } from '../database/repositories/physique-
 import { DailyLogRepository } from '../database/repositories/daily-log-repository';
 import { CustomizationRepository } from '../database/repositories/customization-repository';
 import { PersonalDiaryRepository } from '../database/repositories/personal-diary-repository';
+import { MealPhotoRepository } from '../database/repositories/meal-photo-repository';
 import { seedDatabase } from '../database/seeds/seedDatabase';
 import { calculateNutritionPlan } from '../domain/nutrition-calculator';
 import { SubstitutionEngine } from '../domain/substitution-engine';
@@ -63,6 +64,8 @@ import {
   DailyMealEntry,
   DailyMealIdentityInput,
   DailyMealRestoreInput,
+  MealPhotoInput,
+  MealPhotoRecord,
   DailyMealHistoryQuery,
   DailyMealCopyInput,
   DailyMealCopyResult,
@@ -82,6 +85,7 @@ import {
 } from '../shared/types';
 import { calculatePhysiqueProjection } from '../domain/physique-projection';
 import { PhotoStorage, StoredPhotoImage } from './photo-storage';
+import { MealPhotoInputSchema } from '../shared/schema';
 import { ExerciseMediaStorage } from './exercise-media-storage';
 import { CustomizationMediaStorage } from './customization-media-storage';
 
@@ -98,8 +102,10 @@ export class FitTrackService {
   private dailyLogRepo: DailyLogRepository;
   private customizationRepo: CustomizationRepository;
   private personalDiaryRepo: PersonalDiaryRepository;
+  private mealPhotoRepo: MealPhotoRepository;
   private workoutEngine: WorkoutEngine;
   private photoStorage: PhotoStorage;
+  private mealPhotoStorage: PhotoStorage;
   private exerciseMediaStorage: ExerciseMediaStorage;
   private customizationMediaStorage: CustomizationMediaStorage;
 
@@ -107,13 +113,16 @@ export class FitTrackService {
     db: IDatabase,
     photoDirectory = path.join(process.cwd(), 'data', 'photos'),
     exerciseMediaDirectory = path.join(process.cwd(), 'data', 'exercise_media'),
-    customizationMediaDirectory = path.join(process.cwd(), 'data', 'customization_media')
+    customizationMediaDirectory = path.join(process.cwd(), 'data', 'customization_media'),
+    mealPhotoDirectory = path.join(process.cwd(), 'data', 'meal_photos')
   ) {
     const seededCatalogs = seedDatabase(db);
     this.profileRepo = new ProfileRepository(db);
     this.weightRepo = new WeightRepository(db);
     this.photoRepo = new PhotoRepository(db);
     this.photoStorage = new PhotoStorage(photoDirectory);
+    this.mealPhotoRepo = new MealPhotoRepository(db);
+    this.mealPhotoStorage = new PhotoStorage(mealPhotoDirectory);
     this.exerciseMediaStorage = new ExerciseMediaStorage(exerciseMediaDirectory);
     this.customizationMediaStorage = new CustomizationMediaStorage(customizationMediaDirectory);
     this.measurementRepo = new MeasurementRepository(db);
@@ -231,6 +240,10 @@ export class FitTrackService {
 
   private withPhotoUrl(photo: PhotoRecord): PhotoRecord {
     return { ...photo, filePath: `fittrack-photo://${encodeURIComponent(photo.id)}` };
+  }
+
+  private withMealPhotoUrl(photo: MealPhotoRecord): MealPhotoRecord {
+    return { ...photo, filePath: `fittrack-meal-photo://${encodeURIComponent(photo.id)}` };
   }
 
   // --- MEDIDAS CORPORAIS ---
@@ -493,6 +506,41 @@ export class FitTrackService {
 
   restoreDailyMeal(input: DailyMealRestoreInput): DailyMealEntry {
     return this.dailyLogRepo.restoreMeal(input);
+  }
+
+  getMealPhotos(date: string): MealPhotoRecord[] {
+    return this.mealPhotoRepo.getByDate(date).map(photo => this.withMealPhotoUrl(photo));
+  }
+
+  addMealPhoto(input: MealPhotoInput): MealPhotoRecord {
+    input = MealPhotoInputSchema.parse(input);
+    const meal = this.dailyLogRepo.getMeals(input.date).find(entry => entry.id === input.mealEntryId && entry.slotId === input.slotId);
+    if (!meal) throw new Error('Salve a refeição neste aparelho antes de anexar uma foto.');
+    const id = `photo-meal-${randomUUID()}`;
+    const filePath = this.mealPhotoStorage.save(id, input.imageBytes, input.mimeType);
+    let saved: ReturnType<MealPhotoRepository['save']>;
+    try {
+      saved = this.mealPhotoRepo.save({ id, mealEntryId: input.mealEntryId, date: input.date, slotId: input.slotId, filePath });
+    } catch (error) {
+      this.mealPhotoStorage.delete(filePath);
+      throw error;
+    }
+    if (saved.replacedFilePath && saved.replacedFilePath !== filePath) {
+      try { this.mealPhotoStorage.delete(saved.replacedFilePath); }
+      catch (error) { console.error('[Meals] Não foi possível remover a foto anterior da refeição:', error); }
+    }
+    return this.withMealPhotoUrl(saved.record);
+  }
+
+  deleteMealPhoto(mealEntryId: string): void {
+    const filePath = this.mealPhotoRepo.deleteByMealEntryId(mealEntryId);
+    this.mealPhotoStorage.delete(filePath);
+  }
+
+  getMealPhotoImage(id: string): StoredPhotoImage {
+    const photo = this.mealPhotoRepo.getById(id);
+    if (!photo) throw new Error('Foto da refeição não encontrada.');
+    return this.mealPhotoStorage.read(photo.filePath);
   }
 
   // --- DASHBOARD & METAS ---

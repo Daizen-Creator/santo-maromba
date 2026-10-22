@@ -241,7 +241,14 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Adiciona exclusão confirmada de refeições no histórico com ação imediata de desfazer.
 - A restauração conserva a categoria, os ingredientes, macros, notas e horário original; conflitos com um horário já ocupado são recusados sem sobrescrever dados.
 - SQLite usa IPC validado no desktop; a PWA aplica o mesmo fluxo no armazenamento local offline.
-- 180 testes em 54 arquivos passaram; build, instalador NSIS e portable foram gerados. O executável abriu em perfil isolado e criou o SQLite com a migração 24. Publicação GitHub pendente.
+- 180 testes em 54 arquivos passaram; build, instalador NSIS e portable foram gerados. O executável abriu em perfil isolado e criou o SQLite com a migração 24. GitHub Actions `39765010849` publicou instalador NSIS, portable, blockmap e `latest.yml`.
+
+## v1.1.33
+
+- Permite anexar uma foto ao registro salvo de uma refeição, ampliá-la, trocar o arquivo e removê-lo com confirmação.
+- No desktop, a imagem fica em `userData/meal_photos` e os metadados no SQLite; na PWA, os bytes ficam no IndexedDB. O vínculo usa o ID do registro para não exibir a foto em outra refeição do mesmo horário.
+- Verifica data, horário, tamanho, MIME e assinatura do arquivo; não envia as fotos para servidores.
+- 187 testes em 56 arquivos passaram; build, instalador NSIS e portable concluídos. Smoke test iniciou o executável e aplicou a migração 25 no SQLite. Publicação GitHub pendente.
 
 ## Publicar uma versão
 
