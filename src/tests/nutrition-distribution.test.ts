@@ -17,8 +17,8 @@ describe('Distribuição real por refeição', () => {
       proteinG: 10, carbsG: 20, fatsG: 5, loggedAt: '2026-10-22T10:30:00.000Z'
     }]);
     expect(result).toEqual([
-      { id: 'quick-1', mealName: 'Lanche', source: 'quick_log', loggedAt: '2026-10-22T10:30:00.000Z', calories: 200, proteinG: 10, carbsG: 20, fatsG: 5 },
-      { id: 'Almoço', mealName: 'Almoço', source: 'checklist', loggedAt: '2026-10-22T12:30:00.000Z', calories: 400, proteinG: 30, carbsG: 40, fatsG: 10 }
+      { id: 'quick-1', mealName: 'Lanche', mealTurn: 'snack', source: 'quick_log', loggedAt: '2026-10-22T10:30:00.000Z', calories: 200, proteinG: 10, carbsG: 20, fatsG: 5 },
+      { id: 'Almoço', mealName: 'Almoço', mealTurn: 'lunch', source: 'checklist', loggedAt: '2026-10-22T12:30:00.000Z', calories: 400, proteinG: 30, carbsG: 40, fatsG: 10 }
     ]);
   });
 

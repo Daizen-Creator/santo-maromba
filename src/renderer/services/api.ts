@@ -68,12 +68,13 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
 import { calculateNutritionDistribution } from '../../domain/nutrition-distribution';
+import { inferMealTurn } from '../../domain/meal-turn';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_PROFILE_GOAL_HISTORY = 'fittrack_profile_goal_history';
@@ -945,6 +946,7 @@ export const api = {
   },
 
   addLoggedMeal: async (input: LoggedMealInput): Promise<DashboardSummary> => {
+    input = LoggedMealInputSchema.parse(input);
     if (api.isElectron()) {
       const res = await window.fitTrackAPI.addLoggedMeal(input);
       if (!res.success) throw new Error(res.error || 'Erro ao registrar a refeição.');
@@ -964,7 +966,10 @@ export const api = {
       return res.data || [];
     }
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
-    return entries.filter(entry => entry.date === date);
+    return entries.filter(entry => entry.date === date).map(entry => ({
+      ...entry,
+      mealTurn: entry.mealTurn || inferMealTurn(entry.slotId, entry.mealName)
+    }));
   },
 
   getRecentlyUsedFoods: async (): Promise<RecentlyUsedFood[]> => {
@@ -985,7 +990,10 @@ export const api = {
       return res.data || [];
     }
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
-    return filterDailyMealHistory(entries, query);
+    return filterDailyMealHistory(entries, query).map(entry => ({
+      ...entry,
+      mealTurn: entry.mealTurn || inferMealTurn(entry.slotId, entry.mealName)
+    }));
   },
 
   getNutritionAnalytics: async (rawInput: NutritionAnalyticsQuery): Promise<NutritionAnalytics> => {
@@ -1005,6 +1013,7 @@ export const api = {
     ).map(log => ({
       date: log.date as string,
       mealName: log.mealName as string,
+      mealTurn: typeof log.mealTurn === 'string' ? log.mealTurn as LoggedMealInput['mealTurn'] : inferMealTurn('', log.mealName as string),
       calories: log.calories as number,
       proteinG: log.proteinG as number,
       carbsG: log.carbsG as number,
@@ -1020,7 +1029,8 @@ export const api = {
       if (!res.success || !res.data) throw new Error(res.error || 'Erro ao consultar refeições consumidas.');
       return res.data;
     }
-    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const storedEntries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const entries = storedEntries.map(entry => ({ ...entry, mealTurn: entry.mealTurn || inferMealTurn(entry.slotId, entry.mealName) }));
     const storedLogs: Array<Record<string, unknown>> = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_LOGS) || '[]');
     const loggedMeals = storedLogs.flatMap((log, index) => {
       if (log.kind === 'water' || log.date !== date || typeof log.mealName !== 'string'
@@ -1029,6 +1039,7 @@ export const api = {
         id: typeof log.id === 'string' ? log.id : `quick-${date}-${index}`,
         date,
         mealName: log.mealName,
+        mealTurn: typeof log.mealTurn === 'string' ? log.mealTurn as LoggedMealInput['mealTurn'] : inferMealTurn('', log.mealName),
         calories: log.calories as number,
         proteinG: log.proteinG as number,
         carbsG: log.carbsG as number,
@@ -1040,6 +1051,7 @@ export const api = {
   },
 
   saveDailyMeal: async (input: DailyMealEntryInput): Promise<DailyMealEntry> => {
+    input = DailyMealEntryInputSchema.parse(input);
     if (api.isElectron()) {
       const res = await window.fitTrackAPI.saveDailyMeal(input);
       if (!res.success || !res.data) throw new Error(res.error || 'Erro ao salvar o checklist alimentar.');
@@ -1057,6 +1069,7 @@ export const api = {
     }, { calories: 0, proteinG: 0, carbsG: 0, fatsG: 0 });
     const entry: DailyMealEntry = {
       ...input,
+      mealTurn: input.mealTurn || inferMealTurn(input.slotId, input.mealName),
       id: `daily-meal-${input.date}-${input.slotId}`,
       ...totals,
       completedAt: consumed ? now : undefined,

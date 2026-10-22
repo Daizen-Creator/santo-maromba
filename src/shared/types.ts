@@ -138,6 +138,7 @@ export interface DashboardSummary {
 export interface LoggedMealInput {
   date: string;
   mealName: string;
+  mealTurn?: MealTurn;
   calories: number;
   proteinG: number;
   carbsG: number;
@@ -171,6 +172,7 @@ export interface DailyMealEntryInput {
   date: string;
   slotId: string;
   mealName: string;
+  mealTurn?: MealTurn;
   scheduledTime: string;
   recipeId?: string;
   status: DailyMealStatus;
@@ -221,6 +223,7 @@ export type NutritionDistributionSource = 'quick_log' | 'checklist';
 export interface NutritionMealDistributionEntry {
   id: string;
   mealName: string;
+  mealTurn?: MealTurn;
   source: NutritionDistributionSource;
   loggedAt?: string;
   calories: number;
@@ -242,6 +245,7 @@ export interface DailyMealCopyResult extends DailyMealCopyInput {
 export interface MealTemplateMeal {
   slotId: string;
   mealName: string;
+  mealTurn?: MealTurn;
   scheduledTime: string;
   recipeId?: string;
   items: DailyMealItemLog[];

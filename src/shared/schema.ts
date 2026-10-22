@@ -319,6 +319,7 @@ export const SaveCustomMeasurementInputSchema = z.object({
 export const LoggedMealInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),
   mealName: z.string().trim().min(1).max(80),
+  mealTurn: z.enum(['breakfast', 'lunch', 'snack', 'pre_workout', 'post_workout', 'dinner', 'supper']).optional(),
   calories: z.number().min(0).max(10000),
   proteinG: z.number().min(0).max(1000),
   carbsG: z.number().min(0).max(2000),
@@ -334,6 +335,7 @@ export const DailyMealEntryInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),
   slotId: z.string().trim().min(1).max(80).regex(/^[\w-]+$/),
   mealName: z.string().trim().min(1).max(80),
+  mealTurn: z.enum(['breakfast', 'lunch', 'snack', 'pre_workout', 'post_workout', 'dinner', 'supper']).optional(),
   scheduledTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
   recipeId: z.string().trim().max(100).optional(),
   status: z.enum(['pending', 'preparing', 'consumed', 'partial', 'deferred', 'skipped', 'cancelled']),

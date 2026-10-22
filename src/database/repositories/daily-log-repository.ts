@@ -5,6 +5,7 @@ import { getRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
 import { calculateNutritionDistribution } from '../../domain/nutrition-distribution';
+import { inferMealTurn } from '../../domain/meal-turn';
 
 export class DailyLogRepository {
   constructor(private db: IDatabase) {}
@@ -12,10 +13,10 @@ export class DailyLogRepository {
   addMeal(input: LoggedMealInput): void {
     this.db.execute(
       `INSERT INTO logged_meals (
-        id, date, meal_name, calories, protein_g, carbs_g, fats_g, items_json, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, date, meal_name, meal_turn, calories, protein_g, carbs_g, fats_g, items_json, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        'meal-' + randomUUID(), input.date, input.mealName.trim(), input.calories,
+        'meal-' + randomUUID(), input.date, input.mealName.trim(), input.mealTurn || inferMealTurn('', input.mealName), input.calories,
         input.proteinG, input.carbsG, input.fatsG, '[]', new Date().toISOString()
       ]
     );
@@ -37,6 +38,7 @@ export class DailyLogRepository {
       date: row.date,
       slotId: row.slot_id,
       mealName: row.meal_name,
+      mealTurn: row.meal_turn || inferMealTurn(row.slot_id, row.meal_name),
       scheduledTime: row.scheduled_time,
       recipeId: row.recipe_id || undefined,
       status: row.status,
@@ -53,7 +55,7 @@ export class DailyLogRepository {
 
   getRecentlyUsedFoods(limit = 12): RecentlyUsedFood[] {
     const rows = this.db.query<any>(
-      `SELECT id, date, slot_id, meal_name, scheduled_time, recipe_id, status, items_json,
+      `SELECT id, date, slot_id, meal_name, meal_turn, scheduled_time, recipe_id, status, items_json,
               calories, protein_g, carbs_g, fats_g, note, completed_at, updated_at
        FROM daily_meal_entries ORDER BY updated_at DESC`
     );
@@ -67,6 +69,7 @@ export class DailyLogRepository {
           date: row.date,
           slotId: row.slot_id,
           mealName: row.meal_name,
+          mealTurn: row.meal_turn || inferMealTurn(row.slot_id, row.meal_name),
           scheduledTime: row.scheduled_time,
           recipeId: row.recipe_id || undefined,
           status: row.status,
@@ -102,6 +105,7 @@ export class DailyLogRepository {
           date: row.date,
           slotId: row.slot_id,
           mealName: row.meal_name,
+          mealTurn: row.meal_turn || inferMealTurn(row.slot_id, row.meal_name),
           scheduledTime: row.scheduled_time,
           recipeId: row.recipe_id || undefined,
           status: row.status,
@@ -123,12 +127,13 @@ export class DailyLogRepository {
 
   getNutritionAnalytics(query: NutritionAnalyticsQuery): NutritionAnalytics {
     const loggedMeals = this.db.query<any>(
-      `SELECT date, meal_name, calories, protein_g, carbs_g, fats_g
+      `SELECT date, meal_name, meal_turn, calories, protein_g, carbs_g, fats_g
        FROM logged_meals WHERE date >= ? AND date <= ?`,
       [query.fromDate, query.toDate]
     ).map(row => ({
       date: row.date,
       mealName: row.meal_name,
+      mealTurn: row.meal_turn || inferMealTurn('', row.meal_name),
       calories: Number(row.calories),
       proteinG: Number(row.protein_g),
       carbsG: Number(row.carbs_g),
@@ -140,11 +145,12 @@ export class DailyLogRepository {
 
   getNutritionDistribution(date: string): NutritionMealDistributionEntry[] {
     const loggedMeals = this.db.query<any>(
-      `SELECT id, date, meal_name, calories, protein_g, carbs_g, fats_g, created_at
+      `SELECT id, date, meal_name, meal_turn, calories, protein_g, carbs_g, fats_g, created_at
        FROM logged_meals WHERE date = ? ORDER BY created_at`,
       [date]
     ).map(row => ({
       id: String(row.id), date: String(row.date), mealName: String(row.meal_name),
+      mealTurn: row.meal_turn,
       calories: Number(row.calories), proteinG: Number(row.protein_g), carbsG: Number(row.carbs_g),
       fatsG: Number(row.fats_g), loggedAt: String(row.created_at)
     }));
@@ -169,6 +175,7 @@ export class DailyLogRepository {
           date: input.targetDate,
           slotId: meal.slotId,
           mealName: meal.mealName,
+          mealTurn: meal.mealTurn || inferMealTurn(meal.slotId, meal.mealName),
           scheduledTime: meal.scheduledTime,
           recipeId: meal.recipeId,
           status: 'pending',
@@ -213,6 +220,7 @@ export class DailyLogRepository {
     const meals: MealTemplateMeal[] = entries.map(entry => ({
       slotId: entry.slotId,
       mealName: entry.mealName,
+      mealTurn: entry.mealTurn || inferMealTurn(entry.slotId, entry.mealName),
       scheduledTime: entry.scheduledTime,
       recipeId: entry.recipeId,
       items: entry.items.map(item => ({ ...item, consumedAmountG: 0 }))
@@ -247,6 +255,7 @@ export class DailyLogRepository {
           date: input.targetDate,
           slotId: meal.slotId,
           mealName: meal.mealName,
+          mealTurn: meal.mealTurn || inferMealTurn(meal.slotId, meal.mealName),
           scheduledTime: meal.scheduledTime,
           recipeId: meal.recipeId,
           status: 'pending',
@@ -282,11 +291,12 @@ export class DailyLogRepository {
 
     this.db.execute(
       `INSERT INTO daily_meal_entries (
-        id, date, slot_id, meal_name, scheduled_time, recipe_id, status, items_json,
+        id, date, slot_id, meal_name, meal_turn, scheduled_time, recipe_id, status, items_json,
         calories, protein_g, carbs_g, fats_g, note, completed_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(date, slot_id) DO UPDATE SET
         meal_name = excluded.meal_name, scheduled_time = excluded.scheduled_time,
+        meal_turn = excluded.meal_turn,
         recipe_id = excluded.recipe_id, status = excluded.status, items_json = excluded.items_json,
         calories = excluded.calories, protein_g = excluded.protein_g, carbs_g = excluded.carbs_g,
         fats_g = excluded.fats_g, note = excluded.note,
@@ -297,7 +307,7 @@ export class DailyLogRepository {
           ELSE excluded.completed_at
         END,
         updated_at = excluded.updated_at`,
-      [id, input.date, input.slotId, input.mealName.trim(), input.scheduledTime, input.recipeId || null,
+      [id, input.date, input.slotId, input.mealName.trim(), input.mealTurn || inferMealTurn(input.slotId, input.mealName), input.scheduledTime, input.recipeId || null,
         input.status, JSON.stringify(input.items), totals.calories, totals.proteinG, totals.carbsG,
         totals.fatsG, input.note?.trim() || null, completedAt, now]
     );

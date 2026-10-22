@@ -1,4 +1,5 @@
 import { DailyMealEntry, LoggedMealInput, NutritionMealDistributionEntry } from '../shared/types';
+import { inferMealTurn } from './meal-turn';
 
 export interface LoggedMealDistributionInput extends LoggedMealInput {
   id?: string;
@@ -17,6 +18,7 @@ export function calculateNutritionDistribution(
     return [{
       id: meal.id || `quick-${date}-${index}`,
       mealName: meal.mealName,
+      mealTurn: meal.mealTurn || inferMealTurn('', meal.mealName),
       source: 'quick_log' as const,
       loggedAt: meal.loggedAt,
       calories: meal.calories,
@@ -31,6 +33,7 @@ export function calculateNutritionDistribution(
     return [{
       id: meal.id,
       mealName: meal.mealName,
+      mealTurn: meal.mealTurn || inferMealTurn(meal.slotId, meal.mealName),
       source: 'checklist' as const,
       loggedAt: meal.completedAt,
       calories: meal.calories,

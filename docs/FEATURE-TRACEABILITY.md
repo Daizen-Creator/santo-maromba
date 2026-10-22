@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.29. Estado após validação do incremento: **87 validadas, 43 parciais, 47 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.30. Estado após validação do incremento: **88 validadas, 42 parciais, 47 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -55,7 +55,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | ID | Comportamento verificável (critério de aceitação) | Arquivos | Dependência | Estado / teste |
 |---:|---|---|---|---|
 | 21 | Descrever uma refeição em português com quantidade explícita, reconhecer itens do catálogo local, revisar pesos/macros calculados e confirmar o consumo em horário livre do checklist; rejeitar desconhecidos ou nomes ambíguos. | `natural-meal-parser.ts`; `NutritionView.tsx`; `daily-log-repository.ts`; `api.ts`; catálogo de alimentos | SQLite desktop; armazenamento local offline na PWA | V · `natural-meal-parser.test.ts` cobre correspondência do catálogo, cálculo por grama, quantidades ausentes/fora de faixa, alimento desconhecido, ambiguidade e persistência de itens/macros após reabrir SQLite e PWA |
-| 22 | Classificar registro por café, almoço, lanche, jantar ou ceia. | DIAR | — | P · slots existem; classificação manual limitada |
+| 22 | Classificar refeições como café da manhã, almoço, lanche, pré-treino, pós-treino, jantar ou ceia; persistir a categoria nos registros do checklist e lançamentos rápidos, exibi-la no histórico/distribuição e mantê-la após reabrir. | `NutritionView.tsx`; `meal-turn.ts`; `daily-log-repository.ts`; `nutrition-distribution.ts`; `daily-meal-history.ts`; `api.ts`; `schema.ts`; `schema.sql`; `migrations.ts` | Migração SQLite 24; armazenamento local offline da PWA | V · `meal-category-persistence.test.ts` cobre migração e classificação de registros antigos, persistência/reabertura de pré e pós-treino em SQLite e PWA e rejeição de categoria inválida; `nutrition-distribution.test.ts` cobre classificação mostrada na distribuição |
 | 23 | Distinguir itens planejados dos realmente consumidos. | DIAR | — | V · `daily-meal-api.test.ts` |
 | 24 | Registrar gramas parciais e recalcular totais consumidos. | DIAR; NUTR | — | V · `daily-log-persistence.test.ts` |
 | 25 | Favoritar alimento e consultá-lo em lista própria. | NUTR | — | V · catálogo mantém favoritos no SQLite/PWA e filtra a lista; testes `catalog-persistence.test.ts` e `daily-meal-api.test.ts` |

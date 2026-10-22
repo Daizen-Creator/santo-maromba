@@ -23,6 +23,32 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   // Executa o schema completo
   db.exec(schemaSql);
 
+  const loggedMealColumns = db.query<{ name: string }>('PRAGMA table_info(logged_meals)');
+  if (!loggedMealColumns.some(column => column.name === 'meal_turn')) {
+    db.exec("ALTER TABLE logged_meals ADD COLUMN meal_turn TEXT NOT NULL DEFAULT 'snack' CHECK(meal_turn IN ('breakfast', 'lunch', 'snack', 'pre_workout', 'post_workout', 'dinner', 'supper'))");
+    db.exec(`UPDATE logged_meals SET meal_turn = CASE
+      WHEN lower(meal_name) LIKE '%café%' OR lower(meal_name) LIKE '%cafe%' OR lower(meal_name) LIKE '%breakfast%' THEN 'breakfast'
+      WHEN lower(meal_name) LIKE '%almoço%' OR lower(meal_name) LIKE '%almoco%' OR lower(meal_name) LIKE '%lunch%' THEN 'lunch'
+      WHEN lower(meal_name) LIKE '%pré-treino%' OR lower(meal_name) LIKE '%pre-treino%' OR lower(meal_name) LIKE '%pre workout%' THEN 'pre_workout'
+      WHEN lower(meal_name) LIKE '%pós-treino%' OR lower(meal_name) LIKE '%pos-treino%' OR lower(meal_name) LIKE '%post workout%' THEN 'post_workout'
+      WHEN lower(meal_name) LIKE '%jantar%' OR lower(meal_name) LIKE '%dinner%' THEN 'dinner'
+      WHEN lower(meal_name) LIKE '%ceia%' OR lower(meal_name) LIKE '%supper%' THEN 'supper'
+      ELSE 'snack' END`);
+  }
+  const dailyMealColumns = db.query<{ name: string }>('PRAGMA table_info(daily_meal_entries)');
+  if (!dailyMealColumns.some(column => column.name === 'meal_turn')) {
+    db.exec("ALTER TABLE daily_meal_entries ADD COLUMN meal_turn TEXT NOT NULL DEFAULT 'snack' CHECK(meal_turn IN ('breakfast', 'lunch', 'snack', 'pre_workout', 'post_workout', 'dinner', 'supper'))");
+    db.exec(`UPDATE daily_meal_entries SET meal_turn = CASE
+      WHEN slot_id = 'breakfast' OR lower(meal_name) LIKE '%café%' OR lower(meal_name) LIKE '%cafe%' THEN 'breakfast'
+      WHEN slot_id = 'lunch' OR lower(meal_name) LIKE '%almoço%' OR lower(meal_name) LIKE '%almoco%' THEN 'lunch'
+      WHEN slot_id LIKE '%snack%' OR lower(meal_name) LIKE '%lanche%' THEN 'snack'
+      WHEN slot_id = 'pre_workout' OR lower(meal_name) LIKE '%pré-treino%' OR lower(meal_name) LIKE '%pre-treino%' THEN 'pre_workout'
+      WHEN slot_id = 'post_workout' OR lower(meal_name) LIKE '%pós-treino%' OR lower(meal_name) LIKE '%pos-treino%' THEN 'post_workout'
+      WHEN slot_id = 'dinner' OR lower(meal_name) LIKE '%jantar%' THEN 'dinner'
+      WHEN slot_id = 'supper' OR lower(meal_name) LIKE '%ceia%' THEN 'supper'
+      ELSE 'snack' END`);
+  }
+
   // Campos de catálogo adicionados depois da versão 1 são migrados sem apagar dados existentes.
   const recipeColumns = db.query<{ name: string }>('PRAGMA table_info(recipes)');
   if (!recipeColumns.some(column => column.name === 'budget_swaps')) {
@@ -309,6 +335,13 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [23, 'Diário pessoal de rotina e treino', new Date().toISOString()]
+    );
+  }
+  const version24 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 24');
+  if (!version24) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [24, 'Categoria de período alimentar em lançamentos e checklist', new Date().toISOString()]
     );
   }
 }
