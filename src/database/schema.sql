@@ -301,3 +301,14 @@ CREATE TABLE IF NOT EXISTS physique_projections (
 
 CREATE INDEX IF NOT EXISTS idx_physique_projections_profile_created
   ON physique_projections(profile_id, created_at DESC);
+
+-- 17. Modelos reutilizáveis de refeições criados pelo usuário
+CREATE TABLE IF NOT EXISTS meal_templates (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  source_date TEXT NOT NULL,
+  meals_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_meal_templates_updated ON meal_templates(updated_at DESC);

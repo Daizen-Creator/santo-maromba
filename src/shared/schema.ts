@@ -263,3 +263,11 @@ export const DailyMealCopyInputSchema = z.object({
   message: 'Escolha datas diferentes para copiar as refeições.',
   path: ['targetDate']
 });
+export const SaveMealTemplateInputSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  sourceDate: DailyMealDateSchema
+}).strict();
+export const ApplyMealTemplateInputSchema = z.object({
+  templateId: CustomFoodIdSchema,
+  targetDate: DailyMealDateSchema
+}).strict();

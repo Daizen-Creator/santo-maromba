@@ -52,6 +52,25 @@ describe('Checklist alimentar na versão web', () => {
     await expect(api.copyDailyMeals({ sourceDate: input.date, targetDate: input.date })).rejects.toThrow();
   });
 
+  it('salva modelos no armazenamento local e aplica apenas em horários vazios', async () => {
+    const sourceDate = '2026-10-20';
+    await api.saveDailyMeal({
+      date: sourceDate, slotId: 'breakfast', mealName: 'Café da manhã', scheduledTime: '08:00', status: 'consumed',
+      items: [{ itemId: 'oat-0', foodId: 'oat', foodName: 'Aveia', plannedAmountG: 50, consumedAmountG: 50, calories: 190, proteinG: 7, carbsG: 32, fatsG: 4 }]
+    });
+    const template = await api.saveMealTemplate({ name: 'Rotina manhã', sourceDate });
+    expect((await api.getMealTemplates()).map(item => item.id)).toContain(template.id);
+    expect(template.meals[0].items[0].consumedAmountG).toBe(0);
+    await expect(api.saveMealTemplate({ name: 'rotina manhã', sourceDate })).rejects.toThrow('Já existe um modelo');
+
+    await api.saveDailyMeal({
+      date: '2026-10-21', slotId: 'breakfast', mealName: 'Já planejado', scheduledTime: '07:00', status: 'pending', items: []
+    });
+    const applied = await api.applyMealTemplate({ templateId: template.id, targetDate: '2026-10-21' });
+    expect(applied).toMatchObject({ copiedCount: 0, skippedCount: 1 });
+    expect(await api.getDailyMeals('2026-10-21')).toMatchObject([{ mealName: 'Já planejado' }]);
+  });
+
   it('mantém origem e qualidade nutricional nos ingredientes do catálogo web', async () => {
     const recipes = await api.getRecipes();
     const ingredients = recipes.flatMap(recipe => recipe.ingredients);

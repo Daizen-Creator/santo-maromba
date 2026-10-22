@@ -4,6 +4,8 @@ import {
   CustomFoodInputSchema,
   DailyMealHistoryQuerySchema,
   DailyMealCopyInputSchema,
+  SaveMealTemplateInputSchema,
+  ApplyMealTemplateInputSchema,
   PhotoInputSchema,
   PhotoNotesUpdateSchema,
   ProfileInputSchema,
@@ -33,6 +35,15 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(DailyMealCopyInputSchema.parse({ sourceDate: '2026-10-21', targetDate: '2026-10-22' }))
       .toEqual({ sourceDate: '2026-10-21', targetDate: '2026-10-22' });
     expect(() => DailyMealCopyInputSchema.parse({ sourceDate: '2026-10-22', targetDate: '2026-10-22' })).toThrow();
+  });
+
+  it('valida entradas para salvar e aplicar modelos de refeições', () => {
+    expect(SaveMealTemplateInputSchema.parse({ name: '  Dia de treino  ', sourceDate: '2026-10-21' }))
+      .toEqual({ name: 'Dia de treino', sourceDate: '2026-10-21' });
+    expect(() => SaveMealTemplateInputSchema.parse({ name: '   ', sourceDate: '2026-02-31' })).toThrow();
+    expect(ApplyMealTemplateInputSchema.parse({ templateId: 'template-abc', targetDate: '2026-10-22' }).templateId)
+      .toBe('template-abc');
+    expect(() => ApplyMealTemplateInputSchema.parse({ templateId: '../bad', targetDate: '2026-10-22' })).toThrow();
   });
 
   it('valida cadastro nutricional por 100 g e rejeita macros negativos', () => {

@@ -19,6 +19,8 @@ import {
   DailyMealDateSchema,
   DailyMealHistoryQuerySchema,
   DailyMealCopyInputSchema,
+  SaveMealTemplateInputSchema,
+  ApplyMealTemplateInputSchema,
   DailyMealEntryInputSchema,
   CustomFoodInputSchema,
   CustomFoodUpdateInputSchema,
@@ -420,6 +422,33 @@ export function registerIpcHandlers(
       return { success: true, data: service.copyDailyMeals(DailyMealCopyInputSchema.parse(rawInput)) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível copiar as refeições.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_MEAL_TEMPLATES, async event => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getMealTemplates() };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível consultar os modelos de refeições.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_MEAL_TEMPLATE, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.saveMealTemplate(SaveMealTemplateInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar o modelo de refeições.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.APPLY_MEAL_TEMPLATE, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.applyMealTemplate(ApplyMealTemplateInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível aplicar o modelo de refeições.' };
     }
   });
 

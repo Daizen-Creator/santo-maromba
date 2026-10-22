@@ -174,4 +174,12 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [10, 'Rendimento de porções editável para receitas', new Date().toISOString()]
     );
   }
+
+  const version11 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 11');
+  if (!version11) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [11, 'Modelos reutilizáveis de refeições do usuário', new Date().toISOString()]
+    );
+  }
 }

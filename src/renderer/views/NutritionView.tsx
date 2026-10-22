@@ -13,7 +13,7 @@ import {
   Plus,
   Star
 } from 'lucide-react';
-import { CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTemplate, MealTurn, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
@@ -47,6 +47,9 @@ interface NutritionViewProps {
   onGetRecentlyUsedFoods: () => Promise<RecentlyUsedFood[]>;
   onGetMealHistory: (query: DailyMealHistoryQuery) => Promise<DailyMealEntry[]>;
   onCopyDailyMeals: (input: DailyMealCopyInput) => Promise<DailyMealCopyResult>;
+  onGetMealTemplates: () => Promise<MealTemplate[]>;
+  onSaveMealTemplate: (input: SaveMealTemplateInput) => Promise<MealTemplate>;
+  onApplyMealTemplate: (input: ApplyMealTemplateInput) => Promise<ApplyMealTemplateResult>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
   onSetRecipeServings: (id: string, servings: number) => Promise<void>;
   onSetFoodFavorite: (id: string, isFavorite: boolean) => Promise<void>;
@@ -68,6 +71,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onGetRecentlyUsedFoods,
   onGetMealHistory,
   onCopyDailyMeals,
+  onGetMealTemplates,
+  onSaveMealTemplate,
+  onApplyMealTemplate,
   onSetRecipeFavorite,
   onSetRecipeServings,
   onSetFoodFavorite
@@ -121,6 +127,14 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [copyTargetDate, setCopyTargetDate] = useState(() => formatDateInput(new Date()));
   const [copyResultMessage, setCopyResultMessage] = useState<string | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
+  const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
+  const [templateName, setTemplateName] = useState('');
+  const [templateSourceDate, setTemplateSourceDate] = useState(() => formatDateInput(new Date()));
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [templateTargetDate, setTemplateTargetDate] = useState(() => formatDateInput(new Date()));
+  const [templateMessage, setTemplateMessage] = useState<string | null>(null);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const [templateSaving, setTemplateSaving] = useState(false);
 
   const today = new Date();
   const todayString = formatDateInput(today);
@@ -207,6 +221,54 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
       setHistoryEntries(await onGetMealHistory({ fromDate: copyTargetDate, toDate: copyTargetDate }));
     } catch (error) {
       setCopyError(error instanceof Error ? error.message : 'Não foi possível copiar as refeições.');
+    }
+  };
+
+  const refreshMealTemplates = async () => {
+    try {
+      const templates = await onGetMealTemplates();
+      setMealTemplates(templates);
+      setSelectedTemplateId(current => current && templates.some(template => template.id === current) ? current : templates[0]?.id || '');
+      setTemplateError(null);
+    } catch (error) {
+      setTemplateError(error instanceof Error ? error.message : 'Não foi possível carregar os modelos.');
+    }
+  };
+
+  useEffect(() => {
+    void refreshMealTemplates();
+  }, []);
+
+  const saveMealTemplate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setTemplateSaving(true);
+    setTemplateError(null);
+    setTemplateMessage(null);
+    try {
+      const template = await onSaveMealTemplate({ name: templateName, sourceDate: templateSourceDate });
+      setMealTemplates(current => [template, ...current.filter(item => item.id !== template.id)]);
+      setSelectedTemplateId(template.id);
+      setTemplateName('');
+      setTemplateMessage(`Modelo “${template.name}” salvo com ${template.meals.length} refeições.`);
+    } catch (error) {
+      setTemplateError(error instanceof Error ? error.message : 'Não foi possível salvar o modelo.');
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
+
+  const applyMealTemplate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setTemplateError(null);
+    setTemplateMessage(null);
+    try {
+      const result = await onApplyMealTemplate({ templateId: selectedTemplateId, targetDate: templateTargetDate });
+      setTemplateMessage(`${result.copiedCount} refeição(ões) adicionada(s); ${result.skippedCount} horário(s) preenchido(s) preservado(s).`);
+      setHistoryFromDate(templateTargetDate);
+      setHistoryToDate(templateTargetDate);
+      setHistoryEntries(await onGetMealHistory({ fromDate: templateTargetDate, toDate: templateTargetDate }));
+    } catch (error) {
+      setTemplateError(error instanceof Error ? error.message : 'Não foi possível aplicar o modelo.');
     }
   };
 
@@ -917,6 +979,49 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             {copyError && <p role="alert" className="sm:col-span-3 text-xs text-red-300">{copyError}</p>}
             <p className="sm:col-span-3 text-[10px] text-muted-foreground">O registro do dia de destino permanece intacto; quantidades consumidas e estados não são copiados.</p>
           </form>
+          <div className="grid gap-4 rounded-2xl border border-border bg-card/70 p-4 lg:grid-cols-2">
+            <form onSubmit={saveMealTemplate} className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Salvar dia como modelo</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Guarde as refeições planejadas dessa data para reutilizar depois.</p>
+              </div>
+              <label className="block space-y-1 text-xs text-muted-foreground">
+                Nome do modelo
+                <input required minLength={1} maxLength={80} value={templateName} onChange={event => setTemplateName(event.target.value)} placeholder="Ex.: Dia de treino" className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground/60" />
+              </label>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="flex-1 space-y-1 text-xs text-muted-foreground">
+                  Refeições de
+                  <input type="date" required value={templateSourceDate} onChange={event => setTemplateSourceDate(event.target.value)} className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" />
+                </label>
+                <button type="submit" disabled={templateSaving} className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:opacity-50">
+                  {templateSaving ? 'Salvando…' : 'Salvar modelo'}
+                </button>
+              </div>
+            </form>
+            <form onSubmit={applyMealTemplate} className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Aplicar modelo a uma data</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Horários já preenchidos são mantidos. As novas refeições entram como planejadas.</p>
+              </div>
+              <label className="block space-y-1 text-xs text-muted-foreground">
+                Modelo salvo
+                <select required value={selectedTemplateId} onChange={event => setSelectedTemplateId(event.target.value)} className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" disabled={!mealTemplates.length}>
+                  {mealTemplates.length === 0 && <option value="">Nenhum modelo salvo</option>}
+                  {mealTemplates.map(template => <option key={template.id} value={template.id}>{template.name} · {template.meals.length} refeições</option>)}
+                </select>
+              </label>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="flex-1 space-y-1 text-xs text-muted-foreground">
+                  Aplicar em
+                  <input type="date" required value={templateTargetDate} onChange={event => setTemplateTargetDate(event.target.value)} className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" />
+                </label>
+                <button type="submit" disabled={!selectedTemplateId} className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-50">Aplicar modelo</button>
+              </div>
+            </form>
+            {templateMessage && <p role="status" className="lg:col-span-2 text-xs text-emerald-300">{templateMessage}</p>}
+            {templateError && <p role="alert" className="lg:col-span-2 text-xs text-red-300">{templateError}</p>}
+          </div>
           <form onSubmit={searchMealHistory} className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_2fr_auto] lg:items-end">
             <label className="space-y-1 text-xs text-muted-foreground">
               De

@@ -24,6 +24,10 @@ import {
   DailyMealHistoryQuery,
   DailyMealCopyInput,
   DailyMealCopyResult,
+  MealTemplate,
+  SaveMealTemplateInput,
+  ApplyMealTemplateInput,
+  ApplyMealTemplateResult,
   RecentlyUsedFood,
   HydrationLogInput,
   CustomizationMediaInput,
@@ -44,7 +48,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 
@@ -56,6 +60,7 @@ const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
 const LOCAL_STORAGE_KEY_PROJECTIONS = 'fittrack_physique_projections';
 const LOCAL_STORAGE_KEY_DAILY_LOGS = 'fittrack_daily_logs';
 const LOCAL_STORAGE_KEY_DAILY_MEALS = 'fittrack_daily_meals';
+const LOCAL_STORAGE_KEY_MEAL_TEMPLATES = 'fittrack_meal_templates';
 const LOCAL_STORAGE_KEY_CUSTOM_FOODS = 'fittrack_custom_foods';
 const LOCAL_STORAGE_KEY_FAVORITE_FOODS = 'fittrack_favorite_foods';
 const LOCAL_STORAGE_KEY_FAVORITE_RECIPES = 'fittrack_favorite_recipes';
@@ -717,6 +722,92 @@ export const api = {
     }
     if (copied.length) localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify([...entries, ...copied]));
     return { ...input, copiedCount, skippedCount };
+  },
+
+  getMealTemplates: async (): Promise<MealTemplate[]> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getMealTemplates();
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar modelos de refeições.');
+      return res.data || [];
+    }
+    return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MEAL_TEMPLATES) || '[]');
+  },
+
+  saveMealTemplate: async (rawInput: SaveMealTemplateInput): Promise<MealTemplate> => {
+    const input = SaveMealTemplateInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveMealTemplate(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao salvar modelo de refeições.');
+      return res.data;
+    }
+    const templates = await api.getMealTemplates();
+    const normalizedName = input.name.normalize('NFC').toLocaleLowerCase('pt-BR');
+    if (templates.some(template => template.name.normalize('NFC').toLocaleLowerCase('pt-BR') === normalizedName)) {
+      throw new Error('Já existe um modelo com esse nome.');
+    }
+    const sourceMeals = await api.getDailyMeals(input.sourceDate);
+    if (!sourceMeals.length) throw new Error('Não há refeições salvas nessa data para criar um modelo.');
+    const template: MealTemplate = {
+      id: `template-${globalThis.crypto.randomUUID()}`,
+      name: input.name,
+      sourceDate: input.sourceDate,
+      createdAt: new Date().toISOString(),
+      meals: sourceMeals.map(meal => ({
+        slotId: meal.slotId,
+        mealName: meal.mealName,
+        scheduledTime: meal.scheduledTime,
+        recipeId: meal.recipeId,
+        items: meal.items.map(item => ({ ...item, consumedAmountG: 0 }))
+      }))
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY_MEAL_TEMPLATES, JSON.stringify([template, ...templates]));
+    return template;
+  },
+
+  applyMealTemplate: async (rawInput: ApplyMealTemplateInput): Promise<ApplyMealTemplateResult> => {
+    const input = ApplyMealTemplateInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.applyMealTemplate(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao aplicar modelo de refeições.');
+      return res.data;
+    }
+    const template = (await api.getMealTemplates()).find(candidate => candidate.id === input.templateId);
+    if (!template) throw new Error('Modelo de refeições não encontrado.');
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const occupiedSlots = new Set(entries.filter(entry => entry.date === input.targetDate).map(entry => entry.slotId));
+    const now = new Date().toISOString();
+    const added: DailyMealEntry[] = [];
+    let skippedCount = 0;
+    for (const meal of template.meals) {
+      if (occupiedSlots.has(meal.slotId)) {
+        skippedCount += 1;
+        continue;
+      }
+      added.push({
+        id: `daily-meal-${input.targetDate}-${meal.slotId}`,
+        date: input.targetDate,
+        slotId: meal.slotId,
+        mealName: meal.mealName,
+        scheduledTime: meal.scheduledTime,
+        recipeId: meal.recipeId,
+        status: 'pending',
+        items: meal.items.map(item => ({ ...item, consumedAmountG: 0 })),
+        calories: 0,
+        proteinG: 0,
+        carbsG: 0,
+        fatsG: 0,
+        updatedAt: now
+      });
+      occupiedSlots.add(meal.slotId);
+    }
+    if (added.length) localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify([...entries, ...added]));
+    return {
+      templateId: template.id,
+      templateName: template.name,
+      targetDate: input.targetDate,
+      copiedCount: added.length,
+      skippedCount
+    };
   },
 
   addHydrationLog: async (input: HydrationLogInput): Promise<DashboardSummary> => {

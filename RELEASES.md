@@ -52,6 +52,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - A cópia cria refeições pendentes com consumo zerado e preserva qualquer slot já ocupado no destino.
 - O desktop usa transação SQLite; a versão web grava o conjunto copiado no armazenamento local de uma só vez.
 
+## v1.1.2
+
+- Permite salvar refeições de uma data como modelos nomeados e reutilizá-los em outra data.
+- Aplicação dos modelos cria refeições planejadas com consumo zerado e mantém intactos os horários que já têm registros.
+- Os modelos persistem no SQLite no desktop e no armazenamento local da PWA; testes verificam reabertura e duplicidade de nomes.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

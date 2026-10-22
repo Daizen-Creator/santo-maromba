@@ -183,6 +183,40 @@ export interface DailyMealCopyResult extends DailyMealCopyInput {
   skippedCount: number;
 }
 
+export interface MealTemplateMeal {
+  slotId: string;
+  mealName: string;
+  scheduledTime: string;
+  recipeId?: string;
+  items: DailyMealItemLog[];
+}
+
+export interface MealTemplate {
+  id: string;
+  name: string;
+  sourceDate: string;
+  meals: MealTemplateMeal[];
+  createdAt: string;
+}
+
+export interface SaveMealTemplateInput {
+  name: string;
+  sourceDate: string;
+}
+
+export interface ApplyMealTemplateInput {
+  templateId: string;
+  targetDate: string;
+}
+
+export interface ApplyMealTemplateResult {
+  templateId: string;
+  templateName: string;
+  targetDate: string;
+  copiedCount: number;
+  skippedCount: number;
+}
+
 export interface RecentlyUsedFood {
   foodId: string;
   foodName: string;

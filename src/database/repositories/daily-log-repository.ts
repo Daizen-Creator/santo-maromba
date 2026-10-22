@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, RecentlyUsedFood } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, RecentlyUsedFood, SaveMealTemplateInput } from '../../shared/types';
 import { getRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 
@@ -146,6 +146,90 @@ export class DailyLogRepository {
       }
     });
     return { ...input, copiedCount, skippedCount };
+  }
+
+  getMealTemplates(): MealTemplate[] {
+    const rows = this.db.query<any>('SELECT * FROM meal_templates ORDER BY updated_at DESC, name COLLATE NOCASE');
+    const templates: MealTemplate[] = [];
+    for (const row of rows) {
+      try {
+        const meals = JSON.parse(row.meals_json || '[]');
+        if (!Array.isArray(meals)) continue;
+        templates.push({
+          id: row.id,
+          name: row.name,
+          sourceDate: row.source_date,
+          meals: meals as MealTemplateMeal[],
+          createdAt: row.created_at
+        });
+      } catch {
+        // Um modelo inválido não impede a consulta dos demais.
+      }
+    }
+    return templates;
+  }
+
+  saveMealTemplate(input: SaveMealTemplateInput): MealTemplate {
+    const name = input.name.trim();
+    if (!name || name.length > 80) throw new Error('O nome do modelo deve ter entre 1 e 80 caracteres.');
+    const normalizedName = name.normalize('NFC').toLocaleLowerCase('pt-BR');
+    if (this.getMealTemplates().some(template => template.name.normalize('NFC').toLocaleLowerCase('pt-BR') === normalizedName)) {
+      throw new Error('Já existe um modelo com esse nome.');
+    }
+    const entries = this.getMeals(input.sourceDate);
+    if (!entries.length) throw new Error('Não há refeições salvas nessa data para criar um modelo.');
+    const meals: MealTemplateMeal[] = entries.map(entry => ({
+      slotId: entry.slotId,
+      mealName: entry.mealName,
+      scheduledTime: entry.scheduledTime,
+      recipeId: entry.recipeId,
+      items: entry.items.map(item => ({ ...item, consumedAmountG: 0 }))
+    }));
+    const now = new Date().toISOString();
+    const id = `template-${randomUUID()}`;
+    this.db.execute(
+      'INSERT INTO meal_templates (id, name, source_date, meals_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, name, input.sourceDate, JSON.stringify(meals), now, now]
+    );
+    const template = this.getMealTemplates().find(item => item.id === id);
+    if (!template) throw new Error('Não foi possível carregar o modelo salvo.');
+    return template;
+  }
+
+  applyMealTemplate(input: ApplyMealTemplateInput): ApplyMealTemplateResult {
+    const template = this.getMealTemplates().find(item => item.id === input.templateId);
+    if (!template) throw new Error('Modelo de refeições não encontrado.');
+    let copiedCount = 0;
+    let skippedCount = 0;
+    this.db.transaction(() => {
+      for (const meal of template.meals) {
+        const occupied = this.db.queryOne<{ present: number }>(
+          'SELECT 1 AS present FROM daily_meal_entries WHERE date = ? AND slot_id = ?',
+          [input.targetDate, meal.slotId]
+        );
+        if (occupied) {
+          skippedCount += 1;
+          continue;
+        }
+        this.saveMeal({
+          date: input.targetDate,
+          slotId: meal.slotId,
+          mealName: meal.mealName,
+          scheduledTime: meal.scheduledTime,
+          recipeId: meal.recipeId,
+          status: 'pending',
+          items: meal.items.map(item => ({ ...item, consumedAmountG: 0 }))
+        });
+        copiedCount += 1;
+      }
+    });
+    return {
+      templateId: template.id,
+      templateName: template.name,
+      targetDate: input.targetDate,
+      copiedCount,
+      skippedCount
+    };
   }
 
   saveMeal(input: DailyMealEntryInput): DailyMealEntry {

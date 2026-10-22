@@ -48,6 +48,10 @@ import {
   DailyMealCopyInput,
   DailyMealCopyResult,
   RecentlyUsedFood,
+  MealTemplate,
+  SaveMealTemplateInput,
+  ApplyMealTemplateInput,
+  ApplyMealTemplateResult,
   HydrationLogInput,
   VisualCustomization,
   CustomizationMediaInput,
@@ -390,6 +394,18 @@ export class FitTrackService {
 
   copyDailyMeals(input: DailyMealCopyInput): DailyMealCopyResult {
     return this.dailyLogRepo.copyMeals(input);
+  }
+
+  getMealTemplates(): MealTemplate[] {
+    return this.dailyLogRepo.getMealTemplates();
+  }
+
+  saveMealTemplate(input: SaveMealTemplateInput): MealTemplate {
+    return this.dailyLogRepo.saveMealTemplate(input);
+  }
+
+  applyMealTemplate(input: ApplyMealTemplateInput): ApplyMealTemplateResult {
+    return this.dailyLogRepo.applyMealTemplate(input);
   }
 
   saveDailyMeal(input: DailyMealEntryInput): DailyMealEntry {
