@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { DailyIntakeProgress, DailyMealEntry, DailyMealEntryInput, HydrationLogInput, LoggedMealInput } from '../../shared/types';
+import { DailyIntakeProgress, DailyMealEntry, DailyMealEntryInput, HydrationLogInput, LoggedMealInput, RecentlyUsedFood } from '../../shared/types';
+import { getRecentlyUsedFoods } from '../../domain/recent-foods';
 
 export class DailyLogRepository {
   constructor(private db: IDatabase) {}
@@ -45,6 +46,39 @@ export class DailyLogRepository {
       completedAt: row.completed_at || undefined,
       updatedAt: row.updated_at
     }));
+  }
+
+  getRecentlyUsedFoods(limit = 12): RecentlyUsedFood[] {
+    const rows = this.db.query<any>(
+      `SELECT id, date, slot_id, meal_name, scheduled_time, recipe_id, status, items_json,
+              calories, protein_g, carbs_g, fats_g, note, completed_at, updated_at
+       FROM daily_meal_entries ORDER BY updated_at DESC`
+    );
+    const entries: DailyMealEntry[] = [];
+    for (const row of rows) {
+      try {
+        entries.push({
+          id: row.id,
+          date: row.date,
+          slotId: row.slot_id,
+          mealName: row.meal_name,
+          scheduledTime: row.scheduled_time,
+          recipeId: row.recipe_id || undefined,
+          status: row.status,
+          items: JSON.parse(row.items_json || '[]'),
+          calories: Number(row.calories),
+          proteinG: Number(row.protein_g),
+          carbsG: Number(row.carbs_g),
+          fatsG: Number(row.fats_g),
+          note: row.note || undefined,
+          completedAt: row.completed_at || undefined,
+          updatedAt: row.updated_at
+        });
+      } catch {
+        // Um lançamento legado/corrompido não deve bloquear a consulta das outras refeições.
+      }
+    }
+    return getRecentlyUsedFoods(entries, limit);
   }
 
   saveMeal(input: DailyMealEntryInput): DailyMealEntry {

@@ -40,6 +40,7 @@ describe('Checklist alimentar na versão web', () => {
     expect(reopenedView).toHaveLength(1);
     expect(reopenedView[0].calories).toBe(130);
     expect(reopenedView[0].status).toBe('consumed');
+    expect(await api.getRecentlyUsedFoods()).toMatchObject([{ foodId: 'rice', foodName: 'Arroz', lastAmountG: 100 }]);
   });
 
   it('mantém origem e qualidade nutricional nos ingredientes do catálogo web', async () => {

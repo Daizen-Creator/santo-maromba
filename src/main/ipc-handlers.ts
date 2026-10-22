@@ -394,6 +394,15 @@ export function registerIpcHandlers(
     }
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_RECENTLY_USED_FOODS, async event => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getRecentlyUsedFoods() };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível consultar alimentos recentes.' };
+    }
+  });
+
   ipcMain.handle(IPC_CHANNELS.SAVE_DAILY_MEAL, async (event, rawInput) => {
     try {
       getCallingWindow(event);

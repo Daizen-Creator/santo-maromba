@@ -21,6 +21,7 @@ import {
   LoggedMealInput,
   DailyMealEntry,
   DailyMealEntryInput,
+  RecentlyUsedFood,
   HydrationLogInput,
   CustomizationMediaInput,
   CustomizationMediaRecord,
@@ -41,6 +42,7 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { CustomFoodInputSchema } from '../../shared/schema';
+import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
@@ -620,6 +622,16 @@ export const api = {
     }
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
     return entries.filter(entry => entry.date === date);
+  },
+
+  getRecentlyUsedFoods: async (): Promise<RecentlyUsedFood[]> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getRecentlyUsedFoods();
+      if (!res.success) throw new Error(res.error || 'Erro ao consultar alimentos recentes.');
+      return res.data || [];
+    }
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    return selectRecentlyUsedFoods(entries);
   },
 
   saveDailyMeal: async (input: DailyMealEntryInput): Promise<DailyMealEntry> => {

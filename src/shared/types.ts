@@ -167,6 +167,17 @@ export interface DailyMealEntry extends DailyMealEntryInput {
   updatedAt: string;
 }
 
+export interface RecentlyUsedFood {
+  foodId: string;
+  foodName: string;
+  lastUsedDate: string;
+  lastUsedAt: string;
+  lastAmountG: number;
+  useCount: number;
+  dataQuality?: NutritionDataQuality;
+  dataSource?: string;
+}
+
 export interface DailyIntakeProgress {
   date: string;
   calories: number | null;

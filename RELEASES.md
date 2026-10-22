@@ -34,6 +34,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - A migração SQLite v10 preserva receitas existentes e limita o rendimento a 1–50 porções.
 - No modo PWA, o rendimento escolhido fica salvo no armazenamento local do dispositivo.
 
+## v1.0.9
+
+- A aba de alimentos mostra os itens consumidos recentemente, com data, quantidade e origem dos dados.
+- A lista considera refeições consumidas ou parciais, ignora planejamentos pendentes e preserva itens históricos no SQLite.
+- Na PWA, a consulta usa o histórico alimentar local do dispositivo.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

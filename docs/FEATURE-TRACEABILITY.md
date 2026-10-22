@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas e atualizada até o incremento 1.0.8. Estado atual: **52 validadas, 62 parciais, 63 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas e atualizada até o incremento 1.0.9. Estado atual: **54 validadas, 62 parciais, 61 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -14,8 +14,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | Código | Arquivos principais | Testes/evidência |
 |---|---|---|
 | PERF | `src/renderer/views/ProfileView.tsx`; `src/database/repositories/profile-repository.ts`; `src/database/schema.sql`; `src/domain/nutrition-calculator.ts` | `src/tests/nutrition-calculator.test.ts`; `src/tests/weight-analytics.test.ts`; `src/tests/validation.test.ts` |
-| DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/meal-schedule.test.ts` |
-| NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-catalog.ts`; `src/domain/recipe-portions.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/recipe-portions.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
+| DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts`; `src/domain/recent-foods.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/meal-schedule.test.ts` |
+| NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-catalog.ts`; `src/domain/recipe-portions.ts`; `src/domain/recent-foods.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/recipe-portions.test.ts`; `src/tests/recent-foods.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
 | TREI | `src/renderer/views/WorkoutView.tsx`; `src/domain/workout-engine.ts`; `src/database/repositories/workout-repository.ts`; `src/database/repositories/exercise-media-repository.ts`; `src/database/schema.sql`; `src/database/migrations.ts` | `src/tests/workout-engine.test.ts`; `src/tests/workout-media-persistence.test.ts`; `src/tests/workout-migration.test.ts` |
 | SHAP | `src/renderer/views/ShapeCalendarView.tsx`; `src/renderer/views/ProjectionView.tsx`; `src/database/repositories/photo-repository.ts`; `src/database/repositories/measurement-repository.ts`; `src/services/photo-storage.ts`; `src/database/schema.sql` | `src/tests/photo-persistence.test.ts`; `src/tests/physique-projection.test.ts`; `src/tests/physique-projection-persistence.test.ts` |
 | DESP | `src/renderer/views/NutritionView.tsx`; `src/domain/substitution-engine.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/schema.sql` | `src/tests/substitution-engine.test.ts`; `src/tests/catalog-persistence.test.ts` |
@@ -72,7 +72,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 36 | Ler código de barras e localizar produto. | NUTR | API/base de produtos (ex.: Open Food Facts) | B · serviço de barcode não configurado |
 | 37 | Converter unidade doméstica para massa com hipótese explícita. | NUTR | densidade/tabela de medidas verificadas | A · sem conversor geral |
 | 38 | Registrar sobras e ajustar o consumido real. | DIAR | — | A · sem registro de sobras |
-| 39 | Consultar alimentos usados recentemente. | NUTR | — | A · sem lista de recentes |
+| 39 | Consultar alimentos usados recentemente. | NUTR; DIAR | — | V · consulta os registros consumidos/parciais mais recentes; ignora planos e itens sem consumo; `recent-foods.test.ts` |
 | 40 | Contar estados pendente, consumido, parcial, adiado e pulado. | DIAR | — | P · filtros/contagem limitada; sem resumo completo de estados |
 
 ## Funcionalidades 41–60 — cálculo nutricional
@@ -111,7 +111,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 65 | Criar/editar alimento pessoal no SQLite. | NUTR; IPC | — | V · formulário, IPC validado por schema e persistência/reabertura testadas em `catalog-persistence.test.ts` |
 | 66 | Encontrar alimento pelos sinônimos cadastrados. | NUTR | dados de sinônimos | A · sem campo de sinônimos |
 | 67 | Favoritar alimentos/receitas e filtrar favoritos. | NUTR; IPC | — | V · favoritos persistem no SQLite e no armazenamento local da PWA; catálogo de receitas e alimentos tem filtro; `catalog-persistence.test.ts` e `daily-meal-api.test.ts` |
-| 68 | Consultar itens recentemente usados. | NUTR; DIAR | — | A · sem histórico de recentes |
+| 68 | Consultar itens recentemente usados. | NUTR; DIAR; IPC | — | V · leitura usa o histórico local SQLite/PWA e conserva data, gramas e origem após reabrir; `recent-food-persistence.test.ts` |
 | 69 | Sugerir possíveis duplicatas por nome/código. | NUTR | índice de barcode para produtos | P · IDs são únicos; detecção semântica ausente |
 | 70 | Armazenar e distinguir nutrientes de rótulo. | NUTR | usuário informa o rótulo | P · uma fonte textual, sem estrutura de rótulo |
 | 71 | Identificar foto real versus imagem ilustrativa. | NUTR | atribuição/licença das imagens | P · imagens ilustrativas repetidas sem rótulo claro |
@@ -295,9 +295,10 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- `npm test`: 76/76 testes aprovados localmente; inclui migração v10, rendimento e macros por porção, validação IPC, alimentos pessoais, checklist, sessões parciais e cronômetro.
-- `npm run build`: build de renderer e Electron aprovado após o rendimento de receitas.
+- `npm test`: 79/79 testes aprovados localmente; inclui alimentos recentes no domínio, SQLite após reabertura e PWA local.
+- `npm run build`: build de renderer e Electron aprovado após consulta de alimentos recentes.
 - Portable 1.0.8: abriu por 12 segundos e criou `fittrack.db` num perfil temporário isolado.
+- Portable 1.0.9: abriu por 12 segundos e criou `fittrack.db` num perfil temporário isolado.
 - Instalador NSIS e portable 1.0.4: publicados; smoke test do portable criou `fittrack.db` num perfil temporário isolado.
 - Portable 1.0.5: empacotado e smoke test de 12 segundos criou `fittrack.db` num perfil isolado.
 - Portable 1.0.6: abriu por 12 segundos e criou `fittrack.db` num perfil isolado.
@@ -312,6 +313,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - Release 1.0.7: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.7.
 - GitHub Actions e release 1.0.8: 76 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39725504471).
 - Release 1.0.8: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.8.
+- Incremento 1.0.9: 79 testes e build aprovados; instalador e portable empacotados, smoke test isolado aprovado. Publicação pendente.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
@@ -321,6 +323,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - IDs **61, 65 e 67** estão concluídos e validados: busca de receitas/alimentos; cadastro e edição de alimento pessoal com rótulo de origem e persistência; favoritos e filtros de favoritos para receitas e alimentos no SQLite/PWA.
 - IDs **88, 91 e 92** estão concluídos e validados: cronômetro de descanso ligado ao intervalo planejado; marcação persistente por série; salvamento de sessão parcial sem tratá-la como treino concluído.
 - IDs **75 e 76** e critérios **CAT-06 e CAT-07** estão concluídos e validados: rendimento de 1–50 porções salvo no SQLite/PWA, macros e quantidades do checklist recalculados por porção, com migração v10 e testes de reabertura.
+- IDs **39 e 68** estão concluídos e validados: lista de alimentos realmente consumidos, quantidades e origem, persistida no desktop e derivada do armazenamento local da PWA; pendentes e itens zerados ficam de fora.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas

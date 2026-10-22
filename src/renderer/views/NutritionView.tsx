@@ -13,7 +13,7 @@ import {
   Plus,
   Star
 } from 'lucide-react';
-import { CustomFoodInput, DailyMealEntry, DailyMealEntryInput, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, SubstitutionOption } from '../../shared/types';
+import { CustomFoodInput, DailyMealEntry, DailyMealEntryInput, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
@@ -41,6 +41,7 @@ interface NutritionViewProps {
   onFindRecipesFromPantry: (maxPrepTime?: number) => Promise<Array<Recipe & { matchRate: number }>>;
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
   onSaveCustomFood: (input: CustomFoodInput, id?: string) => Promise<FoodItem>;
+  onGetRecentlyUsedFoods: () => Promise<RecentlyUsedFood[]>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
   onSetRecipeServings: (id: string, servings: number) => Promise<void>;
   onSetFoodFavorite: (id: string, isFavorite: boolean) => Promise<void>;
@@ -59,6 +60,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onFindRecipesFromPantry,
   onSaveDailyMeal,
   onSaveCustomFood,
+  onGetRecentlyUsedFoods,
   onSetRecipeFavorite,
   onSetRecipeServings,
   onSetFoodFavorite
@@ -92,9 +94,22 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [recipeActionError, setRecipeActionError] = useState<string | null>(null);
   const [recipeServingDrafts, setRecipeServingDrafts] = useState<Record<string, string>>({});
+  const [recentFoods, setRecentFoods] = useState<RecentlyUsedFood[]>([]);
+  const [recentFoodsError, setRecentFoodsError] = useState<string | null>(null);
 
   const today = new Date();
   const todayString = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+
+  const refreshRecentFoods = async () => {
+    try {
+      setRecentFoods(await onGetRecentlyUsedFoods());
+      setRecentFoodsError(null);
+    } catch (error) {
+      setRecentFoodsError(error instanceof Error ? error.message : 'Não foi possível consultar alimentos recentes.');
+    }
+  };
+
+  useEffect(() => { void refreshRecentFoods(); }, [onGetRecentlyUsedFoods]);
 
   const itemsForMeal = (recipe: Recipe | null, substitution?: SubstitutionOption): DailyMealItemLog[] => {
     const ingredients = substitution?.items ?? recipe?.ingredients ?? [];
@@ -173,6 +188,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
         items,
         note: existing?.note
       });
+      await refreshRecentFoods();
     } catch (error) {
       setMealSaveError(error instanceof Error ? error.message : 'Não foi possível salvar o registro da refeição.');
     } finally {
@@ -796,7 +812,32 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
         </div>
       )}
 
-      {activeTab === 'foods' && <CustomFoodLibrary foods={foods} onSave={onSaveCustomFood} onSetFavorite={onSetFoodFavorite} />}
+      {activeTab === 'foods' && (
+        <div className="space-y-5">
+          <section className="rounded-2xl border border-border bg-card p-5" aria-label="Alimentos consumidos recentemente">
+            <div className="mb-3 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              <h3 className="font-display text-sm font-semibold text-foreground">Usados recentemente</h3>
+            </div>
+            {recentFoodsError ? <p role="alert" className="text-xs text-red-300">{recentFoodsError}</p>
+              : recentFoods.length === 0 ? <p className="text-xs text-muted-foreground">Alimentos consumidos aparecerão aqui depois de registrar uma refeição no checklist.</p>
+                : <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {recentFoods.map(item => (
+                    <li key={item.foodId} className="rounded-xl border border-border/70 bg-secondary/25 px-3.5 py-3">
+                      <strong className="block text-xs font-medium text-foreground">{item.foodName}</strong>
+                      <span className="mt-1 block text-[10px] text-muted-foreground">
+                        {item.lastAmountG} g em {new Date(`${item.lastUsedDate}T12:00:00`).toLocaleDateString('pt-BR')} · {item.useCount} registro(s)
+                      </span>
+                      <span className="mt-1 block text-[10px] text-muted-foreground">
+                        {nutritionQualityLabel(item.dataQuality)}{item.dataSource ? ` · ${item.dataSource}` : ''}
+                      </span>
+                    </li>
+                  ))}
+                </ul>}
+          </section>
+          <CustomFoodLibrary foods={foods} onSave={onSaveCustomFood} onSetFavorite={onSetFoodFavorite} />
+        </div>
+      )}
 
       {/* 3. ABA O QUE POSSO COMER COM O QUE TENHO */}
       {activeTab === 'what_to_eat' && (
