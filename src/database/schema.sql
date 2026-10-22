@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   food_budget_monthly REAL,
   meals_per_day INTEGER NOT NULL DEFAULT 4 CHECK(meals_per_day BETWEEN 3 AND 6),
   training_days_per_week INTEGER NOT NULL DEFAULT 5 CHECK(training_days_per_week BETWEEN 1 AND 7),
+  training_weekdays TEXT, -- JSON Array de dias disponíveis (0=domingo ... 6=sábado)
   work_schedule TEXT,
   study_schedule TEXT,
   sleep_schedule TEXT,

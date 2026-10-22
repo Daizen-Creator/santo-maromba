@@ -63,7 +63,7 @@ export class WorkoutEngine {
    * Sugere divisões de treino baseadas na disponibilidade semanal (3, 5 ou 7 dias)
    * Respeitando que 7 dias disponíveis não significa musculação pesada 7 dias por semana.
    */
-  generateSplit(daysPerWeek: number, isReturningFromBreak: boolean = false): DailyWorkoutPlan[] {
+  generateSplit(daysPerWeek: number, isReturningFromBreak: boolean = false, availableWeekdays?: number[]): DailyWorkoutPlan[] {
     const plans: DailyWorkoutPlan[] = [];
 
     // Ajuste de volume inicial para retornos de interrupção
@@ -71,7 +71,9 @@ export class WorkoutEngine {
 
     const findEx = (id: string) => this.exercises.find(e => e.id === id) || this.exercises[0];
 
-    if (daysPerWeek === 3) {
+    if (daysPerWeek === 1 || daysPerWeek === 2) {
+      plans.push(...this.generateSplit(3, isReturningFromBreak).slice(0, daysPerWeek));
+    } else if (daysPerWeek === 3) {
       // Divisão 3 Dias: Full Body Alternado com descanso intercalado
       plans.push({
         dayName: 'Segunda-feira',
@@ -114,6 +116,19 @@ export class WorkoutEngine {
           { exercise: findEx('ex-abdominal-infra'), sets: 3, repRange: '15 - 20', restSeconds: 45 }
         ]
       });
+    } else if (daysPerWeek === 4) {
+      const fiveDayPlans = this.generateSplit(5, isReturningFromBreak);
+      const [push, pull, legs, upper, lower] = fiveDayPlans;
+      plans.push({
+        ...push,
+        dayName: 'Segunda-feira',
+        splitTitle: 'Upper A — Empurrar e puxar',
+        focusMuscles: 'Peitoral, costas, ombros e braços',
+        exercises: [...push.exercises.slice(0, 4), ...pull.exercises.slice(0, 2)]
+      });
+      plans.push({ ...legs, dayName: 'Terça-feira', splitTitle: 'Lower A — Quadríceps e posteriores' });
+      plans.push({ ...upper, dayName: 'Quinta-feira', splitTitle: 'Upper B — Membros superiores' });
+      plans.push({ ...lower, dayName: 'Sexta-feira', splitTitle: 'Lower B — Pernas e core' });
     } else if (daysPerWeek === 5) {
       // Divisão 5 Dias: Push / Pull / Legs + Upper / Lower
       plans.push({
@@ -187,29 +202,36 @@ export class WorkoutEngine {
           { exercise: findEx('ex-abdominal-infra'), sets: 4, repRange: '15 - 20', restSeconds: 45 }
         ]
       });
-    } else {
-      // 7 dias disponíveis: 5 dias de musculação + 2 dias de recuperação ativa / cardio leve
+    } else if (daysPerWeek === 6 || daysPerWeek === 7) {
+      plans.push(...this.generateSplit(5, isReturningFromBreak));
       plans.push({
-        dayName: 'Segunda a Sexta',
-        splitTitle: 'Rotina Dividida (Push / Pull / Legs / Upper / Lower)',
-        focusMuscles: 'Grupos musculares distribuídos',
-        recoveryNotes: 'Sessões concentradas de 50 a 65 minutos.',
-        exercises: [
-          { exercise: findEx('ex-supino-reto'), sets: 4, repRange: '8 - 10', restSeconds: 90 },
-          { exercise: findEx('ex-agachamento-livre'), sets: 4, repRange: '8 - 10', restSeconds: 120 }
-        ]
-      });
-
-      plans.push({
-        dayName: 'Sábado & Domingo',
-        splitTitle: 'Recuperação Ativa & Condicionamento Cardiovascular',
-        focusMuscles: 'Mobilidade, caminhada inclinada ou cardio zona 2',
-        recoveryNotes: 'Não treinar musculação até a falha 7 dias por semana para evitar overtraining do SNC.',
+        dayName: 'Sábado',
+        splitTitle: 'Recuperação Ativa e Condicionamento Leve',
+        focusMuscles: 'Mobilidade, caminhada ou cardio leve',
+        recoveryNotes: 'Mantenha o esforço leve e priorize a recuperação para a próxima sessão.',
         exercises: []
       });
+      if (daysPerWeek === 7) {
+        plans.push({
+          dayName: 'Domingo',
+          splitTitle: 'Descanso e preparação da semana',
+          focusMuscles: 'Recuperação geral',
+          recoveryNotes: 'Use o dia para descanso, sono adequado e preparação da próxima semana.',
+          exercises: []
+        });
+      }
     }
 
-    return plans;
+    if (!availableWeekdays) return plans;
+    const weekOrder = [1, 2, 3, 4, 5, 6, 0];
+    const selectedDays = weekOrder.filter(day => availableWeekdays.includes(day));
+    if (selectedDays.length !== plans.length || new Set(availableWeekdays).size !== availableWeekdays.length) {
+      throw new Error('A quantidade de dias disponíveis precisa corresponder à divisão semanal.');
+    }
+    return plans.map((plan, index) => ({
+      ...plan,
+      dayName: WEEKDAY_NAMES[selectedDays[index]]
+    }));
   }
 
   /** Gera uma rotina de três dias com peso corporal e apoios domésticos, sem prescrever halteres. */

@@ -697,7 +697,7 @@ export const api = {
     const profile = await api.getProfile();
     const days = profile?.trainingDaysPerWeek || 5;
     const isReturning = Boolean(profile?.interruptionHistoryNotes && profile.interruptionHistoryNotes.includes('Retorno'));
-    return workoutEngine.generateSplit(days, isReturning);
+    return workoutEngine.generateSplit(days, isReturning, profile?.trainingWeekdays);
   },
 
   getWorkoutTemplates: async (): Promise<WorkoutTemplate[]> => {

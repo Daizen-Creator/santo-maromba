@@ -174,7 +174,13 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Salva horários estruturados de acordar e dormir no SQLite e no armazenamento offline da PWA, preservando os demais dados do perfil.
 - Distribui os horários das refeições ao longo da janela de vigília, inclusive em rotinas que atravessam a meia-noite; as porções de macros permanecem somadas exatamente à meta diária.
-- Migração 19, validações de horário, bancos legados e reabertura aprovados; 151 testes em 46 arquivos e build React/Electron aprovados. Empacotamento Windows e publicação pendentes.
+- Migração 19, validações de horário, bancos legados e reabertura aprovados; 151 testes em 46 arquivos, build React/Electron, instalador e versão portátil aprovados; GitHub Actions 39746589111 publicou os quatro artefatos.
+
+## v1.1.23
+
+- Salva os dias da semana disponíveis e monta a divisão de treino nesses dias, incluindo opções de 1 a 7 dias, Upper/Lower em quatro sessões e dias de recuperação em semanas de seis ou sete dias.
+- A migração 20 adiciona os dias ao perfil sem sobrescrever registros existentes; o SQLite e a PWA mantêm a seleção após reabrir.
+- 154 testes em 46 arquivos, build React/Electron, instalador e versão portátil aprovados; executável abriu em perfil isolado e criou SQLite com migração 20. Publicação GitHub pendente.
 
 ## Publicar uma versão
 

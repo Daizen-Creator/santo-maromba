@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.22. Estado após validação do incremento: **79 validadas, 48 parciais, 50 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.23. Estado após validação do incremento: **80 validadas, 47 parciais, 50 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -39,7 +39,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 8 | Calcular idade válida pela data de nascimento. | PERF | — | V · `nutrition-calculator.test.ts` |
 | 9 | Registrar e consultar mudanças de altura por data. | PERF; SHAP; IPC; PWA | SQLite desktop; armazenamento local da PWA | V · `height-history-persistence.test.ts` valida inclusão, edição, reabertura, migração preservando medições antigas e armazenamento offline; `measurement-trend.test.ts` valida a série cronológica; `validation.test.ts` valida data e faixa de altura |
 | 10 | Registrar horários habituais de acordar e dormir; gerar as refeições dentro da janela de vigília, respeitando a quantidade diária e os macros. | PERF, DIAR | `ProfileView.tsx`; `NutritionView.tsx`; `meal-schedule.ts`; `profile-repository.ts`; `schema.sql`; `migrations.ts`; `ProfileInputSchema` | V · migração 19, SQLite/PWA após reabrir, horários regulares e noturnos, validação e macros cobertos por testes |
-| 11 | Definir dias disponíveis e adaptar a divisão de treino. | PERF; TREI | — | P · gerador existe, sem editor persistente completo |
+| 11 | Escolher dias da semana disponíveis, persistir a seleção e gerar uma sessão em cada dia escolhido; adaptar a divisão para 1–7 dias, com recuperação em semanas de 6–7 dias. | PERF; TREI | `ProfileView.tsx`; `profile-repository.ts`; `schema.sql`; `migrations.ts`; `workout-engine.ts`; `fittrack-service.ts`; `api.ts` | V · migração 20, SQLite/PWA reabertos, divisões de 1–7 dias, mapeamento de dias e validação cobertos por testes |
 | 12 | Salvar alergias/restrições e excluir receitas incompatíveis. | PERF; NUTR | — | P · dados de perfil não filtram o catálogo |
 | 13 | Salvar preferências e aplicá-las às sugestões. | PERF; NUTR | — | P · preferências não filtram receitas |
 | 14 | Selecionar 3–6 refeições e gerar exatamente essa quantidade. | PERF; DIAR | — | V · `meal-schedule.test.ts` |

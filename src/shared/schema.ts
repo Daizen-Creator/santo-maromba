@@ -79,6 +79,7 @@ export const ProfileInputSchema = z.object({
   foodBudgetMonthly: z.number().min(0).max(50000).optional(),
   mealsPerDay: z.number().int().min(3, 'Mínimo de 3 refeições').max(6, 'Máximo de 6 refeições'),
   trainingDaysPerWeek: z.number().int().min(1).max(7),
+  trainingWeekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7).refine(days => new Set(days).size === days.length, 'Não repita dias da semana.').optional(),
   workSchedule: z.string().max(100).optional(),
   studySchedule: z.string().max(100).optional(),
   sleepSchedule: z.string().max(100).optional(),
@@ -94,6 +95,9 @@ export const ProfileInputSchema = z.object({
 }).refine(profile => !profile.wakeTime || profile.wakeTime !== profile.sleepTime, {
   message: 'Os horários de acordar e dormir precisam ser diferentes.',
   path: ['sleepTime']
+}).refine(profile => !profile.trainingWeekdays || profile.trainingWeekdays.length === profile.trainingDaysPerWeek, {
+  message: 'Selecione a mesma quantidade de dias informada para treinar por semana.',
+  path: ['trainingWeekdays']
 });
 
 export const ProfileGoalHistoryRecordSchema = z.object({

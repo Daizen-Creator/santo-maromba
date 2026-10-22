@@ -34,6 +34,7 @@ export interface UserProfile {
   foodBudgetMonthly?: number;
   mealsPerDay: number; // 3, 4, 5, 6
   trainingDaysPerWeek: number; // 3, 5, 7 or custom
+    trainingWeekdays?: number[]; // JavaScript weekdays: Sunday 0 through Saturday 6
   workSchedule?: string;
   studySchedule?: string;
   sleepSchedule?: string;

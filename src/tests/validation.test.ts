@@ -109,6 +109,18 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(() => ProfileInputSchema.parse({ ...base, wakeTime: '06:30', sleepTime: '06:30' })).toThrow();
   });
 
+  it('valida dias disponíveis sem duplicações e em quantidade coerente com a semana', () => {
+    const base = {
+      name: 'João Silva', birthDate: '2008-05-14', heightCm: 182,
+      biologicalSex: 'male', activityLevel: 'moderate', trainingExperience: 'intermediate',
+      fitnessGoal: 'muscle_gain', mealsPerDay: 4, trainingDaysPerWeek: 3
+    };
+    expect(ProfileInputSchema.parse({ ...base, trainingWeekdays: [1, 3, 5] }).trainingWeekdays).toEqual([1, 3, 5]);
+    expect(() => ProfileInputSchema.parse({ ...base, trainingWeekdays: [1, 1, 5] })).toThrow();
+    expect(() => ProfileInputSchema.parse({ ...base, trainingWeekdays: [1, 3] })).toThrow();
+    expect(() => ProfileInputSchema.parse({ ...base, trainingWeekdays: [1, 3, 7] })).toThrow();
+  });
+
   it('deve rejeitar perfil com dados inconsistentes ou fora dos limites clínicos', () => {
     expect(() =>
       ProfileInputSchema.parse({

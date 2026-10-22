@@ -22,7 +22,28 @@ describe('Motor de Treino e Divisões Semanais', () => {
 
   it('deve incluir recuperação ativa e não sobrecarregar em 7 dias disponíveis', () => {
     const split = engine.generateSplit(7, false);
+    expect(split).toHaveLength(7);
     expect(split.some(p => p.splitTitle.includes('Recuperação Ativa'))).toBe(true);
+    expect(split.filter(plan => plan.exercises.length === 0)).toHaveLength(2);
+  });
+
+  it('gera divisões semanais de quatro e seis dias com uma sessão para cada dia escolhido', () => {
+    const fourDays = engine.generateSplit(4, false, [1, 3, 5, 0]);
+    const sixDays = engine.generateSplit(6, false);
+
+    expect(fourDays).toHaveLength(4);
+    expect(fourDays.map(plan => plan.dayName)).toEqual(['segunda-feira', 'quarta-feira', 'sexta-feira', 'domingo']);
+    expect(fourDays.map(plan => plan.splitTitle)).toEqual(expect.arrayContaining([
+      'Upper A — Empurrar e puxar', 'Lower A — Quadríceps e posteriores',
+      'Upper B — Membros superiores', 'Lower B — Pernas e core'
+    ]));
+    expect(sixDays).toHaveLength(6);
+    expect(sixDays.filter(plan => plan.exercises.length === 0)).toHaveLength(1);
+  });
+
+  it('rejeita dias duplicados ou quantidade incompatível com a divisão', () => {
+    expect(() => engine.generateSplit(3, false, [1, 1, 5])).toThrow();
+    expect(() => engine.generateSplit(3, false, [1, 3])).toThrow();
   });
 
   it('gera uma rotina doméstica de três dias sem prescrever halteres', () => {

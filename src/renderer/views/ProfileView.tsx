@@ -38,6 +38,11 @@ const FITNESS_GOAL_LABELS: Record<FitnessGoal, string> = {
   body_recomposition: 'Recomposição corporal'
 };
 
+const TRAINING_WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const TRAINING_WEEKDAY_LABELS: Record<number, string> = {
+  0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb'
+};
+
 export const ProfileView: React.FC<ProfileViewProps> = ({
   profile,
   mealsPerDay,
@@ -66,6 +71,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   );
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState<number>(
     profile?.trainingDaysPerWeek || 5
+  );
+  const [trainingWeekdays, setTrainingWeekdays] = useState<number[]>(() =>
+    profile?.trainingWeekdays?.length
+      ? profile.trainingWeekdays
+      : TRAINING_WEEKDAY_ORDER.slice(0, profile?.trainingDaysPerWeek || 5)
   );
   const [foodBudgetMonthly, setFoodBudgetMonthly] = useState<string>(
     profile?.foodBudgetMonthly ? String(profile.foodBudgetMonthly) : ''
@@ -135,6 +145,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         targetWeightKg: targetWeightKg ? Number(targetWeightKg) : undefined,
         mealsPerDay: Number(mealsPerDay),
         trainingDaysPerWeek: Number(trainingDaysPerWeek),
+        trainingWeekdays,
         foodBudgetMonthly: foodBudgetMonthly ? Number(foodBudgetMonthly) : undefined,
         dietaryPreferences,
         dietaryRestrictions: restrictionsArr,
@@ -344,7 +355,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {goalHistoryError && <p role="alert" className="mt-2 text-[11px] text-destructive">{goalHistoryError}</p>}
           </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground">Nível de Atividade Física</label>
               <select
@@ -373,19 +384,38 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </select>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">Dias Disponíveis para Treinar</label>
-              <select
-                value={trainingDaysPerWeek}
-                onChange={e => setTrainingDaysPerWeek(Number(e.target.value))}
-                className="w-full rounded-xl border border-border bg-secondary/50 px-3.5 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
-              >
-                <option value={3}>3 dias por semana (Full Body / Recuperação)</option>
-                <option value={4}>4 dias por semana (Upper / Lower)</option>
-                <option value={5}>5 dias por semana (Divisão PPL / Upper-Lower)</option>
-                <option value={6}>6 dias por semana (Push / Pull / Legs)</option>
-                <option value={7}>7 dias disponíveis (Treino + Recuperação ativa)</option>
-              </select>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs font-semibold text-muted-foreground">Dias disponíveis para treinar</label>
+              <span className="text-[11px] text-muted-foreground">{trainingDaysPerWeek} {trainingDaysPerWeek === 1 ? 'dia' : 'dias'} por semana</span>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+              {TRAINING_WEEKDAY_ORDER.map(day => {
+                const selected = trainingWeekdays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => {
+                      const next = selected
+                        ? trainingWeekdays.filter(item => item !== day)
+                        : TRAINING_WEEKDAY_ORDER.filter(item => trainingWeekdays.includes(item) || item === day);
+                      if (next.length === 0) return;
+                      setTrainingWeekdays(next);
+                      setTrainingDaysPerWeek(next.length);
+                    }}
+                    className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors ${selected
+                      ? 'border-primary bg-primary/15 text-primary'
+                      : 'border-border bg-secondary/40 text-muted-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    {TRAINING_WEEKDAY_LABELS[day]}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

@@ -256,11 +256,21 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!profileColumns.some(column => column.name === 'sleep_time')) {
     db.exec("ALTER TABLE profiles ADD COLUMN sleep_time TEXT CHECK(sleep_time IS NULL OR (sleep_time GLOB '[0-2][0-9]:[0-5][0-9]' AND substr(sleep_time, 1, 2) BETWEEN '00' AND '23'))");
   }
+  if (!profileColumns.some(column => column.name === 'training_weekdays')) {
+    db.exec('ALTER TABLE profiles ADD COLUMN training_weekdays TEXT');
+  }
   const version19 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 19');
   if (!version19) {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [19, 'Horários estruturados de acordar e dormir para o plano alimentar', new Date().toISOString()]
+    );
+  }
+  const version20 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 20');
+  if (!version20) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [20, 'Dias disponíveis para encaixe da divisão semanal de treino', new Date().toISOString()]
     );
   }
 }

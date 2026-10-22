@@ -16,10 +16,11 @@ const validProfile = {
   trainingExperience: 'beginner' as const,
   fitnessGoal: 'muscle_gain' as const,
   mealsPerDay: 5,
-  trainingDaysPerWeek: 4
+  trainingDaysPerWeek: 4,
+  trainingWeekdays: [1, 3, 5, 0]
 };
 
-describe('Horários estruturados de rotina do perfil', () => {
+describe('Rotina estruturada do perfil', () => {
   let tempDirectory = '';
   let db: IDatabase | null = null;
 
@@ -37,23 +38,24 @@ describe('Horários estruturados de rotina do perfil', () => {
     const schemaPath = path.resolve(process.cwd(), 'src/database/schema.sql');
     const priorSchema = fs.readFileSync(schemaPath, 'utf8')
       .replace(/^\s*wake_time TEXT[^\n]*\n/m, '')
-      .replace(/^\s*sleep_time TEXT[^\n]*\n/m, '');
+      .replace(/^\s*sleep_time TEXT[^\n]*\n/m, '')
+      .replace(/^\s*training_weekdays TEXT[^\n]*\n/m, '');
     db.exec(priorSchema);
     await runMigrations(db);
 
     let repository = new ProfileRepository(db);
     repository.saveProfile({ ...validProfile, wakeTime: '06:15', sleepTime: '22:45' });
-    expect(repository.getProfile()).toMatchObject({ wakeTime: '06:15', sleepTime: '22:45' });
-    expect(db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 19')?.version).toBe(19);
+    expect(repository.getProfile()).toMatchObject({ wakeTime: '06:15', sleepTime: '22:45', trainingWeekdays: [1, 3, 5, 0] });
+    expect(db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 20')?.version).toBe(20);
 
     db.close();
     db = await createDatabaseDriver(databasePath);
     await runMigrations(db);
     repository = new ProfileRepository(db);
-    expect(repository.getProfile()).toMatchObject({ wakeTime: '06:15', sleepTime: '22:45' });
+    expect(repository.getProfile()).toMatchObject({ wakeTime: '06:15', sleepTime: '22:45', trainingWeekdays: [1, 3, 5, 0] });
 
-    repository.saveProfile({ ...validProfile, wakeTime: undefined, sleepTime: undefined });
-    expect(repository.getProfile()).toMatchObject({ wakeTime: undefined, sleepTime: undefined });
+    repository.saveProfile({ ...validProfile, wakeTime: undefined, sleepTime: undefined, trainingWeekdays: undefined });
+    expect(repository.getProfile()).toMatchObject({ wakeTime: undefined, sleepTime: undefined, trainingWeekdays: undefined });
   });
 
   it('mantém os horários estruturados no armazenamento local offline da PWA', async () => {
@@ -65,6 +67,6 @@ describe('Horários estruturados de rotina do perfil', () => {
     });
 
     await api.saveProfile({ ...validProfile, wakeTime: '05:50', sleepTime: '21:40' });
-    expect(await api.getProfile()).toMatchObject({ wakeTime: '05:50', sleepTime: '21:40' });
+    expect(await api.getProfile()).toMatchObject({ wakeTime: '05:50', sleepTime: '21:40', trainingWeekdays: [1, 3, 5, 0] });
   });
 });

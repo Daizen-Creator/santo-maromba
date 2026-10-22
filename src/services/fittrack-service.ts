@@ -391,7 +391,7 @@ export class FitTrackService {
     const profile = this.profileRepo.getProfile();
     const days = profile?.trainingDaysPerWeek || 5;
     const isReturning = Boolean(profile?.interruptionHistoryNotes && profile.interruptionHistoryNotes.includes('Retorno'));
-    return this.workoutEngine.generateSplit(days, isReturning);
+    return this.workoutEngine.generateSplit(days, isReturning, profile?.trainingWeekdays);
   }
 
   getWorkoutTemplates(): WorkoutTemplate[] {

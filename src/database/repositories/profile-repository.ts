@@ -30,6 +30,7 @@ export class ProfileRepository {
       foodBudgetMonthly: row.food_budget_monthly ? Number(row.food_budget_monthly) : undefined,
       mealsPerDay: Number(row.meals_per_day),
       trainingDaysPerWeek: Number(row.training_days_per_week),
+      trainingWeekdays: row.training_weekdays ? JSON.parse(row.training_weekdays) : undefined,
       workSchedule: row.work_schedule || undefined,
       studySchedule: row.study_schedule || undefined,
       sleepSchedule: row.sleep_schedule || undefined,
@@ -76,6 +77,9 @@ export class ProfileRepository {
     const dietaryRestrictions = JSON.stringify(profile.dietaryRestrictions || existing?.dietaryRestrictions || []);
     const allergies = JSON.stringify(profile.allergies || existing?.allergies || []);
     const availableEquipment = JSON.stringify(profile.availableEquipment || existing?.availableEquipment || []);
+    const trainingWeekdays = Object.prototype.hasOwnProperty.call(profile, 'trainingWeekdays')
+      ? (profile.trainingWeekdays ? JSON.stringify(profile.trainingWeekdays) : null)
+      : existing?.trainingWeekdays ? JSON.stringify(existing.trainingWeekdays) : null;
     const wakeTime = Object.prototype.hasOwnProperty.call(profile, 'wakeTime') ? profile.wakeTime || null : existing?.wakeTime ?? null;
     const sleepTime = Object.prototype.hasOwnProperty.call(profile, 'sleepTime') ? profile.sleepTime || null : existing?.sleepTime ?? null;
 
@@ -107,6 +111,7 @@ export class ProfileRepository {
           food_budget_monthly = ?,
           meals_per_day = ?,
           training_days_per_week = ?,
+          training_weekdays = ?,
           work_schedule = ?,
           study_schedule = ?,
           sleep_schedule = ?,
@@ -133,6 +138,7 @@ export class ProfileRepository {
           profile.foodBudgetMonthly ?? existing.foodBudgetMonthly ?? null,
           mealsPerDay,
           trainingDaysPerWeek,
+          trainingWeekdays,
           profile.workSchedule ?? existing.workSchedule ?? null,
           profile.studySchedule ?? existing.studySchedule ?? null,
           profile.sleepSchedule ?? existing.sleepSchedule ?? null,
@@ -154,10 +160,10 @@ export class ProfileRepository {
           id, name, birth_date, height_cm, biological_sex, activity_level,
           training_experience, fitness_goal, target_weight_kg, dietary_restrictions,
           allergies, dietary_preferences, food_budget_monthly, meals_per_day,
-          training_days_per_week, work_schedule, study_schedule, sleep_schedule,
+          training_days_per_week, training_weekdays, work_schedule, study_schedule, sleep_schedule,
           wake_time, sleep_time, training_schedule, available_equipment, interruption_history_notes,
           initial_history_confirmed, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           profile.name,
@@ -174,6 +180,7 @@ export class ProfileRepository {
           profile.foodBudgetMonthly ?? null,
           mealsPerDay,
           trainingDaysPerWeek,
+          trainingWeekdays,
           profile.workSchedule ?? null,
           profile.studySchedule ?? null,
           profile.sleepSchedule ?? null,
