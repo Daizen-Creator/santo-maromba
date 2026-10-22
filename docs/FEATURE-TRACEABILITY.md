@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.9. Estado atual: **66 validadas, 56 parciais, 55 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.10. Estado após validação do incremento: **67 validadas, 55 parciais, 55 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -137,7 +137,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 86 | Registrar séries e repetições realizadas. | TREI | — | V · `workout-media-persistence.test.ts` |
 | 87 | Registrar carga separada por série. | TREI | — | V · persistência de cargas |
 | 88 | Iniciar cronômetro de descanso pelo intervalo do exercício. | TREI | — | V · timer visual usa o intervalo do plano e encerra com aviso; `rest-timer.test.ts` |
-| 89 | Registrar RPE ou RIR por série. | TREI | — | P · RPE existe; RIR não |
+| 89 | Registrar RPE ou RIR por série. | TREI | — | V · RPE e RIR são validados, salvos no SQLite e reabertos; `workout-media-persistence.test.ts`, `workout-migration.test.ts`, `validation.test.ts` |
 | 90 | Salvar e reabrir observação do exercício/sessão. | TREI | — | P · campo parcial, fluxo de notas não cobre tudo |
 | 91 | Marcar cada série como concluída. | TREI | — | V · checkbox salva o estado por série; migração v9 mantém séries antigas como concluídas; teste de reabertura |
 | 92 | Salvar sessão parcial sem declará-la completa. | TREI | — | V · ação dedicada persiste a sessão com status parcial, mantém séries concluídas e não marca PR para série não feita; teste de reabertura |

@@ -66,22 +66,31 @@ describe('Mídia local e progressão de cargas', () => {
     })).toThrow('formato declarado');
   });
 
-  it('persiste RPE por série e marca recorde de volume real por exercício', () => {
+  it('persiste RPE e RIR por série e marca recorde de volume real por exercício', async () => {
     const exerciseId = INITIAL_EXERCISES[0].id;
     const first = service.logWorkoutSession({
       date: '2026-10-19', splitName: 'Teste A', completed: true,
-      sets: [{ exerciseId, setNumber: 1, weightKg: 20, reps: 5, rpe: 8 }]
+      sets: [{ exerciseId, setNumber: 1, weightKg: 20, reps: 5, rpe: 8, rir: 2.5 }]
     });
     expect(first.sets[0].isPr).toBe(true);
     expect(first.sets[0].rpe).toBe(8);
+    expect(first.sets[0].rir).toBe(2.5);
 
     const volumePr = service.logWorkoutSession({
       date: '2026-10-20', splitName: 'Teste A', completed: true,
-      sets: [{ exerciseId, setNumber: 1, weightKg: 10, reps: 12, rpe: 9 }]
+      sets: [{ exerciseId, setNumber: 1, weightKg: 10, reps: 12, rpe: 9, rir: 0 }]
     });
     expect(volumePr.sets[0].weightKg).toBe(10);
     expect(volumePr.sets[0].isPr).toBe(true);
     expect(service.getWorkoutSessions()[0].sets[0].rpe).toBe(9);
+
+    db!.close();
+    db = await createDatabaseDriver(databasePath);
+    await runMigrations(db);
+    service = new FitTrackService(db, path.join(tempDirectory, 'photos'), mediaDirectory);
+    const reopenedSets = service.getWorkoutSessions().flatMap(session => session.sets);
+    expect(reopenedSets.find(set => set.rpe === 9)?.rir).toBe(0);
+    expect(reopenedSets.find(set => set.rpe === 8)?.rir).toBe(2.5);
   });
 
   it('persiste sessões parciais e conclusão de cada série sem contar uma sessão parcial como PR', async () => {

@@ -40,6 +40,9 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!currentWorkoutSetColumns.some(column => column.name === 'completed')) {
     db.exec('ALTER TABLE workout_sets ADD COLUMN completed INTEGER NOT NULL DEFAULT 1');
   }
+  if (!currentWorkoutSetColumns.some(column => column.name === 'rir')) {
+    db.exec('ALTER TABLE workout_sets ADD COLUMN rir REAL CHECK(rir BETWEEN 0 AND 10)');
+  }
   const foodColumns = db.query<{ name: string }>('PRAGMA table_info(foods)');
   if (!foodColumns.some(column => column.name === 'substitute_group_id')) {
     db.exec('ALTER TABLE foods ADD COLUMN substitute_group_id TEXT');
@@ -180,6 +183,14 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [11, 'Modelos reutilizáveis de refeições do usuário', new Date().toISOString()]
+    );
+  }
+
+  const version12 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 12');
+  if (!version12) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [12, 'Repetições em reserva (RIR) por série', new Date().toISOString()]
     );
   }
 }

@@ -657,6 +657,7 @@ export interface WorkoutSet {
   reps: number;
   completed: boolean;
   rpe?: number; // Percepção de esforço 1 a 10
+  rir?: number; // Repetições em reserva 0 a 10
   isPr?: boolean;
   notes?: string;
 }

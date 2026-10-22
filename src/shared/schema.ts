@@ -204,6 +204,7 @@ export const WorkoutSessionInputSchema = z.object({
     reps: z.number().int().min(1).max(500),
     completed: z.boolean().default(true),
     rpe: z.number().min(1).max(10).optional(),
+    rir: z.number().min(0).max(10).optional(),
     notes: z.string().trim().max(200).optional()
   }).strict()).min(1).max(100)
 }).strict();

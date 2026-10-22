@@ -67,6 +67,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
     reps: number;
     completed: boolean;
     rpe?: number;
+    rir?: number;
   }>>([]);
 
   const [sessionDuration, setSessionDuration] = useState<number>(0);
@@ -171,7 +172,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
         : 'Marque ao menos uma série concluída para registrar uma sessão parcial.');
       return;
     }
-    if (sessionDuration < 1 || sessionRpe < 1 || sessionRpe > 10 || activeSets.some(set => set.weightKg <= 0 || set.reps < 1 || (set.rpe !== undefined && (set.rpe < 1 || set.rpe > 10)))) {
+    if (sessionDuration < 1 || sessionRpe < 1 || sessionRpe > 10 || activeSets.some(set => set.weightKg <= 0 || set.reps < 1 || (set.rpe !== undefined && (set.rpe < 1 || set.rpe > 10)) || (set.rir !== undefined && (set.rir < 0 || set.rir > 10)))) {
       setSessionValidationError('Informe a duração, o esforço percebido e uma carga e repetições reais para cada série.');
       return;
     }
@@ -185,8 +186,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
         completed,
         durationMinutes: sessionDuration,
         perceivedExertion: sessionRpe,
-        sets: activeSets.map(({ exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe }) => ({
-          exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe
+        sets: activeSets.map(({ exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir }) => ({
+          exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir
         }))
       });
       setSessionSuccessMsg(completed
@@ -304,12 +305,12 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                         <div>
                           <strong className="text-foreground block">{set.exerciseName}</strong>
                           <span className="text-[11px] text-muted-foreground">
-                            Carga: {set.weightKg > 0 ? `${set.weightKg} kg` : 'não informada'} • Reps: {set.reps > 0 ? set.reps : 'não informadas'}{set.rpe ? ` • RPE ${set.rpe}` : ''}
+                            Carga: {set.weightKg > 0 ? `${set.weightKg} kg` : 'não informada'} • Reps: {set.reps > 0 ? set.reps : 'não informadas'}{set.rpe ? ` • RPE ${set.rpe}` : ''}{set.rir !== undefined ? ` • RIR ${set.rir}` : ''}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 self-end sm:self-auto">
+                      <div className="flex flex-wrap items-center gap-2 self-end sm:flex-nowrap sm:gap-3 sm:self-auto">
                         <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                           <input type="checkbox" checked={set.completed} aria-label={`Marcar série ${set.setNumber} de ${set.exerciseName} como concluída`}
                             onChange={event => setActiveSets(prev => prev.map((current, idx) => idx === sIdx ? { ...current, completed: event.target.checked } : current))} />
@@ -363,6 +364,24 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                             className="w-12 rounded-lg border border-border bg-background p-1.5 text-xs text-center text-foreground"
                           />
                           <span className="text-muted-foreground">RPE</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.5"
+                            placeholder="—"
+                            value={set.rir ?? ''}
+                            aria-label={`RIR da série ${set.setNumber}`}
+                            onChange={e => {
+                              const value = e.target.value === '' ? undefined : Number(e.target.value);
+                              setActiveSets(prev => prev.map((current, idx) => idx === sIdx ? { ...current, rir: value } : current));
+                            }}
+                            className="w-12 rounded-lg border border-border bg-background p-1.5 text-xs text-center text-foreground"
+                          />
+                          <span className="text-muted-foreground">RIR</span>
                         </div>
 
                         <button
@@ -712,7 +731,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                   <div className="flex flex-wrap gap-2 pt-1">
                     {s.sets.map(set => (
                       <span key={set.id} className={`rounded-lg border px-2 py-1 text-[10px] ${set.isPr ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-border bg-card/60 text-muted-foreground'}`}>
-                        {set.exerciseName}: {set.weightKg} kg × {set.reps}{set.rpe ? ` · RPE ${set.rpe}` : ''}{!set.completed ? ' · não concluída' : ''}{set.isPr ? ' · PR' : ''}
+                        {set.exerciseName}: {set.weightKg} kg × {set.reps}{set.rpe ? ` · RPE ${set.rpe}` : ''}{set.rir !== undefined ? ` · RIR ${set.rir}` : ''}{!set.completed ? ' · não concluída' : ''}{set.isPr ? ' · PR' : ''}
                       </span>
                     ))}
                   </div>

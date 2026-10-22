@@ -102,6 +102,7 @@ export class WorkoutRepository {
         reps: Number(set.reps),
         completed: Boolean(set.completed),
         rpe: set.rpe === null || set.rpe === undefined ? undefined : Number(set.rpe),
+        rir: set.rir === null || set.rir === undefined ? undefined : Number(set.rir),
         isPr: Boolean(set.is_pr),
         notes: set.notes || undefined
       }));
@@ -134,6 +135,7 @@ export class WorkoutRepository {
       reps: number;
       completed?: boolean;
       rpe?: number;
+      rir?: number;
       isPr?: boolean;
       notes?: string;
     }>;
@@ -207,8 +209,8 @@ export class WorkoutRepository {
         if (eligibleForPr && loadOrRepPr) bestSetByExercise.set(set.exerciseId, { weightKg: set.weightKg, reps: set.reps });
         this.db.execute(
           `INSERT INTO workout_sets (
-            id, session_id, exercise_id, set_number, weight_kg, reps, completed, rpe, is_pr, notes, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, session_id, exercise_id, set_number, weight_kg, reps, completed, rpe, rir, is_pr, notes, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             setId,
             sessionId,
@@ -218,6 +220,7 @@ export class WorkoutRepository {
             set.reps,
             set.completed === false ? 0 : 1,
             set.rpe ?? null,
+            set.rir ?? null,
             isPr ? 1 : 0,
             set.notes || null,
             now
@@ -249,6 +252,7 @@ export class WorkoutRepository {
       reps: Number(r.reps),
       completed: Boolean(r.completed),
       rpe: r.rpe === null || r.rpe === undefined ? undefined : Number(r.rpe),
+      rir: r.rir === null || r.rir === undefined ? undefined : Number(r.rir),
       isPr: Boolean(r.is_pr),
       notes: r.notes || undefined
     }));

@@ -40,7 +40,11 @@ describe('Migração de conclusão de séries', () => {
     await runMigrations(db!);
     const columns = db!.query<{ name: string }>('PRAGMA table_info(workout_sets)').map(column => column.name);
     expect(columns).toContain('completed');
+    expect(columns).toContain('rir');
     expect(db!.queryOne<{ completed: number }>('SELECT completed FROM workout_sets WHERE id = ?', ['legacy-set'])?.completed).toBe(1);
     expect(db!.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 9')?.version).toBe(9);
+    expect(db!.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 12')?.version).toBe(12);
+    expect(db!.queryOne<{ rir: number | null }>('SELECT rir FROM workout_sets WHERE id = ?', ['legacy-set'])?.rir).toBeNull();
+    expect(() => db!.execute('UPDATE workout_sets SET rir = 11 WHERE id = ?', ['legacy-set'])).toThrow();
   });
 });

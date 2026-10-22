@@ -98,6 +98,11 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Combina lançamentos rápidos e refeições consumidas ou parciais do checklist, no desktop e na PWA.
 - Exclui refeições apenas planejadas e exibe a origem e o horário registrado quando disponível.
 
+## v1.1.10
+
+- Registra RIR (repetições em reserva) opcional junto ao RPE de cada série.
+- Migra o histórico existente sem apagar séries anteriores e mantém o novo valor após fechar e reabrir o aplicativo.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.
