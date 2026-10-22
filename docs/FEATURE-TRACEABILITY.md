@@ -301,7 +301,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - Portable 1.0.5: empacotado e smoke test de 12 segundos criou `fittrack.db` num perfil isolado.
 - GitHub Actions e release 1.0.4: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39721903982).
 - Release 1.0.4: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.4.
-- Incremento 1.0.5: 67 testes, build e abertura do portable passaram localmente; publicação ainda pendente.
+- GitHub Actions e release 1.0.5: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39723144455).
+- Release 1.0.5: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.5.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
