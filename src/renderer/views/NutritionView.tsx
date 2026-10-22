@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
+import { filterRecipesForProfile } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
 import { getIngredientPerServing, getRecipeNutritionPerServing } from '../../domain/recipe-portions';
@@ -51,6 +52,8 @@ interface NutritionViewProps {
   mealsPerDay: number;
   wakeTime?: string;
   sleepTime?: string;
+  allergies?: string[];
+  dietaryRestrictions?: string[];
   foods: FoodItem[];
   recipes: Recipe[];
   dailyMealEntries: DailyMealEntry[];
@@ -78,6 +81,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   mealsPerDay,
   wakeTime,
   sleepTime,
+  allergies,
+  dietaryRestrictions,
   foods,
   recipes,
   dailyMealEntries,
@@ -386,20 +391,28 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   };
 
   // Filtragem das 200 Receitas
+  const compatibleRecipes = useMemo(
+    () => filterRecipesForProfile(recipes, { allergies, dietaryRestrictions }),
+    [recipes, allergies, dietaryRestrictions]
+  );
+  const compatiblePantryRecipes = useMemo(
+    () => filterRecipesForProfile(pantryMatchedRecipes, { allergies, dietaryRestrictions }),
+    [pantryMatchedRecipes, allergies, dietaryRestrictions]
+  );
   const filteredRecipes = useMemo(() => {
-    const matchingRecipeIds = new Set(searchRecipes(recipes, searchTerm).map(recipe => recipe.id));
-    return recipes.filter(r => {
+    const matchingRecipeIds = new Set(searchRecipes(compatibleRecipes, searchTerm).map(recipe => recipe.id));
+    return compatibleRecipes.filter(r => {
       const matchTurn = selectedTurn === 'all' || r.category === selectedTurn;
       const matchSearch = matchingRecipeIds.has(r.id);
       const matchCost = !r.estimatedCost || r.estimatedCost <= maxCostFilter;
       const matchFavorite = !favoritesOnly || Boolean(r.isFavorite);
       return matchTurn && matchSearch && matchCost && matchFavorite;
     });
-  }, [recipes, selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
+  }, [compatibleRecipes, selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
 
   useEffect(() => {
     setRecipePage(0);
-  }, [selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
+  }, [compatibleRecipes, selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
 
   const visibleRecipes = useMemo(
     () => filteredRecipes.slice(recipePage * recipesPerPage, (recipePage + 1) * recipesPerPage),
@@ -411,7 +424,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     const slots = buildMealSchedule(mealsPerDay, targets, { wakeTime, sleepTime });
     const usedRecipeIds = new Set<string>();
     return slots.map(slot => {
-      const candidates = recipes
+      const candidates = compatibleRecipes
         .filter(recipe => recipe.category === slot.category)
         .sort((a, b) => {
           const target = slot.target;
@@ -426,7 +439,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
       if (recipe) usedRecipeIds.add(recipe.id);
       return { slot, recipe, substitution: selectedSubstitutions[slot.id] };
     });
-  }, [mealsPerDay, recipes, selectedSubstitutions, targets, wakeTime, sleepTime]);
+  }, [mealsPerDay, compatibleRecipes, selectedSubstitutions, targets, wakeTime, sleepTime]);
 
   const visibleMealPlan = mealPlan.filter(({ slot }) => {
     if (mealListFilter === 'all') return true;
@@ -749,7 +762,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                         <p className="text-[10px] text-muted-foreground">Porção sugerida: {recipePortion?.calories} kcal · {recipePortion?.proteinG}g proteína · {recipe.prepTimeMinutes} min · receita para {recipe.servings ?? 1} porção(ões)</p>
                       </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground">Ainda não há receita cadastrada para este horário.</p>
+                      <p className="text-xs text-muted-foreground">{compatibleRecipes.length === 0
+                        ? 'Nenhuma receita cadastrada corresponde às alergias e restrições atuais do perfil.'
+                        : 'Ainda não há receita cadastrada para este horário.'}</p>
                     )}
                   </div>
                 ) : (
@@ -1157,7 +1172,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           )}
           {filteredRecipes.length === 0 && (
             <div className="rounded-2xl border border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
-              Nenhuma receita encontrada com esses filtros. Aumente o limite de custo ou ajuste a busca.
+              {compatibleRecipes.length === 0
+                ? 'Nenhuma receita do catálogo corresponde às alergias e restrições do perfil. Revise as informações salvas no Perfil & Metas.'
+                : 'Nenhuma receita encontrada com esses filtros. Aumente o limite de custo ou ajuste a busca.'}
             </div>
           )}
         </div>
@@ -1322,7 +1339,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {pantryMatchedRecipes.length === 0 ? (
+            {compatiblePantryRecipes.length === 0 ? (
               <div className="col-span-full py-12 text-center text-xs text-muted-foreground">
                 <ChefHat className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
                 <p>Nenhuma análise executada ainda. Clique no botão abaixo para analisar sua despensa.</p>
@@ -1334,7 +1351,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                 </button>
               </div>
             ) : (
-              pantryMatchedRecipes.slice(0, 15).map(recipe => (
+              compatiblePantryRecipes.slice(0, 15).map(recipe => (
                 <div key={recipe.id} className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-3 flex flex-col justify-between">
                   {recipe.imageUrl && (
                     <img

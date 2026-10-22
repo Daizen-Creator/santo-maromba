@@ -17,7 +17,9 @@ const validProfile = {
   fitnessGoal: 'muscle_gain' as const,
   mealsPerDay: 5,
   trainingDaysPerWeek: 4,
-  trainingWeekdays: [1, 3, 5, 0]
+  trainingWeekdays: [1, 3, 5, 0],
+  dietaryRestrictions: ['Sem glúten'],
+  allergies: ['amendoim']
 };
 
 describe('Rotina estruturada do perfil', () => {
@@ -45,14 +47,20 @@ describe('Rotina estruturada do perfil', () => {
 
     let repository = new ProfileRepository(db);
     repository.saveProfile({ ...validProfile, wakeTime: '06:15', sleepTime: '22:45' });
-    expect(repository.getProfile()).toMatchObject({ wakeTime: '06:15', sleepTime: '22:45', trainingWeekdays: [1, 3, 5, 0] });
+    expect(repository.getProfile()).toMatchObject({
+      wakeTime: '06:15', sleepTime: '22:45', trainingWeekdays: [1, 3, 5, 0],
+      dietaryRestrictions: ['Sem glúten'], allergies: ['amendoim']
+    });
     expect(db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 20')?.version).toBe(20);
 
     db.close();
     db = await createDatabaseDriver(databasePath);
     await runMigrations(db);
     repository = new ProfileRepository(db);
-    expect(repository.getProfile()).toMatchObject({ wakeTime: '06:15', sleepTime: '22:45', trainingWeekdays: [1, 3, 5, 0] });
+    expect(repository.getProfile()).toMatchObject({
+      wakeTime: '06:15', sleepTime: '22:45', trainingWeekdays: [1, 3, 5, 0],
+      dietaryRestrictions: ['Sem glúten'], allergies: ['amendoim']
+    });
 
     repository.saveProfile({ ...validProfile, wakeTime: undefined, sleepTime: undefined, trainingWeekdays: undefined });
     expect(repository.getProfile()).toMatchObject({ wakeTime: undefined, sleepTime: undefined, trainingWeekdays: undefined });
@@ -67,6 +75,9 @@ describe('Rotina estruturada do perfil', () => {
     });
 
     await api.saveProfile({ ...validProfile, wakeTime: '05:50', sleepTime: '21:40' });
-    expect(await api.getProfile()).toMatchObject({ wakeTime: '05:50', sleepTime: '21:40', trainingWeekdays: [1, 3, 5, 0] });
+    expect(await api.getProfile()).toMatchObject({
+      wakeTime: '05:50', sleepTime: '21:40', trainingWeekdays: [1, 3, 5, 0],
+      dietaryRestrictions: ['Sem glúten'], allergies: ['amendoim']
+    });
   });
 });

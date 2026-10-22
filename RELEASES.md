@@ -180,7 +180,13 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Salva os dias da semana disponíveis e monta a divisão de treino nesses dias, incluindo opções de 1 a 7 dias, Upper/Lower em quatro sessões e dias de recuperação em semanas de seis ou sete dias.
 - A migração 20 adiciona os dias ao perfil sem sobrescrever registros existentes; o SQLite e a PWA mantêm a seleção após reabrir.
-- 154 testes em 46 arquivos, build React/Electron, instalador e versão portátil aprovados; executável abriu em perfil isolado e criou SQLite com migração 20. Publicação GitHub pendente.
+- 154 testes em 46 arquivos, build React/Electron, instalador e versão portátil aprovados; executável abriu em perfil isolado e criou SQLite com migração 20; GitHub Actions 39747281374 publicou os quatro artefatos.
+
+## v1.1.24
+
+- Salva alergias em campo próprio e aplica alergias/restrições ao catálogo, ao plano diário e às sugestões da despensa.
+- Evita tratar limites de consumo como alergias; reconhece os principais alérgenos cadastrados e mostra quando o perfil não tem receita compatível.
+- 157 testes em 47 arquivos, build React/Electron, instalador e versão portátil aprovados; executável abriu em perfil isolado e criou o SQLite. Publicação GitHub pendente.
 
 ## Publicar uma versão
 

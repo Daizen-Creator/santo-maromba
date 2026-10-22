@@ -493,6 +493,8 @@ export const App: React.FC = () => {
               mealsPerDay={mealCount}
               wakeTime={profile?.wakeTime}
               sleepTime={profile?.sleepTime}
+              allergies={profile?.allergies}
+              dietaryRestrictions={profile?.dietaryRestrictions}
               foods={foods}
               recipes={recipes}
               dailyMealEntries={dailyMealEntries}

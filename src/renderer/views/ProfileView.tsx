@@ -84,6 +84,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string>(
     (profile?.dietaryRestrictions || []).join(', ')
   );
+  const [allergies, setAllergies] = useState<string>((profile?.allergies || []).join(', '));
   const [workSchedule, setWorkSchedule] = useState<string>(profile?.workSchedule || '');
   const [studySchedule, setStudySchedule] = useState<string>(profile?.studySchedule || '');
   const [sleepSchedule, setSleepSchedule] = useState<string>(profile?.sleepSchedule || '');
@@ -149,6 +150,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         foodBudgetMonthly: foodBudgetMonthly ? Number(foodBudgetMonthly) : undefined,
         dietaryPreferences,
         dietaryRestrictions: restrictionsArr,
+        allergies: allergies.split(',').map(value => value.trim()).filter(Boolean),
         availableEquipment: equipmentArr,
         workSchedule,
         studySchedule,
@@ -498,15 +500,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           <div className="space-y-1.5 pt-2">
             <label className="text-xs font-semibold text-muted-foreground">
-              Restrições Alimentares e Alergias (separadas por vírgula)
+              Restrições e limites de consumo (separados por vírgula)
             </label>
             <input
               type="text"
               value={dietaryRestrictions}
               onChange={e => setDietaryRestrictions(e.target.value)}
-              placeholder="Ex: Limite de ~2 ovos/dia, Intolerância a lactose, etc."
+              placeholder="Ex: Sem glúten, vegetariano, limite de 2 ovos/dia"
               className="w-full rounded-xl border border-border bg-secondary/50 px-3.5 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
             />
+          </div>
+
+          <div className="space-y-1.5 pt-2">
+            <label className="text-xs font-semibold text-muted-foreground">
+              Alergias alimentares (separadas por vírgula)
+            </label>
+            <input
+              type="text"
+              value={allergies}
+              onChange={e => setAllergies(e.target.value)}
+              placeholder="Ex: amendoim, leite, camarão"
+              className="w-full rounded-xl border border-border bg-secondary/50 px-3.5 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+            />
+            <p className="text-[10px] text-muted-foreground">As sugestões verificam os ingredientes cadastrados. Confira os rótulos e o risco de contaminação cruzada.</p>
           </div>
 
           <div className="space-y-1.5 pt-2">
