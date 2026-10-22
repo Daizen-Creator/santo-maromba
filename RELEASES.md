@@ -186,7 +186,13 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Salva alergias em campo próprio e aplica alergias/restrições ao catálogo, ao plano diário e às sugestões da despensa.
 - Evita tratar limites de consumo como alergias; reconhece os principais alérgenos cadastrados e mostra quando o perfil não tem receita compatível.
-- 157 testes em 47 arquivos, build React/Electron, instalador e versão portátil aprovados; executável abriu em perfil isolado e criou o SQLite. Publicação GitHub pendente.
+- 157 testes em 47 arquivos, build React/Electron, instalador e versão portátil aprovados; executável abriu em perfil isolado e criou o SQLite; GitHub Actions 39748175759 publicou os quatro artefatos.
+
+## v1.1.25
+
+- Usa as preferências alimentares salvas para ordenar o catálogo, o plano diário e as sugestões da despensa por custo, tempo de preparo, macros, dieta e ingredientes preferidos.
+- Preferências afetam a ordem das sugestões; alergias e restrições incompatíveis continuam sendo excluídas.
+- 159 testes em 47 arquivos, build React/Electron, instalador e versão portátil aprovados; executável abriu em perfil isolado e criou SQLite. Publicação GitHub pendente.
 
 ## Publicar uma versão
 

@@ -1,4 +1,5 @@
 import { Recipe } from '../shared/types';
+import { getRecipeNutritionPerServing } from './recipe-portions';
 
 export interface RecipeProfileRestrictions {
   allergies?: string[];
@@ -71,4 +72,60 @@ export function isRecipeCompatible(recipe: Recipe, profile: RecipeProfileRestric
 
 export function filterRecipesForProfile<T extends Recipe>(recipes: T[], profile: RecipeProfileRestrictions): T[] {
   return recipes.filter(recipe => isRecipeCompatible(recipe, profile));
+}
+
+const PREFERENCE_STOP_WORDS = new Set([
+  'prefiro', 'prefere', 'gosto', 'gosta', 'quero', 'queria', 'opcao', 'opcoes', 'receita', 'receitas',
+  'comida', 'de', 'do', 'da', 'dos', 'das', 'e', 'ou', 'com', 'para', 'por', 'um', 'uma', 'o', 'a',
+  'mais', 'menos', 'alto', 'alta', 'baixo', 'baixa', 'rico', 'rica', 'proteina', 'proteinas',
+  'carbo', 'carboidrato', 'rapido', 'rapida', 'pratico', 'pratica', 'barato', 'barata', 'economico', 'economica'
+]);
+
+export function getRecipePreferenceScore(recipe: Recipe, preferences?: string): number {
+  if (!preferences?.trim()) return 0;
+  const normalized = normalize(preferences);
+  const nutrition = getRecipeNutritionPerServing(recipe);
+  const ingredientText = ingredientNames(recipe);
+  let score = 0;
+
+  if (/econom|barat|baixo custo/.test(normalized) && recipe.estimatedCost !== undefined) {
+    score += 10 / (1 + Math.max(0, recipe.estimatedCost));
+  }
+  if (/rapido|pratico|pouco tempo/.test(normalized)) {
+    score += Math.max(0, 10 - recipe.prepTimeMinutes / 5);
+  }
+  if (/mais proteina|alto.*proteina|rico.*proteina/.test(normalized)) {
+    score += Math.min(60, nutrition.proteinG) / 10;
+  }
+  if (/menos carbo|baixo.*carbo/.test(normalized)) {
+    score += Math.max(0, 8 - nutrition.carbsG / 10);
+  }
+  if (/vegano/.test(normalized)) {
+    score += isRecipeCompatible(recipe, { dietaryRestrictions: ['vegano'] }) ? 8 : -8;
+  } else if (/vegetarian/.test(normalized)) {
+    score += isRecipeCompatible(recipe, { dietaryRestrictions: ['vegetariano'] }) ? 8 : -8;
+  }
+
+  for (const segment of normalized.split(/[;,\n]+/).filter(Boolean)) {
+    const sign = /nao gosto|nao curto|evito|nao prefiro/.test(segment) ? -1 : 1;
+    const terms = segment.split(/[^\p{L}\p{N}]+/u)
+      .filter(term => term.length >= 3 && !PREFERENCE_STOP_WORDS.has(term));
+    for (const term of new Set(terms)) {
+      if (ingredientText.some(name => name.includes(term))) score += sign * 2;
+    }
+  }
+
+  return score;
+}
+
+export function rankRecipesByPreferences<T extends Recipe>(
+  recipes: T[],
+  preferences?: string,
+  baseScore: (recipe: T) => number = () => 0
+): T[] {
+  return recipes.map((recipe, index) => ({
+    recipe,
+    index,
+    score: baseScore(recipe) + getRecipePreferenceScore(recipe, preferences)
+  })).sort((a, b) => b.score - a.score || a.index - b.index).map(item => item.recipe);
 }

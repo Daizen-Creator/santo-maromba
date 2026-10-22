@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
-import { filterRecipesForProfile } from '../../domain/recipe-compatibility';
+import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
 import { getIngredientPerServing, getRecipeNutritionPerServing } from '../../domain/recipe-portions';
@@ -54,6 +54,7 @@ interface NutritionViewProps {
   sleepTime?: string;
   allergies?: string[];
   dietaryRestrictions?: string[];
+  dietaryPreferences?: string;
   foods: FoodItem[];
   recipes: Recipe[];
   dailyMealEntries: DailyMealEntry[];
@@ -83,6 +84,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   sleepTime,
   allergies,
   dietaryRestrictions,
+  dietaryPreferences,
   foods,
   recipes,
   dailyMealEntries,
@@ -399,20 +401,28 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     () => filterRecipesForProfile(pantryMatchedRecipes, { allergies, dietaryRestrictions }),
     [pantryMatchedRecipes, allergies, dietaryRestrictions]
   );
+  const preferredRecipes = useMemo(
+    () => rankRecipesByPreferences(compatibleRecipes, dietaryPreferences),
+    [compatibleRecipes, dietaryPreferences]
+  );
+  const preferredPantryRecipes = useMemo(
+    () => rankRecipesByPreferences(compatiblePantryRecipes, dietaryPreferences, recipe => recipe.matchRate * 100),
+    [compatiblePantryRecipes, dietaryPreferences]
+  );
   const filteredRecipes = useMemo(() => {
-    const matchingRecipeIds = new Set(searchRecipes(compatibleRecipes, searchTerm).map(recipe => recipe.id));
-    return compatibleRecipes.filter(r => {
+    const matchingRecipeIds = new Set(searchRecipes(preferredRecipes, searchTerm).map(recipe => recipe.id));
+    return preferredRecipes.filter(r => {
       const matchTurn = selectedTurn === 'all' || r.category === selectedTurn;
       const matchSearch = matchingRecipeIds.has(r.id);
       const matchCost = !r.estimatedCost || r.estimatedCost <= maxCostFilter;
       const matchFavorite = !favoritesOnly || Boolean(r.isFavorite);
       return matchTurn && matchSearch && matchCost && matchFavorite;
     });
-  }, [compatibleRecipes, selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
+  }, [preferredRecipes, selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
 
   useEffect(() => {
     setRecipePage(0);
-  }, [compatibleRecipes, selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
+  }, [preferredRecipes, selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
 
   const visibleRecipes = useMemo(
     () => filteredRecipes.slice(recipePage * recipesPerPage, (recipePage + 1) * recipesPerPage),
@@ -433,13 +443,14 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             Math.abs(getRecipeNutritionPerServing(recipe).calories - target.calories) +
             Math.abs(getRecipeNutritionPerServing(recipe).proteinG - target.proteinG) * 3 +
             Math.abs(getRecipeNutritionPerServing(recipe).carbsG - target.carbsG) * 0.35;
-          return score(a) - score(b);
+          return score(a) - score(b) - getRecipePreferenceScore(a, dietaryPreferences) * 2
+            + getRecipePreferenceScore(b, dietaryPreferences) * 2;
         });
       const recipe = candidates.find(candidate => !usedRecipeIds.has(candidate.id)) || candidates[0] || null;
       if (recipe) usedRecipeIds.add(recipe.id);
       return { slot, recipe, substitution: selectedSubstitutions[slot.id] };
     });
-  }, [mealsPerDay, compatibleRecipes, selectedSubstitutions, targets, wakeTime, sleepTime]);
+  }, [mealsPerDay, compatibleRecipes, dietaryPreferences, selectedSubstitutions, targets, wakeTime, sleepTime]);
 
   const visibleMealPlan = mealPlan.filter(({ slot }) => {
     if (mealListFilter === 'all') return true;
@@ -1339,7 +1350,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {compatiblePantryRecipes.length === 0 ? (
+            {preferredPantryRecipes.length === 0 ? (
               <div className="col-span-full py-12 text-center text-xs text-muted-foreground">
                 <ChefHat className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
                 <p>Nenhuma análise executada ainda. Clique no botão abaixo para analisar sua despensa.</p>
@@ -1351,7 +1362,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                 </button>
               </div>
             ) : (
-              compatiblePantryRecipes.slice(0, 15).map(recipe => (
+              preferredPantryRecipes.slice(0, 15).map(recipe => (
                 <div key={recipe.id} className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-3 flex flex-col justify-between">
                   {recipe.imageUrl && (
                     <img

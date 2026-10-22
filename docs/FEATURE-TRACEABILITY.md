@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.24. Estado após validação do incremento: **81 validadas, 46 parciais, 50 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.25. Estado após validação do incremento: **82 validadas, 45 parciais, 50 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -41,7 +41,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 10 | Registrar horários habituais de acordar e dormir; gerar as refeições dentro da janela de vigília, respeitando a quantidade diária e os macros. | PERF, DIAR | `ProfileView.tsx`; `NutritionView.tsx`; `meal-schedule.ts`; `profile-repository.ts`; `schema.sql`; `migrations.ts`; `ProfileInputSchema` | V · migração 19, SQLite/PWA após reabrir, horários regulares e noturnos, validação e macros cobertos por testes |
 | 11 | Escolher dias da semana disponíveis, persistir a seleção e gerar uma sessão em cada dia escolhido; adaptar a divisão para 1–7 dias, com recuperação em semanas de 6–7 dias. | PERF; TREI | `ProfileView.tsx`; `profile-repository.ts`; `schema.sql`; `migrations.ts`; `workout-engine.ts`; `fittrack-service.ts`; `api.ts` | V · migração 20, SQLite/PWA reabertos, divisões de 1–7 dias, mapeamento de dias e validação cobertos por testes |
 | 12 | Salvar alergias separadamente das restrições e aplicar a compatibilidade a catálogo, plano diário e sugestões da despensa. | PERF; NUTR | `ProfileView.tsx`; `App.tsx`; `NutritionView.tsx`; `recipe-compatibility.ts`; `profile-repository.ts` | V · alérgenos conhecidos, dietas vegetariana/vegana, alergia a ingrediente personalizado e limite de consumo cobertos por `recipe-compatibility.test.ts`; persistência do perfil coberta por `profile-routine-persistence.test.ts` |
-| 13 | Salvar preferências e aplicá-las às sugestões. | PERF; NUTR | — | P · preferências não filtram receitas |
+| 13 | Salvar preferências alimentares e usá-las para ordenar catálogo, refeições planejadas e opções da despensa sem enfraquecer as restrições. | PERF; NUTR | `ProfileView.tsx`; `App.tsx`; `NutritionView.tsx`; `recipe-compatibility.ts` | V · custo, rapidez, macros, ingredientes e dieta ordenam sugestões em `recipe-compatibility.test.ts`; persistência SQLite/PWA verificada em `profile-routine-persistence.test.ts` |
 | 14 | Selecionar 3–6 refeições e gerar exatamente essa quantidade. | PERF; DIAR | — | V · `meal-schedule.test.ts` |
 | 15 | Calcular meta calórica a partir de dados válidos do perfil. | PERF | — | V · `nutrition-calculator.test.ts` |
 | 16 | Calcular meta diária de proteína. | PERF | — | V · `nutrition-calculator.test.ts` |

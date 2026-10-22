@@ -533,6 +533,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               rows={2}
               value={dietaryPreferences}
               onChange={e => setDietaryPreferences(e.target.value)}
+              placeholder="Ex: prefiro frango, opções econômicas, preparo rápido, mais proteína"
               className="w-full rounded-xl border border-border bg-secondary/50 p-3 text-xs text-foreground focus:border-primary focus:outline-none"
             />
           </div>
