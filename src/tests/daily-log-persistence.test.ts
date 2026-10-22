@@ -144,4 +144,34 @@ describe('Registros reais do painel diário', () => {
     expect(item.consumedAmountG).toBe(135);
     expect(calculateLeftoverAmount(item.plannedAmountG, item.consumedAmountG)).toBe(45);
   });
+
+  it('persiste a porção planejada recalculada sem alterar consumo real nem o horário registrado', async () => {
+    const date = localDate();
+    const initial = service.saveDailyMeal({
+      date, slotId: 'breakfast', mealName: 'Café da manhã', scheduledTime: '07:30', status: 'partial',
+      items: [{ itemId: 'oat-0', foodId: 'oat', foodName: 'Aveia', plannedAmountG: 100, consumedAmountG: 40,
+        calories: 300, proteinG: 12, carbsG: 50, fatsG: 6 }]
+    });
+    const updated = service.saveDailyMeal({
+      date, slotId: 'breakfast', mealName: 'Café da manhã', scheduledTime: '07:30', status: 'partial',
+      items: [{ itemId: 'oat-0', foodId: 'oat', foodName: 'Aveia', plannedAmountG: 150, consumedAmountG: 40,
+        calories: 450, proteinG: 18, carbsG: 75, fatsG: 9 }]
+    });
+    expect(updated.items[0].plannedAmountG).toBe(150);
+    expect(updated.items[0].consumedAmountG).toBe(40);
+    expect(updated.calories).toBe(120);
+    expect(updated.completedAt).toBe(initial.completedAt);
+
+    db!.close();
+    db = null;
+    const reopened = await createDatabaseDriver(dbPath);
+    db = reopened;
+    await runMigrations(reopened);
+    service = new FitTrackService(reopened);
+    expect(service.getDailyMeals(date)[0]).toMatchObject({
+      completedAt: initial.completedAt,
+      calories: 120,
+      items: [{ plannedAmountG: 150, consumedAmountG: 40, calories: 450 }]
+    });
+  });
 });

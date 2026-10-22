@@ -21,6 +21,7 @@ import { getIngredientPerServing, getRecipeNutritionPerServing } from '../../dom
 import { DAILY_MEAL_STATUSES, summarizeDailyMealStatuses } from '../../domain/meal-status-summary';
 import { calculateConsumedFromLeftovers, calculateLeftoverAmount } from '../../domain/meal-leftovers';
 import { compareMealNutrition } from '../../domain/meal-nutrition-comparison';
+import { getMaxPlannedAmountG, scalePlannedMealItem } from '../../domain/planned-meal-portion';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -104,6 +105,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [pantryMatchedRecipes, setPantryMatchedRecipes] = useState<Array<Recipe & { matchRate: number }>>([]);
   const [findingPantryLoading, setFindingPantryLoading] = useState<boolean>(false);
   const [draftAmounts, setDraftAmounts] = useState<Record<string, number>>({});
+  const [draftPlannedAmounts, setDraftPlannedAmounts] = useState<Record<string, number>>({});
   const [savingMealSlot, setSavingMealSlot] = useState<string | null>(null);
   const [mealListFilter, setMealListFilter] = useState<'all' | 'eaten' | 'remaining'>('all');
   const [mealSaveError, setMealSaveError] = useState<string | null>(null);
@@ -289,9 +291,10 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     recipe: Recipe | null,
     substitution: SubstitutionOption | undefined,
     status: DailyMealStatus,
-    amounts: Record<string, number>
+    amounts: Record<string, number>,
+    plannedItems?: DailyMealItemLog[]
   ) => {
-    const sourceItems = itemsForMeal(recipe, substitution);
+    const sourceItems = plannedItems ?? itemsForMeal(recipe, substitution);
     const existing = dailyMealEntries.find(item => item.date === todayString && item.slotId === slot.id);
     const items = sourceItems.map(item => ({
       ...item,
@@ -312,6 +315,11 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
         items,
         note: existing?.note
       });
+      setDraftPlannedAmounts(current => {
+        const next = { ...current };
+        sourceItems.forEach(item => { delete next[`${slot.id}:${item.itemId}`]; });
+        return next;
+      });
       await refreshRecentFoods();
     } catch (error) {
       setMealSaveError(error instanceof Error ? error.message : 'Não foi possível salvar o registro da refeição.');
@@ -325,9 +333,10 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     recipe: Recipe | null,
     substitution: SubstitutionOption | undefined,
     item: DailyMealItemLog,
-    checked: boolean
+    checked: boolean,
+    plannedItems?: DailyMealItemLog[]
   ) => {
-    const sourceItems = itemsForMeal(recipe, substitution);
+    const sourceItems = plannedItems ?? itemsForMeal(recipe, substitution);
     const amounts = getCurrentAmounts(slot.id, sourceItems);
     amounts[item.itemId] = checked ? item.plannedAmountG : 0;
     const consumed = sourceItems.map(source => amounts[source.itemId] || 0);
@@ -514,10 +523,15 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {visibleMealPlan.map(({ slot, recipe, substitution }, index) => {
               const entry = dailyMealEntries.find(item => item.date === todayString && item.slotId === slot.id);
-              const checklistItems = itemsForMeal(recipe, substitution);
+              const baseChecklistItems = entry?.items?.length ? entry.items : itemsForMeal(recipe, substitution);
+              const checklistItems = baseChecklistItems.map(item => {
+                const plannedDraft = draftPlannedAmounts[`${slot.id}:${item.itemId}`];
+                return plannedDraft === undefined ? item : scalePlannedMealItem(item, plannedDraft);
+              });
+              const hasPlannedChanges = baseChecklistItems.some(item => draftPlannedAmounts[`${slot.id}:${item.itemId}`] !== undefined);
               const recipePortion = recipe ? getRecipeNutritionPerServing(recipe) : null;
               const amounts = getCurrentAmounts(slot.id, checklistItems);
-              const nutritionComparison = compareMealNutrition(entry?.items?.length ? entry.items : checklistItems, entry);
+              const nutritionComparison = compareMealNutrition(checklistItems, entry);
               const statusLabels: Record<DailyMealStatus, string> = {
                 pending: 'Pendente', preparing: 'Em preparo', consumed: 'Consumida', partial: 'Parcial',
                 deferred: 'Adiada', skipped: 'Não consumida', cancelled: 'Cancelada'
@@ -527,7 +541,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                 const values = checklistItems.map(item => currentAmounts[item.itemId] || 0);
                 const anyConsumed = values.some(value => value > 0);
                 const allConsumed = checklistItems.length > 0 && values.every((value, itemIndex) => value >= checklistItems[itemIndex].plannedAmountG);
-                void saveMealState(slot, recipe, substitution, allConsumed ? 'consumed' : anyConsumed ? 'partial' : 'pending', currentAmounts);
+                void saveMealState(slot, recipe, substitution, allConsumed ? 'consumed' : anyConsumed ? 'partial' : 'pending', currentAmounts, checklistItems);
               };
               return (
               <article key={slot.id} className="group rounded-2xl border border-border/80 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-xl hover:shadow-black/10">
@@ -672,16 +686,45 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       {checklistItems.map(item => {
                         const amount = amounts[item.itemId] || 0;
                         const draftKey = `${slot.id}:${item.itemId}`;
+                        const sourceItem = baseChecklistItems.find(source => source.itemId === item.itemId) ?? item;
+                        const maxPlannedAmountG = getMaxPlannedAmountG(sourceItem);
                         return (
                     <div key={item.itemId} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-background/40 px-3 py-2">
                             <input
                               type="checkbox"
                               checked={amount >= item.plannedAmountG}
                               aria-label={`Marcar ${item.foodName} consumido`}
-                              onChange={event => void toggleMealIngredient(slot, recipe, substitution, item, event.target.checked)}
+                              onChange={event => void toggleMealIngredient(slot, recipe, substitution, item, event.target.checked, checklistItems)}
                               className="h-4 w-4 accent-primary"
                             />
-                            <span className="min-w-0 flex-1 text-xs text-foreground">{item.foodName} <span className="text-muted-foreground">({item.plannedAmountG}g na porção sugerida)</span></span>
+                            <span className="min-w-0 flex-1 text-xs text-foreground">{item.foodName} <span className="text-muted-foreground">({item.plannedAmountG}g no plano atual)</span></span>
+                            <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              Plano
+                              <input
+                                type="number"
+                                min="1"
+                              max={maxPlannedAmountG}
+                              disabled={maxPlannedAmountG === 0}
+                                step="5"
+                                value={item.plannedAmountG}
+                                aria-label={`Quantidade planejada de ${item.foodName} em gramas`}
+                                onChange={event => {
+                                  const rawAmount = Number(event.target.value);
+                                  const nextAmount = Number.isFinite(rawAmount)
+                                    ? Math.max(1, Math.min(maxPlannedAmountG, rawAmount))
+                                    : item.plannedAmountG;
+                                  const originalAmount = sourceItem.plannedAmountG;
+                                  setDraftPlannedAmounts(current => {
+                                    const next = { ...current };
+                                    const draftKey = `${slot.id}:${item.itemId}`;
+                                    if (nextAmount === originalAmount) delete next[draftKey];
+                                    else next[draftKey] = nextAmount;
+                                    return next;
+                                  });
+                                }}
+                                className="w-16 rounded-md border border-border bg-card px-1.5 py-1 text-right text-xs text-foreground"
+                              />g
+                            </label>
                             <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               Consumidos
                               <input
@@ -713,6 +756,16 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                           </div>
                         );
                       })}
+                      {hasPlannedChanges && (
+                        <button
+                          type="button"
+                          onClick={() => void saveMealState(slot, recipe, substitution, entry?.status ?? 'pending', getCurrentAmounts(slot.id, checklistItems), checklistItems)}
+                          disabled={savingMealSlot === slot.id}
+                          className="w-full rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:opacity-50"
+                        >
+                          {savingMealSlot === slot.id ? 'Salvando…' : 'Salvar porções planejadas'}
+                        </button>
+                      )}
                       <button type="button" onClick={saveCurrentQuantities} disabled={savingMealSlot === slot.id} className="w-full rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:opacity-50">
                         {savingMealSlot === slot.id ? 'Salvando…' : 'Salvar quantidades consumidas'}
                       </button>
@@ -722,16 +775,16 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                   )}
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'consumed', Object.fromEntries(checklistItems.map(item => [item.itemId, item.plannedAmountG])))} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">
+                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'consumed', Object.fromEntries(checklistItems.map(item => [item.itemId, item.plannedAmountG])), checklistItems)} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">
                       <CheckCircle2 className="h-3.5 w-3.5" /> Comi tudo
                     </button>
-                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'preparing', getCurrentAmounts(slot.id, checklistItems))} className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">Preparar agora</button>
-                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'deferred', getCurrentAmounts(slot.id, checklistItems))} className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">Adiar</button>
-                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'skipped', getCurrentAmounts(slot.id, checklistItems))} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">
+                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'preparing', getCurrentAmounts(slot.id, checklistItems), checklistItems)} className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">Preparar agora</button>
+                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'deferred', getCurrentAmounts(slot.id, checklistItems), checklistItems)} className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">Adiar</button>
+                    <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'skipped', getCurrentAmounts(slot.id, checklistItems), checklistItems)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">
                       <SkipForward className="h-3.5 w-3.5" /> Pular refeição
                     </button>
                     {entry && entry.status !== 'pending' && (
-                      <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'pending', {})} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">
+                      <button type="button" disabled={savingMealSlot === slot.id} onClick={() => void saveMealState(slot, recipe, substitution, 'pending', {}, checklistItems)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground disabled:opacity-50">
                         <Circle className="h-3.5 w-3.5" /> Desfazer
                       </button>
                     )}

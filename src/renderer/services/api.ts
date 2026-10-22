@@ -707,6 +707,10 @@ export const api = {
     };
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
     const index = entries.findIndex(existing => existing.date === input.date && existing.slotId === input.slotId);
+    const previous = index >= 0 ? entries[index] : null;
+    if (consumed && previous && (previous.status === 'consumed' || previous.status === 'partial') && previous.completedAt) {
+      entry.completedAt = previous.completedAt;
+    }
     if (index >= 0) entries[index] = entry;
     else entries.push(entry);
     localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(entries));

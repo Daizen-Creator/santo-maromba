@@ -275,7 +275,13 @@ export class DailyLogRepository {
         meal_name = excluded.meal_name, scheduled_time = excluded.scheduled_time,
         recipe_id = excluded.recipe_id, status = excluded.status, items_json = excluded.items_json,
         calories = excluded.calories, protein_g = excluded.protein_g, carbs_g = excluded.carbs_g,
-        fats_g = excluded.fats_g, note = excluded.note, completed_at = excluded.completed_at,
+        fats_g = excluded.fats_g, note = excluded.note,
+        completed_at = CASE
+          WHEN excluded.status IN ('consumed', 'partial')
+            AND daily_meal_entries.status IN ('consumed', 'partial')
+          THEN daily_meal_entries.completed_at
+          ELSE excluded.completed_at
+        END,
         updated_at = excluded.updated_at`,
       [id, input.date, input.slotId, input.mealName.trim(), input.scheduledTime, input.recipeId || null,
         input.status, JSON.stringify(input.items), totals.calories, totals.proteinG, totals.carbsG,

@@ -81,6 +81,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Mostra a diferença do consumo salvo para cada macro e calorias.
 - Refeições pendentes ou sem registro não são apresentadas como consumo real igual a zero.
 
+## v1.1.7
+
+- Ajuste os gramas planejados de cada ingrediente no checklist alimentar.
+- Calorias e macros planejados são recalculados em tempo real com limites compatíveis com o SQLite.
+- Plano e consumo real ficam salvos separadamente; editar o plano mantém o horário original da refeição consumida.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

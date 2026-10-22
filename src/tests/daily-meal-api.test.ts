@@ -52,6 +52,22 @@ describe('Checklist alimentar na versão web', () => {
     await expect(api.copyDailyMeals({ sourceDate: input.date, targetDate: input.date })).rejects.toThrow();
   });
 
+  it('mantém a porção planejada e o horário real ao editar uma refeição já consumida', async () => {
+    const input = {
+      date: '2026-10-24', slotId: 'breakfast', mealName: 'Café da manhã', scheduledTime: '07:30', status: 'partial' as const,
+      items: [{ itemId: 'oat-0', foodId: 'oat', foodName: 'Aveia', plannedAmountG: 100, consumedAmountG: 40,
+        calories: 300, proteinG: 12, carbsG: 50, fatsG: 6 }]
+    };
+    const first = await api.saveDailyMeal(input);
+    const updated = await api.saveDailyMeal({
+      ...input,
+      items: [{ ...input.items[0], plannedAmountG: 150, calories: 450, proteinG: 18, carbsG: 75, fatsG: 9 }]
+    });
+    expect(updated.completedAt).toBe(first.completedAt);
+    expect(updated.calories).toBe(120);
+    expect((await api.getDailyMeals(input.date))[0].items[0]).toMatchObject({ plannedAmountG: 150, consumedAmountG: 40 });
+  });
+
   it('salva modelos no armazenamento local e aplica apenas em horários vazios', async () => {
     const sourceDate = '2026-10-20';
     await api.saveDailyMeal({
