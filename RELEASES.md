@@ -199,7 +199,14 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Adiciona prazo opcional à meta de peso e mostra dias restantes ou atraso, diferença até o peso-alvo e variação média aritmética por semana; os valores dependem do peso real registrado e não são uma previsão fisiológica.
 - Migração 21 adiciona a data ao perfil sem apagar os dados existentes; valida datas impossíveis e preserva o prazo após fechar e reabrir.
 - Reconhece o histórico de objetivos do ID 20 como já coberto pelo histórico persistente do ID 6, evitando duplicar dados e comportamento.
-- 163 testes em 48 arquivos passaram; build, instalador NSIS e versão portátil foram gerados. O executável abriu em perfil isolado e criou um SQLite com a migração 21 e a coluna `target_date`. Publicação GitHub pendente.
+- 163 testes em 48 arquivos passaram; build, instalador NSIS e versão portátil foram gerados. O executável abriu em perfil isolado e criou um SQLite com a migração 21 e a coluna `target_date`. GitHub Actions 39749647634 publicou os quatro artefatos.
+
+## v1.1.27
+
+- Permite salvar, atualizar e remover a porção habitual de alimentos consumidos recentemente; essas preferências ficam no SQLite do desktop e no armazenamento local offline da PWA.
+- Aplica a quantidade escolhida a cada ingrediente do checklist quando solicitado e recalcula os macros por grama, mantendo inalterados os nutrientes de referência por 100 g.
+- Migração 22 cria a tabela de porções sem substituir alimentos, receitas ou refeições existentes.
+- 165 testes em 49 arquivos passaram; build, instalador NSIS e versão portátil foram aprovados. O executável abriu em perfil isolado e criou um SQLite com a migração 22 e a tabela de porções. Publicação GitHub pendente.
 
 ## Publicar uma versão
 

@@ -1,6 +1,6 @@
 import { IDatabase } from '../driver';
 import { randomUUID } from 'crypto';
-import { CustomFoodInput, FoodItem, PantryItem, Recipe } from '../../shared/types';
+import { CustomFoodInput, FoodItem, FoodPortionPreference, PantryItem, Recipe } from '../../shared/types';
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../seeds/nutrition-seeds';
 import { normalizeRecipeServings } from '../../domain/recipe-portions';
 
@@ -116,6 +116,36 @@ export class NutritionRepository {
       isCustom: Boolean(r.is_custom),
       isFavorite: favorites.has(r.id)
     }));
+  }
+
+  getFoodPortionPreferences(): FoodPortionPreference[] {
+    return this.db.query<any>(
+      'SELECT food_id, amount_g, updated_at FROM food_portion_preferences ORDER BY food_id'
+    ).map(row => ({
+      foodId: row.food_id,
+      amountG: Number(row.amount_g),
+      updatedAt: row.updated_at
+    }));
+  }
+
+  saveFoodPortionPreference(foodId: string, amountG: number | null): FoodPortionPreference | null {
+    if (!this.db.queryOne<{ id: string }>('SELECT id FROM foods WHERE id = ?', [foodId])) {
+      throw new Error('Alimento não encontrado.');
+    }
+    if (amountG === null) {
+      this.db.execute('DELETE FROM food_portion_preferences WHERE food_id = ?', [foodId]);
+      return null;
+    }
+    if (!Number.isFinite(amountG) || amountG < 1 || amountG > 5000) {
+      throw new Error('A porção habitual deve estar entre 1 e 5.000 g.');
+    }
+    const updatedAt = new Date().toISOString();
+    this.db.execute(
+      `INSERT INTO food_portion_preferences (food_id, amount_g, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(food_id) DO UPDATE SET amount_g = excluded.amount_g, updated_at = excluded.updated_at`,
+      [foodId, amountG, updatedAt]
+    );
+    return { foodId, amountG, updatedAt };
   }
 
   setFoodFavorite(id: string, isFavorite: boolean): FoodItem {

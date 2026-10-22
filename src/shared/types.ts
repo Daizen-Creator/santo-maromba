@@ -284,6 +284,17 @@ export interface RecentlyUsedFood {
   dataSource?: string;
 }
 
+export interface FoodPortionPreference {
+  foodId: string;
+  amountG: number;
+  updatedAt: string;
+}
+
+export interface SaveFoodPortionPreferenceInput {
+  foodId: string;
+  amountG: number | null;
+}
+
 export interface DailyIntakeProgress {
   date: string;
   calories: number | null;

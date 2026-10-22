@@ -29,6 +29,7 @@ import {
   DashboardSummary,
   Exercise,
   FoodItem,
+  FoodPortionPreference,
   NutritionTargets,
   PantryItem,
   PhotoRecord,
@@ -260,6 +261,14 @@ export class FitTrackService {
   // --- NUTRIÇÃO, 200 RECEITAS E SUBSTITUIÇÕES ---
   getFoods(): FoodItem[] {
     return this.nutritionRepo.getFoods();
+  }
+
+  getFoodPortionPreferences(): FoodPortionPreference[] {
+    return this.nutritionRepo.getFoodPortionPreferences();
+  }
+
+  saveFoodPortionPreference(foodId: string, amountG: number | null): FoodPortionPreference | null {
+    return this.nutritionRepo.saveFoodPortionPreference(foodId, amountG);
   }
 
   createCustomFood(input: CustomFoodInput): FoodItem {

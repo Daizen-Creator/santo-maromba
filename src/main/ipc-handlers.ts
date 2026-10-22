@@ -32,7 +32,8 @@ import {
   CustomFoodInputSchema,
   CustomFoodUpdateInputSchema,
   RecipeFavoriteInputSchema,
-  RecipeServingsInputSchema
+  RecipeServingsInputSchema,
+  SaveFoodPortionPreferenceInputSchema
 } from '../shared/schema';
 import { FitTrackService } from '../services/fittrack-service';
 import { IDatabase } from '../database/driver';
@@ -257,6 +258,25 @@ export function registerIpcHandlers(
       return { success: true, data: service.getFoods() };
     } catch (err: any) {
       return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_FOOD_PORTION_PREFERENCES, async event => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getFoodPortionPreferences() };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível consultar as porções habituais.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_FOOD_PORTION_PREFERENCE, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      const input = SaveFoodPortionPreferenceInputSchema.parse(rawInput);
+      return { success: true, data: service.saveFoodPortionPreference(input.foodId, input.amountG) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar a porção habitual.' };
     }
   });
 

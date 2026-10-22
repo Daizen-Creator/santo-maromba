@@ -185,6 +185,14 @@ CREATE TABLE IF NOT EXISTS pantry_items (
   FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
 );
 
+-- Quantidades habituais escolhidas pelo usuário; os valores nutricionais dos alimentos seguem por 100 g.
+CREATE TABLE IF NOT EXISTS food_portion_preferences (
+  food_id TEXT PRIMARY KEY,
+  amount_g REAL NOT NULL CHECK(amount_g BETWEEN 1 AND 5000),
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
+);
+
 -- 10. Refeições Registradas
 CREATE TABLE IF NOT EXISTS logged_meals (
   id TEXT PRIMARY KEY,

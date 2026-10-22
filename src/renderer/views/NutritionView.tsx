@@ -13,7 +13,7 @@ import {
   Plus,
   Star
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -66,6 +66,8 @@ interface NutritionViewProps {
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
   onSaveCustomFood: (input: CustomFoodInput, id?: string) => Promise<FoodItem>;
   onGetRecentlyUsedFoods: () => Promise<RecentlyUsedFood[]>;
+  onGetFoodPortionPreferences: () => Promise<FoodPortionPreference[]>;
+  onSaveFoodPortionPreference: (input: SaveFoodPortionPreferenceInput) => Promise<FoodPortionPreference | null>;
   onGetMealHistory: (query: DailyMealHistoryQuery) => Promise<DailyMealEntry[]>;
   onCopyDailyMeals: (input: DailyMealCopyInput) => Promise<DailyMealCopyResult>;
   onGetMealTemplates: () => Promise<MealTemplate[]>;
@@ -96,6 +98,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onSaveDailyMeal,
   onSaveCustomFood,
   onGetRecentlyUsedFoods,
+  onGetFoodPortionPreferences,
+  onSaveFoodPortionPreference,
   onGetMealHistory,
   onCopyDailyMeals,
   onGetMealTemplates,
@@ -145,6 +149,10 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [recipeServingDrafts, setRecipeServingDrafts] = useState<Record<string, string>>({});
   const [recentFoods, setRecentFoods] = useState<RecentlyUsedFood[]>([]);
   const [recentFoodsError, setRecentFoodsError] = useState<string | null>(null);
+  const [foodPortionPreferences, setFoodPortionPreferences] = useState<FoodPortionPreference[]>([]);
+  const [foodPortionDrafts, setFoodPortionDrafts] = useState<Record<string, string>>({});
+  const [foodPortionSaving, setFoodPortionSaving] = useState<string | null>(null);
+  const [foodPortionError, setFoodPortionError] = useState<string | null>(null);
   const [historyFromDate, setHistoryFromDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 29);
@@ -186,6 +194,50 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   };
 
   useEffect(() => { void refreshRecentFoods(); }, [onGetRecentlyUsedFoods]);
+
+  const refreshFoodPortionPreferences = async () => {
+    try {
+      setFoodPortionPreferences(await onGetFoodPortionPreferences());
+      setFoodPortionError(null);
+    } catch (error) {
+      setFoodPortionError(error instanceof Error ? error.message : 'Não foi possível carregar as porções habituais.');
+    }
+  };
+
+  useEffect(() => { void refreshFoodPortionPreferences(); }, [onGetFoodPortionPreferences]);
+
+  const saveFoodPortion = async (foodId: string, amountG: number | null) => {
+    setFoodPortionSaving(foodId);
+    setFoodPortionError(null);
+    try {
+      const saved = await onSaveFoodPortionPreference({ foodId, amountG });
+      setFoodPortionPreferences(current => [
+        ...current.filter(item => item.foodId !== foodId),
+        ...(saved ? [saved] : [])
+      ]);
+      setFoodPortionDrafts(current => { const next = { ...current }; delete next[foodId]; return next; });
+    } catch (error) {
+      setFoodPortionError(error instanceof Error ? error.message : 'Não foi possível salvar a porção habitual.');
+    } finally {
+      setFoodPortionSaving(null);
+    }
+  };
+
+  const saveRecentFoodPortion = async (item: RecentlyUsedFood) => {
+    const rawValue = foodPortionDrafts[item.foodId]
+      ?? displayFoodMass(foodPortionPreferences.find(preference => preference.foodId === item.foodId)?.amountG ?? item.lastAmountG);
+    const amountG = displayMassToGrams(Number(rawValue), unitPreferences.foodMassUnit);
+    if (!Number.isFinite(amountG) || amountG < 1 || amountG > 5000) {
+      setFoodPortionError('A porção habitual deve ficar entre 1 e 5.000 g.');
+      return;
+    }
+    await saveFoodPortion(item.foodId, amountG);
+  };
+
+  const portionByFoodId = useMemo(
+    () => new Map(foodPortionPreferences.map(preference => [preference.foodId, preference.amountG])),
+    [foodPortionPreferences]
+  );
 
   useEffect(() => {
     let active = true;
@@ -828,6 +880,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                         const draftKey = `${slot.id}:${item.itemId}`;
                         const sourceItem = baseChecklistItems.find(source => source.itemId === item.itemId) ?? item;
                         const maxPlannedAmountG = getMaxPlannedAmountG(sourceItem);
+                        const preferredPortionG = portionByFoodId.get(item.foodId);
                         return (
                     <div key={item.itemId} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-background/40 px-3 py-2">
                             <input
@@ -865,6 +918,17 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                                 className="w-16 rounded-md border border-border bg-card px-1.5 py-1 text-right text-xs text-foreground"
                               />{unitPreferences.foodMassUnit}
                             </label>
+                            {preferredPortionG !== undefined && (
+                              <button
+                                type="button"
+                                disabled={preferredPortionG > maxPlannedAmountG || preferredPortionG === item.plannedAmountG}
+                                aria-label={`Usar porção habitual de ${item.foodName}: ${formatMass(preferredPortionG)}`}
+                                onClick={() => setDraftPlannedAmounts(current => ({ ...current, [draftKey]: preferredPortionG }))}
+                                className="rounded-md border border-primary/25 bg-primary/5 px-2 py-1 text-[10px] font-medium text-primary disabled:cursor-not-allowed disabled:opacity-45"
+                              >
+                                Usar usual · {formatMass(preferredPortionG)}
+                              </button>
+                            )}
                             <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               Consumidos
                               <input
@@ -1210,9 +1274,44 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       <span className="mt-1 block text-[10px] text-muted-foreground">
                         {nutritionQualityLabel(item.dataQuality)}{item.dataSource ? ` · ${item.dataSource}` : ''}
                       </span>
+                      <label className="mt-3 block text-[10px] text-muted-foreground">
+                        Porção habitual ({unitPreferences.foodMassUnit})
+                        <span className="mt-1 flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={displayFoodMass(1)}
+                            max={displayFoodMass(5000)}
+                            step={foodMassInputStep}
+                            value={foodPortionDrafts[item.foodId] ?? displayFoodMass(portionByFoodId.get(item.foodId) ?? item.lastAmountG)}
+                            aria-label={`Porção habitual de ${item.foodName} em ${unitPreferences.foodMassUnit}`}
+                            onChange={event => setFoodPortionDrafts(current => ({ ...current, [item.foodId]: event.target.value }))}
+                            className="w-24 rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground"
+                          />
+                          <button
+                            type="button"
+                            disabled={foodPortionSaving === item.foodId}
+                            onClick={() => void saveRecentFoodPortion(item)}
+                            className="rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[10px] font-semibold text-primary disabled:opacity-50"
+                          >
+                            {foodPortionSaving === item.foodId ? 'Salvando…' : portionByFoodId.has(item.foodId) ? 'Atualizar' : 'Salvar padrão'}
+                          </button>
+                          {portionByFoodId.has(item.foodId) && (
+                            <button
+                              type="button"
+                              disabled={foodPortionSaving === item.foodId}
+                              onClick={() => void saveFoodPortion(item.foodId, null)}
+                              className="rounded-lg border border-border px-2 py-1.5 text-[10px] text-muted-foreground disabled:opacity-50"
+                            >
+                              Limpar
+                            </button>
+                          )}
+                        </span>
+                      </label>
                     </li>
                   ))}
                 </ul>}
+            {foodPortionError && <p role="alert" className="mt-3 text-xs text-red-300">{foodPortionError}</p>}
+            <p className="mt-3 text-[10px] text-muted-foreground">A porção fica salva neste dispositivo. Ao aplicá-la ao plano, os macros são recalculados pela quantidade em gramas.</p>
           </section>
           <CustomFoodLibrary foods={foods} onSave={onSaveCustomFood} onSetFavorite={onSetFoodFavorite} />
         </div>

@@ -283,4 +283,17 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [21, 'Prazo da meta corporal no perfil', new Date().toISOString()]
     );
   }
+  db.exec(`CREATE TABLE IF NOT EXISTS food_portion_preferences (
+    food_id TEXT PRIMARY KEY,
+    amount_g REAL NOT NULL CHECK(amount_g BETWEEN 1 AND 5000),
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
+  )`);
+  const version22 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 22');
+  if (!version22) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [22, 'Porções habituais configuradas por alimento', new Date().toISOString()]
+    );
+  }
 }

@@ -44,6 +44,8 @@ import {
   ApplyMealTemplateInput,
   ApplyMealTemplateResult,
   RecentlyUsedFood,
+  FoodPortionPreference,
+  SaveFoodPortionPreferenceInput,
   HydrationLogInput,
   AppUpdateStatus,
   CustomizationMediaInput,
@@ -87,6 +89,8 @@ export interface FitTrackAPI {
 
   // Nutrição & Substituições
   getFoods: () => Promise<{ success: boolean; data?: FoodItem[]; error?: string }>;
+  getFoodPortionPreferences: () => Promise<{ success: boolean; data?: FoodPortionPreference[]; error?: string }>;
+  saveFoodPortionPreference: (input: SaveFoodPortionPreferenceInput) => Promise<{ success: boolean; data?: FoodPortionPreference | null; error?: string }>;
   setFoodFavorite: (id: string, isFavorite: boolean) => Promise<{ success: boolean; data?: FoodItem; error?: string }>;
   createCustomFood: (food: CustomFoodInput) => Promise<{ success: boolean; data?: FoodItem; error?: string }>;
   updateCustomFood: (id: string, food: CustomFoodInput) => Promise<{ success: boolean; data?: FoodItem; error?: string }>;
@@ -171,6 +175,8 @@ const api: FitTrackAPI = {
   getPhysiqueProjections: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PHYSIQUE_PROJECTIONS),
 
   getFoods: () => ipcRenderer.invoke(IPC_CHANNELS.GET_FOODS),
+  getFoodPortionPreferences: () => ipcRenderer.invoke(IPC_CHANNELS.GET_FOOD_PORTION_PREFERENCES),
+  saveFoodPortionPreference: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_FOOD_PORTION_PREFERENCE, input),
   setFoodFavorite: (id, isFavorite) => ipcRenderer.invoke(IPC_CHANNELS.SET_FOOD_FAVORITE, { id, isFavorite }),
   createCustomFood: food => ipcRenderer.invoke(IPC_CHANNELS.ADD_CUSTOM_FOOD, food),
   updateCustomFood: (id, food) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CUSTOM_FOOD, { id, food }),

@@ -43,6 +43,8 @@ import {
   ApplyMealTemplateInput,
   ApplyMealTemplateResult,
   RecentlyUsedFood,
+  FoodPortionPreference,
+  SaveFoodPortionPreferenceInput,
   HydrationLogInput,
   MeasurementUnitPreferences,
   CustomizationMediaInput,
@@ -63,7 +65,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -86,6 +88,7 @@ const LOCAL_STORAGE_KEY_DAILY_MEALS = 'fittrack_daily_meals';
 const LOCAL_STORAGE_KEY_MEAL_TEMPLATES = 'fittrack_meal_templates';
 const LOCAL_STORAGE_KEY_CUSTOM_FOODS = 'fittrack_custom_foods';
 const LOCAL_STORAGE_KEY_FAVORITE_FOODS = 'fittrack_favorite_foods';
+const LOCAL_STORAGE_KEY_FOOD_PORTION_PREFERENCES = 'fittrack_food_portion_preferences';
 const LOCAL_STORAGE_KEY_FAVORITE_RECIPES = 'fittrack_favorite_recipes';
 const LOCAL_STORAGE_KEY_RECIPE_SERVINGS = 'fittrack_recipe_servings';
 const LOCAL_STORAGE_KEY_VISUAL_CUSTOMIZATION = 'fittrack_visual_customization';
@@ -459,6 +462,36 @@ export const api = {
     const customFoods: FoodItem[] = json ? JSON.parse(json) : [];
     const favorites = new Set<string>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_FAVORITE_FOODS) || '[]'));
     return [...INITIAL_FOODS, ...customFoods].map(food => ({ ...food, isFavorite: favorites.has(food.id) }));
+  },
+
+  getFoodPortionPreferences: async (): Promise<FoodPortionPreference[]> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getFoodPortionPreferences();
+      if (!res.success) throw new Error(res.error || 'Erro ao consultar porções habituais.');
+      return res.data || [];
+    }
+    return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_FOOD_PORTION_PREFERENCES) || '[]');
+  },
+
+  saveFoodPortionPreference: async (rawInput: SaveFoodPortionPreferenceInput): Promise<FoodPortionPreference | null> => {
+    const input = SaveFoodPortionPreferenceInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveFoodPortionPreference(input);
+      if (!res.success) throw new Error(res.error || 'Erro ao salvar porção habitual.');
+      return res.data ?? null;
+    }
+    if (!(await api.getFoods()).some(food => food.id === input.foodId)) {
+      throw new Error('Alimento não encontrado.');
+    }
+    const current = await api.getFoodPortionPreferences();
+    const updated = input.amountG === null
+      ? current.filter(item => item.foodId !== input.foodId)
+      : [
+          ...current.filter(item => item.foodId !== input.foodId),
+          { ...input, amountG: input.amountG, updatedAt: new Date().toISOString() }
+        ];
+    localStorage.setItem(LOCAL_STORAGE_KEY_FOOD_PORTION_PREFERENCES, JSON.stringify(updated));
+    return updated.find(item => item.foodId === input.foodId) ?? null;
   },
 
   setFoodFavorite: async (id: string, isFavorite: boolean): Promise<FoodItem> => {

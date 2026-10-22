@@ -239,6 +239,10 @@ export const RecipeServingsInputSchema = z.object({
   id: CustomFoodIdSchema,
   servings: z.number().int().min(1).max(50)
 }).strict();
+export const SaveFoodPortionPreferenceInputSchema = z.object({
+  foodId: CustomFoodIdSchema,
+  amountG: z.number().min(1).max(5000).nullable()
+}).strict();
 
 export const WorkoutSessionInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data de treino válida.'),
