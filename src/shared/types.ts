@@ -443,6 +443,8 @@ export interface Recipe {
   prepTimeMinutes: number;
   instructions: string;
   ingredients: RecipeIngredient[];
+  /** Porções informadas para a receita inteira; receitas do catálogo começam com 1 porção. */
+  servings?: number;
   totalCalories: number;
   totalProteinG: number;
   totalCarbsG: number;

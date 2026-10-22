@@ -6,10 +6,19 @@ import {
   PhotoNotesUpdateSchema,
   ProfileInputSchema,
   WeightRecordInputSchema,
+  RecipeServingsInputSchema,
   WorkoutSessionInputSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
+  it('aceita rendimento inteiro de receita e rejeita valores fora de 1 a 50', () => {
+    expect(RecipeServingsInputSchema.parse({ id: 'recipe-1', servings: 6 })).toEqual({ id: 'recipe-1', servings: 6 });
+    expect(() => RecipeServingsInputSchema.parse({ id: 'recipe-1', servings: 0 })).toThrow();
+    expect(() => RecipeServingsInputSchema.parse({ id: 'recipe-1', servings: 1.5 })).toThrow();
+    expect(() => RecipeServingsInputSchema.parse({ id: 'recipe-1', servings: 51 })).toThrow();
+    expect(() => RecipeServingsInputSchema.parse({ id: '../recipe', servings: 2 })).toThrow();
+  });
+
   it('valida cadastro nutricional por 100 g e rejeita macros negativos', () => {
     const food = CustomFoodInputSchema.parse({
       name: '  Receita pessoal  ', category: 'dairy', calories: 110,

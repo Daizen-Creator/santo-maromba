@@ -75,6 +75,9 @@ describe('Checklist alimentar na versão web', () => {
     expect((await api.getRecipes()).find(item => item.id === recipe.id)?.isFavorite).toBe(true);
     await api.setRecipeFavorite(recipe.id, false);
     expect((await api.getRecipes()).find(item => item.id === recipe.id)?.isFavorite).toBe(false);
+    await api.setRecipeServings(recipe.id, 3);
+    expect((await api.getRecipes()).find(item => item.id === recipe.id)?.servings).toBe(3);
+    await expect(api.setRecipeServings(recipe.id, 51)).rejects.toThrow('O rendimento deve ser um número inteiro');
 
     const food = (await api.getFoods())[0];
     await api.setFoodFavorite(food.id, true);

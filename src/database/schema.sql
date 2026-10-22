@@ -137,6 +137,7 @@ CREATE TABLE IF NOT EXISTS recipes (
   category TEXT NOT NULL CHECK(category IN ('breakfast', 'lunch', 'snack', 'pre_workout', 'post_workout', 'dinner', 'supper')),
   prep_time_minutes INTEGER,
   instructions TEXT NOT NULL,
+  servings INTEGER NOT NULL DEFAULT 1 CHECK(servings BETWEEN 1 AND 50),
     image_url TEXT,
     image_credit TEXT,
   budget_swaps TEXT NOT NULL DEFAULT '[]',

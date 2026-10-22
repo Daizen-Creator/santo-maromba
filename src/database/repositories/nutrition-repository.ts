@@ -2,6 +2,7 @@ import { IDatabase } from '../driver';
 import { randomUUID } from 'crypto';
 import { CustomFoodInput, FoodItem, PantryItem, Recipe } from '../../shared/types';
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../seeds/nutrition-seeds';
+import { normalizeRecipeServings } from '../../domain/recipe-portions';
 
 export class NutritionRepository {
   constructor(private db: IDatabase) {
@@ -221,6 +222,7 @@ export class NutritionRepository {
         category: row.category,
         prepTimeMinutes: Number(row.prep_time_minutes || 0),
         instructions: row.instructions,
+        servings: normalizeRecipeServings(Number(row.servings || 1)),
         imageUrl: row.image_url || undefined,
         imageCredit: row.image_credit || undefined,
         ingredients,
@@ -241,6 +243,15 @@ export class NutritionRepository {
     if (result.changes === 0) throw new Error('Receita não encontrada.');
     const recipe = this.getRecipes().find(item => item.id === id);
     if (!recipe) throw new Error('Não foi possível carregar a receita atualizada.');
+    return recipe;
+  }
+
+  setRecipeServings(id: string, servings: number): Recipe {
+    const validatedServings = normalizeRecipeServings(servings);
+    const result = this.db.execute('UPDATE recipes SET servings = ? WHERE id = ?', [validatedServings, id]);
+    if (result.changes === 0) throw new Error('Receita não encontrada.');
+    const recipe = this.getRecipes().find(item => item.id === id);
+    if (!recipe) throw new Error('Não foi possível carregar o rendimento atualizado.');
     return recipe;
   }
 

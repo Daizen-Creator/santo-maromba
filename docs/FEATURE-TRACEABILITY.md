@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas e atualizada até a versão 1.0.7. Estado atual: **50 validadas, 62 parciais, 65 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas e atualizada até o incremento 1.0.8. Estado atual: **52 validadas, 62 parciais, 63 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -15,7 +15,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 |---|---|---|
 | PERF | `src/renderer/views/ProfileView.tsx`; `src/database/repositories/profile-repository.ts`; `src/database/schema.sql`; `src/domain/nutrition-calculator.ts` | `src/tests/nutrition-calculator.test.ts`; `src/tests/weight-analytics.test.ts`; `src/tests/validation.test.ts` |
 | DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/meal-schedule.test.ts` |
-| NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-catalog.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
+| NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-catalog.ts`; `src/domain/recipe-portions.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/recipe-portions.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
 | TREI | `src/renderer/views/WorkoutView.tsx`; `src/domain/workout-engine.ts`; `src/database/repositories/workout-repository.ts`; `src/database/repositories/exercise-media-repository.ts`; `src/database/schema.sql`; `src/database/migrations.ts` | `src/tests/workout-engine.test.ts`; `src/tests/workout-media-persistence.test.ts`; `src/tests/workout-migration.test.ts` |
 | SHAP | `src/renderer/views/ShapeCalendarView.tsx`; `src/renderer/views/ProjectionView.tsx`; `src/database/repositories/photo-repository.ts`; `src/database/repositories/measurement-repository.ts`; `src/services/photo-storage.ts`; `src/database/schema.sql` | `src/tests/photo-persistence.test.ts`; `src/tests/physique-projection.test.ts`; `src/tests/physique-projection-persistence.test.ts` |
 | DESP | `src/renderer/views/NutritionView.tsx`; `src/domain/substitution-engine.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/schema.sql` | `src/tests/substitution-engine.test.ts`; `src/tests/catalog-persistence.test.ts` |
@@ -89,7 +89,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 48 | Recalcular macros ao alterar a porção planejada. | NUTR; DIAR | — | P · cálculo existe, edição da porção no plano falta |
 | 49 | Converter medidas com densidade explícita para líquidos. | NUTR | dados de densidade confiáveis | A · sem conversão por unidade |
 | 50 | Diferenciar cru, cozido, drenado e preparo equivalente. | NUTR | dados de preparo verificados | P · só flag cru/cozido |
-| 51 | Calcular nutrientes por rendimento/peso final da receita. | NUTR | peso final/rendimento da receita | A · receita não registra rendimento |
+| 51 | Calcular nutrientes por rendimento/peso final da receita. | NUTR | peso final da receita | P · porções do lote são calculadas; peso final cozido em gramas não é registrado |
 | 52 | Atualizar total diário ao salvar consumo. | NUTR; DIAR | — | V · `daily-meal-api.test.ts` |
 | 53 | Exibir saldo restante das metas diárias. | NUTR; DASH | — | V · cálculo/dados do dashboard |
 | 54 | Comparar planejado e consumido por refeição. | DIAR; NUTR | — | P · checklist separa estados; comparação detalhada incompleta |
@@ -118,8 +118,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 72 | Exibir ingredientes e quantidades por receita. | NUTR | — | V · `catalog-persistence.test.ts` |
 | 73 | Exibir preparo passo a passo. | NUTR | — | V · instruções persistidas e teste de catálogo |
 | 74 | Exibir tempo estimado de preparo. | NUTR | — | V · campo persistido |
-| 75 | Definir rendimento e número de porções. | NUTR | — | A · schema sem rendimento |
-| 76 | Calcular nutrição por porção usando rendimento. | NUTR | — | P · soma da receita existe, porção/rendimento não |
+| 75 | Definir rendimento e número de porções. | NUTR; IPC | — | V · rendimento inteiro 1–50 editável e persistido; `catalog-persistence.test.ts` |
+| 76 | Calcular nutrição por porção usando rendimento. | NUTR | — | V · ingredientes e macros do lote são divididos pelo rendimento; `recipe-portions.test.ts` |
 | 77 | Sugerir substituições compatíveis nutricionalmente. | NUTR | grupos de equivalência do catálogo | V · `substitution-engine.test.ts` |
 | 78 | Filtrar receitas por categoria e restrições do perfil. | NUTR; PERF | — | P · categoria existe; preferências não filtram |
 | 79 | Mostrar custo atualizado e estimado por porção. | NUTR | preços definidos pelo usuário | P · preços base fixos e estimados |
@@ -284,8 +284,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | CAT-03 | Identidade suporta sinônimo, marca, barcode e estado de preparo. | NUTR | catálogo externo opcional | A · campos ausentes |
 | CAT-04 | Cálculo por porção usa `valor/100g × gramas/100` e mantém nutrientes ausentes. | NUTR | — | P · macros em gramas existem e fibra sem dado fica NULL; conversões/micros não existem |
 | CAT-05 | Conversões de ml/unidade usam densidade/medida cadastrada, nunca densidade presumida. | NUTR | dados de conversão verificados | A · sem conversor |
-| CAT-06 | Receita guarda ingredientes, quantidades, instruções e rendimento. | NUTR | — | P · ingredientes/instruções existem; rendimento não |
-| CAT-07 | Nutrição por porção deriva do total e rendimento da receita. | NUTR | dados de rendimento | A · sem rendimento |
+| CAT-06 | Receita guarda ingredientes, quantidades, instruções e rendimento. | NUTR; IPC | — | V · rendimento armazenado no SQLite e preservado ao reabrir; `catalog-persistence.test.ts` |
+| CAT-07 | Nutrição por porção deriva do total e rendimento da receita. | NUTR | — | V · divisão determinística validada em `recipe-portions.test.ts` e aplicada ao checklist |
 | CAT-08 | Atualizar catálogo preserva snapshots nutricionais dos registros históricos. | DIAR; NUTR | migração/snapshot do diário | P · totais do checklist são persistidos; demais históricos não têm snapshot completo |
 | CAT-09 | Detectar alimento incompleto ou duplicata semântica antes de salvar. | NUTR | — | A · sem detector |
 | CAT-10 | Recalcular prato e total diário após edição de quantidades. | NUTR; DIAR | — | P · parcial no checklist; editar receita/plano não |
@@ -295,8 +295,9 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- `npm test`: 72/72 testes aprovados localmente; inclui migração v9, alimentos pessoais, favoritos, busca nutricional, sessões parciais e cronômetro.
-- `npm run build`: build de renderer e Electron aprovado após o timer de descanso.
+- `npm test`: 76/76 testes aprovados localmente; inclui migração v10, rendimento e macros por porção, validação IPC, alimentos pessoais, checklist, sessões parciais e cronômetro.
+- `npm run build`: build de renderer e Electron aprovado após o rendimento de receitas.
+- Portable 1.0.8: abriu por 12 segundos e criou `fittrack.db` num perfil temporário isolado.
 - Instalador NSIS e portable 1.0.4: publicados; smoke test do portable criou `fittrack.db` num perfil temporário isolado.
 - Portable 1.0.5: empacotado e smoke test de 12 segundos criou `fittrack.db` num perfil isolado.
 - Portable 1.0.6: abriu por 12 segundos e criou `fittrack.db` num perfil isolado.
@@ -309,6 +310,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - Release 1.0.6: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.6.
 - GitHub Actions e release 1.0.7: 72 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39724467747).
 - Release 1.0.7: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.7.
+- Incremento 1.0.8: 76 testes, build, empacotamento NSIS/portable e abertura isolada do portable aprovados localmente. Publicação pendente.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
@@ -317,6 +319,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - IDs **CAT-02, CAT-04, CAT-12 e CAT-13** avançaram parcialmente. Os seeds ainda não têm referências rastreáveis por item, densidade, micronutrientes ou 500 cadastros verificados, então esses critérios permanecem incompletos.
 - IDs **61, 65 e 67** estão concluídos e validados: busca de receitas/alimentos; cadastro e edição de alimento pessoal com rótulo de origem e persistência; favoritos e filtros de favoritos para receitas e alimentos no SQLite/PWA.
 - IDs **88, 91 e 92** estão concluídos e validados: cronômetro de descanso ligado ao intervalo planejado; marcação persistente por série; salvamento de sessão parcial sem tratá-la como treino concluído.
+- IDs **75 e 76** e critérios **CAT-06 e CAT-07** estão concluídos e validados: rendimento de 1–50 porções salvo no SQLite/PWA, macros e quantidades do checklist recalculados por porção, com migração v10 e testes de reabertura.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas

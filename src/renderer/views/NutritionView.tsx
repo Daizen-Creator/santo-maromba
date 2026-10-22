@@ -17,6 +17,7 @@ import { CustomFoodInput, DailyMealEntry, DailyMealEntryInput, DailyMealItemLog,
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
+import { getIngredientPerServing, getRecipeNutritionPerServing } from '../../domain/recipe-portions';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -41,6 +42,7 @@ interface NutritionViewProps {
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
   onSaveCustomFood: (input: CustomFoodInput, id?: string) => Promise<FoodItem>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
+  onSetRecipeServings: (id: string, servings: number) => Promise<void>;
   onSetFoodFavorite: (id: string, isFavorite: boolean) => Promise<void>;
 }
 
@@ -58,6 +60,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onSaveDailyMeal,
   onSaveCustomFood,
   onSetRecipeFavorite,
+  onSetRecipeServings,
   onSetFoodFavorite
 }) => {
   const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat' | 'foods'>('meals');
@@ -88,6 +91,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [mealSaveError, setMealSaveError] = useState<string | null>(null);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [recipeActionError, setRecipeActionError] = useState<string | null>(null);
+  const [recipeServingDrafts, setRecipeServingDrafts] = useState<Record<string, string>>({});
 
   const today = new Date();
   const todayString = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
@@ -95,23 +99,41 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const itemsForMeal = (recipe: Recipe | null, substitution?: SubstitutionOption): DailyMealItemLog[] => {
     const ingredients = substitution?.items ?? recipe?.ingredients ?? [];
     return ingredients.map((item, index) => {
+      const portion = recipe && !substitution ? getIngredientPerServing(item, recipe.servings ?? 1) : item;
       const food = foods.find(candidate => candidate.id === item.foodId);
       return {
-        itemId: `${item.foodId}-${index}`,
-        foodId: item.foodId,
-        foodName: item.foodName,
-        plannedAmountG: item.amountG,
+        itemId: `${portion.foodId}-${index}`,
+        foodId: portion.foodId,
+        foodName: portion.foodName,
+        plannedAmountG: portion.amountG,
         consumedAmountG: 0,
-        calories: item.calories,
-        proteinG: item.proteinG,
-        carbsG: item.carbsG,
-        fatsG: item.fatsG,
-        dataQuality: item.dataQuality ?? food?.dataQuality ?? 'unverified',
-        dataSource: item.dataSource ?? food?.source ?? 'Origem não registrada',
-        sourceReference: item.sourceReference ?? food?.sourceReference,
-        confidenceLevel: item.confidenceLevel ?? food?.confidenceLevel ?? 'unknown'
+        calories: portion.calories,
+        proteinG: portion.proteinG,
+        carbsG: portion.carbsG,
+        fatsG: portion.fatsG,
+        dataQuality: portion.dataQuality ?? food?.dataQuality ?? 'unverified',
+        dataSource: portion.dataSource ?? food?.source ?? 'Origem não registrada',
+        sourceReference: portion.sourceReference ?? food?.sourceReference,
+        confidenceLevel: portion.confidenceLevel ?? food?.confidenceLevel ?? 'unknown'
       };
     });
+  };
+
+  const saveRecipeServings = async (recipe: Recipe, rawValue: string) => {
+    const servings = Number(rawValue);
+    if (!Number.isInteger(servings) || servings < 1 || servings > 50) {
+      setRecipeActionError('Informe um rendimento inteiro entre 1 e 50 porções.');
+      setRecipeServingDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
+      return;
+    }
+    setRecipeActionError(null);
+    try {
+      await onSetRecipeServings(recipe.id, servings);
+      setRecipeServingDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
+    } catch (error) {
+      setRecipeActionError(error instanceof Error ? error.message : 'Não foi possível salvar o rendimento da receita.');
+      setRecipeServingDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
+    }
   };
 
   const getCurrentAmounts = (slotId: string, items: DailyMealItemLog[]) => {
@@ -208,9 +230,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           const target = slot.target;
           if (!target) return a.prepTimeMinutes - b.prepTimeMinutes;
           const score = (recipe: Recipe) =>
-            Math.abs(recipe.totalCalories - target.calories) +
-            Math.abs(recipe.totalProteinG - target.proteinG) * 3 +
-            Math.abs(recipe.totalCarbsG - target.carbsG) * 0.35;
+            Math.abs(getRecipeNutritionPerServing(recipe).calories - target.calories) +
+            Math.abs(getRecipeNutritionPerServing(recipe).proteinG - target.proteinG) * 3 +
+            Math.abs(getRecipeNutritionPerServing(recipe).carbsG - target.carbsG) * 0.35;
           return score(a) - score(b);
         });
       const recipe = candidates.find(candidate => !usedRecipeIds.has(candidate.id)) || candidates[0] || null;
@@ -337,6 +359,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             {visibleMealPlan.map(({ slot, recipe, substitution }, index) => {
               const entry = dailyMealEntries.find(item => item.date === todayString && item.slotId === slot.id);
               const checklistItems = itemsForMeal(recipe, substitution);
+              const recipePortion = recipe ? getRecipeNutritionPerServing(recipe) : null;
               const amounts = getCurrentAmounts(slot.id, checklistItems);
               const statusLabels: Record<DailyMealStatus, string> = {
                 pending: 'Pendente', preparing: 'Em preparo', consumed: 'Consumida', partial: 'Parcial',
@@ -426,18 +449,19 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                           <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground">{recipe.instructions}</p>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {recipe.ingredients.map(ingredient => (
-                            <button key={ingredient.foodId} type="button" onClick={() => handleTriggerSubstitution(ingredient.foodId, ingredient.foodName, ingredient.amountG, slot.id)} className="rounded-full border border-border/80 bg-secondary/50 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
-                              {ingredient.amountG}g {ingredient.foodName} · trocar
+                          {recipe.ingredients.map(ingredient => {
+                            const portion = getIngredientPerServing(ingredient, recipe.servings ?? 1);
+                            return <button key={ingredient.foodId} type="button" onClick={() => handleTriggerSubstitution(portion.foodId, portion.foodName, portion.amountG, slot.id)} className="rounded-full border border-border/80 bg-secondary/50 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
+                              {portion.amountG}g {portion.foodName} · trocar
                             </button>
-                          ))}
+                          })}
                         </div>
                         {recipe.budgetSwaps?.length ? (
                           <p className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-3 py-2 text-[11px] leading-relaxed text-emerald-200/80">
                             <strong className="font-semibold text-emerald-300">Trocas acessíveis:</strong> {recipe.budgetSwaps.join(' · ')}
                           </p>
                         ) : null}
-                        <p className="text-[10px] text-muted-foreground">Receita: {recipe.totalCalories} kcal · {recipe.totalProteinG}g proteína · {recipe.prepTimeMinutes} min</p>
+                        <p className="text-[10px] text-muted-foreground">Porção sugerida: {recipePortion?.calories} kcal · {recipePortion?.proteinG}g proteína · {recipe.prepTimeMinutes} min · receita para {recipe.servings ?? 1} porção(ões)</p>
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">Ainda não há receita cadastrada para este horário.</p>
@@ -609,7 +633,10 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
           {/* Grid de Receitas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {visibleRecipes.map(recipe => (
+            {visibleRecipes.map(recipe => {
+              const servings = recipe.servings ?? 1;
+              const portion = getRecipeNutritionPerServing(recipe);
+              return (
               <div
                 key={recipe.id}
                 className="rounded-3xl border border-border bg-card p-5 shadow-sm flex flex-col justify-between hover:border-primary/40 transition-all"
@@ -655,26 +682,53 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     </div>
                     {recipe.estimatedCost && (
                       <div className="flex items-center gap-0.5 text-emerald-400 font-bold">
-                        <span>R$ {recipe.estimatedCost.toFixed(2)} / porção (estimado)</span>
+                        <span>R$ {(recipe.estimatedCost / servings).toFixed(2)} / porção (estimado)</span>
                       </div>
                     )}
+                  </div>
+
+                  <div className="rounded-xl border border-border/70 bg-secondary/25 p-3">
+                    <label className="flex items-center justify-between gap-3 text-xs text-foreground">
+                      <span>Rendimento da receita</span>
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={50}
+                          step={1}
+                          aria-label={`Rendimento em porções para ${recipe.name}`}
+                          value={recipeServingDrafts[recipe.id] ?? String(servings)}
+                          onChange={event => setRecipeServingDrafts(current => ({ ...current, [recipe.id]: event.target.value }))}
+                          onBlur={event => void saveRecipeServings(recipe, event.currentTarget.value)}
+                          onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                          className="w-16 rounded-lg border border-border bg-background px-2 py-1.5 text-center tabular-nums text-foreground outline-none focus:border-primary"
+                        />
+                        <span className="text-muted-foreground">porções</span>
+                      </span>
+                    </label>
+                    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                      Nutrientes por porção são o total dos ingredientes dividido pelo rendimento informado.
+                    </p>
                   </div>
 
                   {/* Macros */}
                   <div className="rounded-2xl border border-border/70 bg-secondary/30 p-3 grid grid-cols-3 gap-2 text-center text-xs">
                     <div>
-                      <span className="text-[10px] text-muted-foreground block">Calorias</span>
-                      <strong className="text-foreground">{recipe.totalCalories}</strong>
+                      <span className="text-[10px] text-muted-foreground block">kcal / porção</span>
+                      <strong className="text-foreground">{portion.calories}</strong>
                     </div>
                     <div>
-                      <span className="text-[10px] text-muted-foreground block">Proteína</span>
-                      <strong className="text-primary">{recipe.totalProteinG}g</strong>
+                      <span className="text-[10px] text-muted-foreground block">Proteína / porção</span>
+                      <strong className="text-primary">{portion.proteinG}g</strong>
                     </div>
                     <div>
-                      <span className="text-[10px] text-muted-foreground block">Carbos</span>
-                      <strong className="text-foreground">{recipe.totalCarbsG}g</strong>
+                      <span className="text-[10px] text-muted-foreground block">Carbos / porção</span>
+                      <strong className="text-foreground">{portion.carbsG}g</strong>
                     </div>
                   </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Lote completo: {recipe.totalCalories} kcal · {recipe.totalProteinG}g proteína · {recipe.totalCarbsG}g carboidratos · {servings} porção(ões).
+                  </p>
                   {recipe.ingredients.some(ingredient => ingredient.dataQuality !== 'verified') && (
                     <p role="status" className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-relaxed text-amber-100/85">
                       Macros calculados com dados estimados ou não verificados. A origem declarada de cada ingrediente está disponível no cadastro quando informada.
@@ -683,7 +737,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
                   {/* Ingredientes */}
                   <div className="space-y-1 text-[11px] text-muted-foreground">
-                    <span className="font-semibold text-foreground">Ingredientes:</span>
+                    <span className="font-semibold text-foreground">Ingredientes do lote completo:</span>
                     <ul className="list-disc pl-4 space-y-0.5">
                       {recipe.ingredients.map((ing, iIdx) => (
                         <li key={iIdx}>
@@ -708,7 +762,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                   {recipe.instructions}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           {filteredRecipes.length > 0 && (
             <div className="flex items-center justify-center gap-4 pt-1">
@@ -796,9 +851,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <h4 className="font-display text-sm font-bold text-foreground">{recipe.name}</h4>
 
                     <div className="rounded-xl border border-border bg-secondary/30 p-2 text-xs flex justify-between">
-                      <span>{recipe.totalCalories} kcal</span>
-                      <span className="font-bold text-primary">{recipe.totalProteinG}g Proteína</span>
-                      <span>R$ {recipe.estimatedCost?.toFixed(2)}</span>
+                      <span>{getRecipeNutritionPerServing(recipe).calories} kcal/porção</span>
+                      <span className="font-bold text-primary">{getRecipeNutritionPerServing(recipe).proteinG}g Proteína</span>
+                      <span>R$ {((recipe.estimatedCost || 0) / (recipe.servings || 1)).toFixed(2)}/porção</span>
                     </div>
 
                     <ul className="text-[11px] text-muted-foreground space-y-1">

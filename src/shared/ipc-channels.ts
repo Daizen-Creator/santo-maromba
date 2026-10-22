@@ -40,6 +40,7 @@ export const IPC_CHANNELS = {
   UPDATE_CUSTOM_FOOD: 'nutrition:update-custom-food',
   GET_RECIPES: 'nutrition:get-recipes',
   SET_RECIPE_FAVORITE: 'nutrition:set-recipe-favorite',
+  SET_RECIPE_SERVINGS: 'nutrition:set-recipe-servings',
   GET_PANTRY: 'nutrition:get-pantry',
   UPDATE_PANTRY: 'nutrition:update-pantry',
   GET_SUBSTITUTIONS: 'nutrition:get-substitutions',

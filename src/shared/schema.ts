@@ -185,6 +185,10 @@ export const RecipeFavoriteInputSchema = z.object({
   id: CustomFoodIdSchema,
   isFavorite: z.boolean()
 }).strict();
+export const RecipeServingsInputSchema = z.object({
+  id: CustomFoodIdSchema,
+  servings: z.number().int().min(1).max(50)
+}).strict();
 
 export const WorkoutSessionInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data de treino válida.'),

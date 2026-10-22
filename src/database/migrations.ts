@@ -64,6 +64,9 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_foods_substitute_group ON foods(substitute_group_id)');
   const recipeCatalogColumns = db.query<{ name: string }>('PRAGMA table_info(recipes)');
+  if (!recipeCatalogColumns.some(column => column.name === 'servings')) {
+    db.exec('ALTER TABLE recipes ADD COLUMN servings INTEGER NOT NULL DEFAULT 1 CHECK(servings BETWEEN 1 AND 50)');
+  }
   if (!recipeCatalogColumns.some(column => column.name === 'image_url')) {
     db.exec('ALTER TABLE recipes ADD COLUMN image_url TEXT');
   }
@@ -161,6 +164,14 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [9, 'Conclusão individual de séries e sessões parciais de treino', new Date().toISOString()]
+    );
+  }
+
+  const version10 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 10');
+  if (!version10) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [10, 'Rendimento de porções editável para receitas', new Date().toISOString()]
     );
   }
 }

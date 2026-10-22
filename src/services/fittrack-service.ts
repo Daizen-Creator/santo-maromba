@@ -252,6 +252,10 @@ export class FitTrackService {
     return this.nutritionRepo.setRecipeFavorite(id, isFavorite);
   }
 
+  setRecipeServings(id: string, servings: number): Recipe {
+    return this.nutritionRepo.setRecipeServings(id, servings);
+  }
+
   getPantry(): PantryItem[] {
     return this.nutritionRepo.getPantry();
   }

@@ -27,6 +27,13 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Adiciona cronômetro visual de descanso na sessão, preenchido pelo intervalo recomendado para cada exercício.
 - Ao terminar, o timer mostra uma confirmação visível e pode ser encerrado manualmente.
 
+## v1.0.8
+
+- Permite informar e salvar o número de porções que o lote completo de uma receita rende.
+- Mostra os macros por porção e usa as quantidades divididas no checklist e no plano diário.
+- A migração SQLite v10 preserva receitas existentes e limita o rendimento a 1–50 porções.
+- No modo PWA, o rendimento escolhido fica salvo no armazenamento local do dispositivo.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

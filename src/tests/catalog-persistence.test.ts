@@ -140,6 +140,25 @@ describe('Catálogos locais de alimentação e treino', () => {
     expect(() => reopened.setFoodFavorite('missing-food', true)).toThrow('Alimento não encontrado.');
   });
 
+  it('persiste rendimento de receita, valida limites e conserva o total do lote', async () => {
+    const repository = new NutritionRepository(db!);
+    const recipe = repository.getRecipes()[0];
+    const expectedCalories = recipe.totalCalories;
+    expect(recipe.servings).toBe(1);
+    expect(repository.setRecipeServings(recipe.id, 4).servings).toBe(4);
+    expect(() => repository.setRecipeServings(recipe.id, 0)).toThrow('O rendimento deve ser um número inteiro');
+    expect(() => repository.setRecipeServings(recipe.id, 2.5)).toThrow('O rendimento deve ser um número inteiro');
+    expect(() => repository.setRecipeServings('missing-recipe', 2)).toThrow('Receita não encontrada.');
+
+    db!.close();
+    db = await createDatabaseDriver(path.join(tempDirectory, 'fittrack.db'));
+    await runMigrations(db!);
+    const reopened = new NutritionRepository(db!);
+    const saved = reopened.getRecipes().find(item => item.id === recipe.id)!;
+    expect(saved.servings).toBe(4);
+    expect(saved.totalCalories).toBe(expectedCalories);
+  });
+
   it('migra tabelas antigas de alimentos e receitas sem perder dados nem falhar no índice de substituição', async () => {
     const oldDbPath = path.join(tempDirectory, 'old-fittrack.db');
     const oldDb = await createDatabaseDriver(oldDbPath);
@@ -171,6 +190,7 @@ describe('Catálogos locais de alimentação e treino', () => {
       expect(foodColumns).toContain('source_reference');
       expect(foodColumns).toContain('source_date');
       expect(foodColumns).toContain('confidence_level');
+      expect(oldDb.query<{ name: string }>('PRAGMA table_info(recipes)').some(column => column.name === 'servings')).toBe(true);
       expect(oldDb.queryOne<{ name: string }>('SELECT name FROM foods WHERE id = ?', ['food-legacy'])?.name)
         .toBe('Arroz antigo');
       expect(oldDb.queryOne<{ name: string }>(

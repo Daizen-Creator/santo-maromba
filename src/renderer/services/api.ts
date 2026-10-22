@@ -53,6 +53,7 @@ const LOCAL_STORAGE_KEY_DAILY_MEALS = 'fittrack_daily_meals';
 const LOCAL_STORAGE_KEY_CUSTOM_FOODS = 'fittrack_custom_foods';
 const LOCAL_STORAGE_KEY_FAVORITE_FOODS = 'fittrack_favorite_foods';
 const LOCAL_STORAGE_KEY_FAVORITE_RECIPES = 'fittrack_favorite_recipes';
+const LOCAL_STORAGE_KEY_RECIPE_SERVINGS = 'fittrack_recipe_servings';
 const LOCAL_STORAGE_KEY_VISUAL_CUSTOMIZATION = 'fittrack_visual_customization';
 
 const workoutEngine = new WorkoutEngine(INITIAL_EXERCISES);
@@ -357,7 +358,8 @@ export const api = {
       return res.data || [];
     }
     const favorites = new Set<string>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_FAVORITE_RECIPES) || '[]'));
-    return INITIAL_RECIPES.map(recipe => ({ ...recipe, isFavorite: favorites.has(recipe.id) }));
+    const servingValues = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_SERVINGS) || '{}') as Record<string, number>;
+    return INITIAL_RECIPES.map(recipe => ({ ...recipe, servings: servingValues[recipe.id] ?? 1, isFavorite: favorites.has(recipe.id) }));
   },
 
   setRecipeFavorite: async (id: string, isFavorite: boolean): Promise<Recipe> => {
@@ -373,6 +375,23 @@ export const api = {
     else favorites.delete(id);
     localStorage.setItem(LOCAL_STORAGE_KEY_FAVORITE_RECIPES, JSON.stringify([...favorites]));
     return { ...recipe, isFavorite };
+  },
+
+  setRecipeServings: async (id: string, servings: number): Promise<Recipe> => {
+    if (!Number.isInteger(servings) || servings < 1 || servings > 50) {
+      throw new Error('O rendimento deve ser um número inteiro entre 1 e 50 porções.');
+    }
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.setRecipeServings(id, servings);
+      if (!res.success) throw new Error(res.error || 'Erro ao atualizar o rendimento da receita.');
+      return res.data!;
+    }
+    const recipe = INITIAL_RECIPES.find(item => item.id === id);
+    if (!recipe) throw new Error('Receita não encontrada.');
+    const servingValues = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_SERVINGS) || '{}') as Record<string, number>;
+    servingValues[id] = servings;
+    localStorage.setItem(LOCAL_STORAGE_KEY_RECIPE_SERVINGS, JSON.stringify(servingValues));
+    return { ...recipe, servings };
   },
 
   getPantry: async (): Promise<PantryItem[]> => {
