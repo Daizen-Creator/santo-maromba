@@ -22,10 +22,15 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Registros antigos recebem o estado de série concluída na migração v9, sem descartar histórico.
 - Séries não concluídas não contam como PR; séries realmente concluídas de uma sessão parcial continuam no histórico de cargas.
 
+## v1.0.7
+
+- Adiciona cronômetro visual de descanso na sessão, preenchido pelo intervalo recomendado para cada exercício.
+- Ao terminar, o timer mostra uma confirmação visível e pode ser encerrado manualmente.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.
-2. Envie as alterações para `main` e crie uma tag igual à versão, com prefixo `v` (por exemplo, `v1.0.6`).
+2. Envie as alterações para `main` e crie uma tag igual à versão, com prefixo `v` (por exemplo, `v1.0.7`).
 3. Envie a tag ao GitHub. A Action executa os testes, compila e publica os artefatos em GitHub Releases.
 4. Distribua o instalador `Santo Maromba Setup <versão>.exe`. Instalações NSIS verificam atualizações no início do app e recebem a splash de progresso; a versão portátil não usa o auto-update.
 

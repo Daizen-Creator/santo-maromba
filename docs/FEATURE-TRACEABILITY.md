@@ -136,7 +136,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 85 | Abrir mídia demonstrativa licenciada por exercício. | TREI | mídia própria/licença de conteúdo | P · upload local; parte dos links abre busca genérica |
 | 86 | Registrar séries e repetições realizadas. | TREI | — | V · `workout-media-persistence.test.ts` |
 | 87 | Registrar carga separada por série. | TREI | — | V · persistência de cargas |
-| 88 | Iniciar cronômetro de descanso pelo intervalo do exercício. | TREI | — | P · intervalo está no plano; timer não localizado |
+| 88 | Iniciar cronômetro de descanso pelo intervalo do exercício. | TREI | — | V · timer visual usa o intervalo do plano e encerra com aviso; `rest-timer.test.ts` |
 | 89 | Registrar RPE ou RIR por série. | TREI | — | P · RPE existe; RIR não |
 | 90 | Salvar e reabrir observação do exercício/sessão. | TREI | — | P · campo parcial, fluxo de notas não cobre tudo |
 | 91 | Marcar cada série como concluída. | TREI | — | V · checkbox salva o estado por série; migração v9 mantém séries antigas como concluídas; teste de reabertura |
@@ -295,17 +295,19 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- `npm test`: 70/70 testes aprovados localmente; inclui snapshots v7→v8, migração v9, alimentos pessoais, favoritos, busca nutricional e sessões parciais.
-- `npm run build`: build de renderer e Electron aprovado após a biblioteca nutricional e o registro de séries parciais.
+- `npm test`: 72/72 testes aprovados localmente; inclui migração v9, alimentos pessoais, favoritos, busca nutricional, sessões parciais e cronômetro.
+- `npm run build`: build de renderer e Electron aprovado após o timer de descanso.
 - Instalador NSIS e portable 1.0.4: publicados; smoke test do portable criou `fittrack.db` num perfil temporário isolado.
 - Portable 1.0.5: empacotado e smoke test de 12 segundos criou `fittrack.db` num perfil isolado.
 - Portable 1.0.6: abriu por 12 segundos e criou `fittrack.db` num perfil isolado.
+- Portable 1.0.7: abriu por 12 segundos e criou `fittrack.db` num perfil isolado.
 - GitHub Actions e release 1.0.4: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39721903982).
 - Release 1.0.4: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.4.
 - GitHub Actions e release 1.0.5: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39723144455).
 - Release 1.0.5: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.5.
 - GitHub Actions e release 1.0.6: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39723951888).
 - Release 1.0.6: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.6.
+- Incremento 1.0.7: 72 testes e build locais passaram; empacotamento e publicação ainda pendentes.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
@@ -313,7 +315,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - IDs **31, 46, 47, 58 e 157** receberam tratamento de transparência/proveniência, ainda **parcial**: qualidade, origem declarada, referência, data e confiança têm campos persistentes; a interface marca valores estimados/não verificados.
 - IDs **CAT-02, CAT-04, CAT-12 e CAT-13** avançaram parcialmente. Os seeds ainda não têm referências rastreáveis por item, densidade, micronutrientes ou 500 cadastros verificados, então esses critérios permanecem incompletos.
 - IDs **61, 65 e 67** estão concluídos e validados: busca de receitas/alimentos; cadastro e edição de alimento pessoal com rótulo de origem e persistência; favoritos e filtros de favoritos para receitas e alimentos no SQLite/PWA.
-- IDs **91 e 92** estão concluídos e validados: marcação persistente por série e salvamento de sessão parcial, sem tratá-la como treino concluído.
+- IDs **88, 91 e 92** estão concluídos e validados: cronômetro de descanso; marcação persistente por série; salvamento de sessão parcial sem tratá-la como treino concluído.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas
