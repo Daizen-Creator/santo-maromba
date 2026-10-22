@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.4. Estado atual: **60 validadas, 61 parciais, 56 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.5. Estado atual: **61 validadas, 61 parciais, 55 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -15,7 +15,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 |---|---|---|
 | PERF | `src/renderer/views/ProfileView.tsx`; `src/database/repositories/profile-repository.ts`; `src/database/schema.sql`; `src/domain/nutrition-calculator.ts` | `src/tests/nutrition-calculator.test.ts`; `src/tests/weight-analytics.test.ts`; `src/tests/validation.test.ts` |
 | DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts`; `src/domain/recent-foods.ts`; `src/domain/daily-meal-history.ts`; `src/domain/meal-status-summary.ts`; `src/domain/meal-leftovers.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/daily-meal-history.test.ts`; `src/tests/daily-meal-copy-persistence.test.ts`; `src/tests/meal-template-persistence.test.ts`; `src/tests/meal-status-summary.test.ts`; `src/tests/meal-leftovers.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/meal-schedule.test.ts` |
-| NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-catalog.ts`; `src/domain/recipe-portions.ts`; `src/domain/recent-foods.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/recipe-portions.test.ts`; `src/tests/recent-foods.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
+| NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/views/DashboardView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-analytics.ts`; `src/domain/nutrition-catalog.ts`; `src/domain/recipe-portions.ts`; `src/domain/recent-foods.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-analytics.test.ts`; `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/recipe-portions.test.ts`; `src/tests/recent-foods.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
 | TREI | `src/renderer/views/WorkoutView.tsx`; `src/domain/workout-engine.ts`; `src/database/repositories/workout-repository.ts`; `src/database/repositories/exercise-media-repository.ts`; `src/database/schema.sql`; `src/database/migrations.ts` | `src/tests/workout-engine.test.ts`; `src/tests/workout-media-persistence.test.ts`; `src/tests/workout-migration.test.ts` |
 | SHAP | `src/renderer/views/ShapeCalendarView.tsx`; `src/renderer/views/ProjectionView.tsx`; `src/database/repositories/photo-repository.ts`; `src/database/repositories/measurement-repository.ts`; `src/services/photo-storage.ts`; `src/database/schema.sql` | `src/tests/photo-persistence.test.ts`; `src/tests/physique-projection.test.ts`; `src/tests/physique-projection-persistence.test.ts` |
 | DESP | `src/renderer/views/NutritionView.tsx`; `src/domain/substitution-engine.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/schema.sql` | `src/tests/substitution-engine.test.ts`; `src/tests/catalog-persistence.test.ts` |
@@ -93,7 +93,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 52 | Atualizar total diário ao salvar consumo. | NUTR; DIAR | — | V · `daily-meal-api.test.ts` |
 | 53 | Exibir saldo restante das metas diárias. | NUTR; DASH | — | V · cálculo/dados do dashboard |
 | 54 | Comparar planejado e consumido por refeição. | DIAR; NUTR | — | P · checklist separa estados; comparação detalhada incompleta |
-| 55 | Calcular médias nutricionais diária e semanal. | NUTR; DASH | — | A · analytics de peso não cobrem nutrientes |
+| 55 | Calcular médias nutricionais diária e semanal. | NUTR; DASH; IPC; PWA | — | V · combina consumo rápido e checklist realmente consumido, lista totais diários e média dos dias com registros; dias sem dados não viram zero; desktop SQLite e PWA local cobertos por `nutrition-analytics.test.ts`, `daily-log-persistence.test.ts` e `daily-meal-api.test.ts` |
 | 56 | Exibir distribuição real de nutrientes por refeição. | NUTR; DIAR | — | P · slots e totais existem, sem relatório de distribuição |
 | 57 | Configurar faixas de metas e medir aderência. | NUTR; PERF | — | P · metas pontuais, sem faixa configurável |
 | 58 | Alertar quando fonte ou nutriente necessário estiver ausente. | NUTR | proveniência completa | P · alerta para dados não verificados; sem alerta por nutriente ausente |
@@ -325,7 +325,9 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - Release 1.1.2: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.1.2.
 - GitHub Actions e release 1.1.3: 89 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39728767024).
 - Release 1.1.3: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.1.3.
-- Incremento 1.1.4: 93 testes, build, empacotamento NSIS/portable e abertura isolada com SQLite aprovados; publicação pendente.
+- GitHub Actions e release 1.1.4: 93 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39729199060).
+- Release 1.1.4: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.1.4.
+- Incremento 1.1.5: 98 testes e build aprovados; empacotamento e publicação pendentes.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
@@ -341,6 +343,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - ID **34** está concluído e validado: salva no SQLite/PWA modelos nomeados a partir de refeições registradas, reabre os dados e aplica-os em outra data como pendentes, mantendo os horários de destino já preenchidos.
 - ID **40** está concluído e validado: mostra contagens dos sete estados reais do checklist; horários planejados sem registro contam como pendentes e as ações em lote atualizam o estado do painel no mesmo dia.
 - ID **38** está concluído e validado: o usuário informa sobras por ingrediente, o consumo real é recalculado, e ambas as quantidades salvas permitem consultar sobras após reiniciar o aplicativo.
+- ID **55** está concluído e validado: dashboard exibe médias dos últimos sete dias somente nos dias com consumo realmente registrado, combinando registros rápidos e checklist no desktop e na PWA.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas

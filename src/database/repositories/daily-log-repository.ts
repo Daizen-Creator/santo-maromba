@@ -1,8 +1,9 @@
 import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, RecentlyUsedFood, SaveMealTemplateInput } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, NutritionAnalytics, NutritionAnalyticsQuery, RecentlyUsedFood, SaveMealTemplateInput } from '../../shared/types';
 import { getRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
+import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
 
 export class DailyLogRepository {
   constructor(private db: IDatabase) {}
@@ -117,6 +118,23 @@ export class DailyLogRepository {
       }
     }
     return filterDailyMealHistory(entries, query);
+  }
+
+  getNutritionAnalytics(query: NutritionAnalyticsQuery): NutritionAnalytics {
+    const loggedMeals = this.db.query<any>(
+      `SELECT date, meal_name, calories, protein_g, carbs_g, fats_g
+       FROM logged_meals WHERE date >= ? AND date <= ?`,
+      [query.fromDate, query.toDate]
+    ).map(row => ({
+      date: row.date,
+      mealName: row.meal_name,
+      calories: Number(row.calories),
+      proteinG: Number(row.protein_g),
+      carbsG: Number(row.carbs_g),
+      fatsG: Number(row.fats_g)
+    } satisfies LoggedMealInput));
+    const mealEntries = this.getMealHistory(query);
+    return calculateNutritionAnalytics(query, mealEntries, loggedMeals);
   }
 
   copyMeals(input: DailyMealCopyInput): DailyMealCopyResult {

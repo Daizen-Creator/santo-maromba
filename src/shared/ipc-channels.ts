@@ -18,6 +18,7 @@ export const IPC_CHANNELS = {
   GET_DAILY_MEALS: 'nutrition:get-daily-meals',
   GET_RECENTLY_USED_FOODS: 'nutrition:get-recently-used-foods',
   GET_MEAL_HISTORY: 'nutrition:get-meal-history',
+  GET_NUTRITION_ANALYTICS: 'nutrition:get-analytics',
   COPY_DAILY_MEALS: 'nutrition:copy-daily-meals',
   GET_MEAL_TEMPLATES: 'nutrition:get-meal-templates',
   SAVE_MEAL_TEMPLATE: 'nutrition:save-meal-template',

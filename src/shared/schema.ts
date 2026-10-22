@@ -256,6 +256,20 @@ export const DailyMealHistoryQuerySchema = z.object({
   message: 'A data inicial deve ser anterior ou igual à data final.',
   path: ['toDate']
 });
+export const NutritionAnalyticsQuerySchema = z.object({
+  fromDate: DailyMealDateSchema,
+  toDate: DailyMealDateSchema
+}).strict().refine(query => query.fromDate <= query.toDate, {
+  message: 'A data inicial deve ser anterior ou igual à data final.',
+  path: ['toDate']
+}).refine(query => {
+  const from = new Date(`${query.fromDate}T00:00:00.000Z`).getTime();
+  const to = new Date(`${query.toDate}T00:00:00.000Z`).getTime();
+  return (to - from) / 86_400_000 <= 366;
+}, {
+  message: 'Consulte no máximo 367 dias por vez.',
+  path: ['toDate']
+});
 export const DailyMealCopyInputSchema = z.object({
   sourceDate: DailyMealDateSchema,
   targetDate: DailyMealDateSchema

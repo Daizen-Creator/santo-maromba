@@ -71,6 +71,27 @@ describe('Checklist alimentar na versão web', () => {
     expect(await api.getDailyMeals('2026-10-21')).toMatchObject([{ mealName: 'Já planejado' }]);
   });
 
+  it('calcula médias web com registros reais e exclui água e refeições pendentes', async () => {
+    const date = '2026-10-20';
+    await api.addLoggedMeal({ date, mealName: 'Lanche', calories: 200, proteinG: 10, carbsG: 20, fatsG: 5 });
+    await api.saveDailyMeal({
+      date, slotId: 'lunch', mealName: 'Almoço', scheduledTime: '12:00', status: 'partial',
+      items: [{ itemId: 'rice-0', foodId: 'rice', foodName: 'Arroz', plannedAmountG: 100, consumedAmountG: 50, calories: 300, proteinG: 8, carbsG: 60, fatsG: 4 }]
+    });
+    await api.saveDailyMeal({
+      date, slotId: 'dinner', mealName: 'Jantar planejado', scheduledTime: '19:00', status: 'pending',
+      items: [{ itemId: 'egg-0', foodId: 'egg', foodName: 'Ovo', plannedAmountG: 100, consumedAmountG: 0, calories: 140, proteinG: 12, carbsG: 1, fatsG: 10 }]
+    });
+    await api.addHydrationLog({ date, amountMl: 500 });
+
+    const analytics = await api.getNutritionAnalytics({ fromDate: date, toDate: '2026-10-22' });
+    expect(analytics).toMatchObject({
+      trackedDays: 1,
+      averages: { calories: 350, proteinG: 14, carbsG: 50, fatsG: 7 },
+      days: [{ date, mealsLogged: 2 }]
+    });
+  });
+
   it('mantém origem e qualidade nutricional nos ingredientes do catálogo web', async () => {
     const recipes = await api.getRecipes();
     const ingredients = recipes.flatMap(recipe => recipe.ingredients);

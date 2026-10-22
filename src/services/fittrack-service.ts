@@ -47,6 +47,8 @@ import {
   DailyMealHistoryQuery,
   DailyMealCopyInput,
   DailyMealCopyResult,
+  NutritionAnalytics,
+  NutritionAnalyticsQuery,
   RecentlyUsedFood,
   MealTemplate,
   SaveMealTemplateInput,
@@ -390,6 +392,10 @@ export class FitTrackService {
 
   getMealHistory(query: DailyMealHistoryQuery): DailyMealEntry[] {
     return this.dailyLogRepo.getMealHistory(query);
+  }
+
+  getNutritionAnalytics(query: NutritionAnalyticsQuery): NutritionAnalytics {
+    return this.dailyLogRepo.getNutritionAnalytics(query);
   }
 
   copyDailyMeals(input: DailyMealCopyInput): DailyMealCopyResult {

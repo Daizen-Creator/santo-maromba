@@ -69,6 +69,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Permite informar a quantidade de sobras por ingrediente; o aplicativo recalcula a quantidade realmente consumida.
 - Histórico e macros continuam usando o consumo real, e as sobras podem ser reconstruídas pelas quantidades planejadas e consumidas persistidas.
 
+## v1.1.5
+
+- O dashboard calcula a média diária de calorias e macros dos últimos sete dias com dados registrados.
+- Combina refeições lançadas rapidamente com itens consumidos ou parciais no checklist, no SQLite e na PWA local.
+- Dias sem registro ficam fora da média e são identificados como dados ausentes.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

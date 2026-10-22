@@ -18,6 +18,7 @@ import {
   CustomizationMediaIdSchema,
   DailyMealDateSchema,
   DailyMealHistoryQuerySchema,
+  NutritionAnalyticsQuerySchema,
   DailyMealCopyInputSchema,
   SaveMealTemplateInputSchema,
   ApplyMealTemplateInputSchema,
@@ -413,6 +414,15 @@ export function registerIpcHandlers(
       return { success: true, data: service.getMealHistory(DailyMealHistoryQuerySchema.parse(rawQuery)) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível consultar o histórico alimentar.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_NUTRITION_ANALYTICS, async (event, rawQuery) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getNutritionAnalytics(NutritionAnalyticsQuerySchema.parse(rawQuery)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível calcular as médias nutricionais.' };
     }
   });
 

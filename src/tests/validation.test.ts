@@ -4,6 +4,7 @@ import {
   CustomFoodInputSchema,
   DailyMealHistoryQuerySchema,
   DailyMealCopyInputSchema,
+  NutritionAnalyticsQuerySchema,
   SaveMealTemplateInputSchema,
   ApplyMealTemplateInputSchema,
   PhotoInputSchema,
@@ -44,6 +45,12 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(ApplyMealTemplateInputSchema.parse({ templateId: 'template-abc', targetDate: '2026-10-22' }).templateId)
       .toBe('template-abc');
     expect(() => ApplyMealTemplateInputSchema.parse({ templateId: '../bad', targetDate: '2026-10-22' })).toThrow();
+  });
+
+  it('limita consultas analíticas a datas reais e períodos de até 367 dias', () => {
+    expect(NutritionAnalyticsQuerySchema.parse({ fromDate: '2026-10-16', toDate: '2026-10-22' }).toDate).toBe('2026-10-22');
+    expect(() => NutritionAnalyticsQuerySchema.parse({ fromDate: '2026-02-31', toDate: '2026-03-01' })).toThrow();
+    expect(() => NutritionAnalyticsQuerySchema.parse({ fromDate: '2025-01-01', toDate: '2026-10-22' })).toThrow();
   });
 
   it('valida cadastro nutricional por 100 g e rejeita macros negativos', () => {

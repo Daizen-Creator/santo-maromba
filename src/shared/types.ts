@@ -173,6 +173,28 @@ export interface DailyMealHistoryQuery {
   search?: string;
 }
 
+export interface NutritionAnalyticsQuery {
+  fromDate: string;
+  toDate: string;
+}
+
+export interface NutritionDayTotals {
+  date: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatsG: number;
+  mealsLogged: number;
+}
+
+export interface NutritionAnalytics {
+  fromDate: string;
+  toDate: string;
+  trackedDays: number;
+  averages: Omit<NutritionDayTotals, 'date' | 'mealsLogged'> | null;
+  days: NutritionDayTotals[];
+}
+
 export interface DailyMealCopyInput {
   sourceDate: string;
   targetDate: string;

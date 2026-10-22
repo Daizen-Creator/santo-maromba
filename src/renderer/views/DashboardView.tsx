@@ -24,7 +24,7 @@ import {
 } from 'recharts';
 import { StatCard } from '../components/StatCard';
 import { DailyIntakePanel } from '../components/DailyIntakePanel';
-import { DashboardSummary, Exercise, LoggedMealInput, WeightAnalyticsPoint, WorkoutSession } from '../../shared/types';
+import { DashboardSummary, Exercise, LoggedMealInput, NutritionAnalytics, NutritionAnalyticsQuery, WeightAnalyticsPoint, WorkoutSession } from '../../shared/types';
 import { ScheduledWorkout } from '../../domain/workout-engine';
 
 interface DashboardViewProps {
@@ -40,6 +40,7 @@ interface DashboardViewProps {
   onAddMeal: (meal: LoggedMealInput) => Promise<void>;
   onAddWater: (amountMl: number) => Promise<void>;
   onNavigateToShapeCompare: () => void;
+  onGetNutritionAnalytics: (query: NutritionAnalyticsQuery) => Promise<NutritionAnalytics>;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -54,10 +55,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   workoutOfDay,
   onAddMeal,
   onAddWater,
-  onNavigateToShapeCompare
+  onNavigateToShapeCompare,
+  onGetNutritionAnalytics
 }) => {
   const [chartRange, setChartRange] = useState<'30d' | '90d' | 'all'>('all');
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
+  const [nutritionAnalytics, setNutritionAnalytics] = useState<NutritionAnalytics | null>(null);
+  const [nutritionAnalyticsError, setNutritionAnalyticsError] = useState<string | null>(null);
+  const [nutritionAnalyticsLoading, setNutritionAnalyticsLoading] = useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    const to = new Date();
+    const from = new Date(to.getFullYear(), to.getMonth(), to.getDate() - 6);
+    const formatDate = (date: Date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+    setNutritionAnalyticsLoading(true);
+    onGetNutritionAnalytics({ fromDate: formatDate(from), toDate: formatDate(to) })
+      .then(result => {
+        if (!active) return;
+        setNutritionAnalytics(result);
+        setNutritionAnalyticsError(null);
+      })
+      .catch(error => {
+        if (!active) return;
+        setNutritionAnalyticsError(error instanceof Error ? error.message : 'Não foi possível calcular as médias nutricionais.');
+      })
+      .finally(() => { if (active) setNutritionAnalyticsLoading(false); });
+    return () => { active = false; };
+  }, [onGetNutritionAnalytics, summary?.caloriesLogged, summary?.proteinLoggedG, summary?.carbsLoggedG, summary?.fatsLoggedG]);
 
   const filteredAnalytics = React.useMemo(() => {
     if (!analytics || analytics.length === 0) return [];
@@ -317,6 +342,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       )}
 
       <DailyIntakePanel summary={summary} onAddMeal={onAddMeal} onAddWater={onAddWater} />
+
+      <section className="rounded-3xl border border-border bg-card p-5 shadow-sm" aria-label="Médias de nutrição dos últimos sete dias">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/70 pb-3">
+          <div>
+            <h2 className="font-display text-base font-bold text-foreground">Média alimentar dos últimos 7 dias</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Média calculada somente nos dias com consumo registrado ({nutritionAnalytics?.trackedDays || 0}/7).</p>
+          </div>
+          {nutritionAnalyticsLoading && <span className="text-[11px] text-muted-foreground">Atualizando…</span>}
+        </div>
+        {nutritionAnalyticsError ? (
+          <p role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">{nutritionAnalyticsError}</p>
+        ) : nutritionAnalytics?.averages ? (
+          <>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { label: 'Calorias', value: `${Math.round(nutritionAnalytics.averages.calories)} kcal` },
+                { label: 'Proteína', value: `${nutritionAnalytics.averages.proteinG.toFixed(1)} g` },
+                { label: 'Carboidratos', value: `${nutritionAnalytics.averages.carbsG.toFixed(1)} g` },
+                { label: 'Gorduras', value: `${nutritionAnalytics.averages.fatsG.toFixed(1)} g` }
+              ].map(metric => (
+                <div key={metric.label} className="rounded-xl border border-border/70 bg-secondary/30 p-3">
+                  <span className="block text-[10px] text-muted-foreground">{metric.label} · média/dia</span>
+                  <strong className="mt-1 block text-sm font-semibold text-foreground">{metric.value}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2" aria-label="Consumo por dia com registros">
+              {nutritionAnalytics.days.map(day => (
+                <span key={day.date} className="text-[10px] text-muted-foreground">
+                  {new Date(`${day.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' })}: <strong className="text-foreground">{Math.round(day.calories)} kcal</strong>
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="mt-4 text-xs text-muted-foreground">Ainda não há consumo registrado nesse período. Dias sem dados não entram na média.</p>
+        )}
+      </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
         <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">

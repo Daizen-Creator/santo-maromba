@@ -464,6 +464,7 @@ export const App: React.FC = () => {
               onAddMeal={handleAddDailyMeal}
               onAddWater={handleAddWater}
               onNavigateToShapeCompare={() => { setShapeInitialTab('compare'); setCurrentTab('shape'); }}
+              onGetNutritionAnalytics={api.getNutritionAnalytics}
             />
           )}
 

@@ -50,6 +50,11 @@ describe('Registros reais do painel diário', () => {
     expect(logged.completedMeals).toBe(2);
     expect(logged.totalPlannedMeals).toBe(5);
     expect(logged.waterLoggedMl).toBe(850);
+    const nutritionHistory = service.getNutritionAnalytics({ fromDate: localDate(), toDate: localDate() });
+    expect(nutritionHistory).toMatchObject({
+      trackedDays: 1,
+      averages: { calories: 930, proteinG: 66, carbsG: 106, fatsG: 24 }
+    });
 
     db!.close();
     db = null;
@@ -61,6 +66,7 @@ describe('Registros reais do painel diário', () => {
     expect(restored.caloriesLogged).toBe(930);
     expect(restored.waterLoggedMl).toBe(850);
     expect(restored.completedMeals).toBe(2);
+    expect(service.getNutritionAnalytics({ fromDate: localDate(), toDate: localDate() }).averages?.calories).toBe(930);
   });
 
   it('salva o checklist por horário sem duplicar, contabiliza consumo parcial e conserva o estado ao reabrir', async () => {

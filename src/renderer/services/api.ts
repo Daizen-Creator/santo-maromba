@@ -24,6 +24,8 @@ import {
   DailyMealHistoryQuery,
   DailyMealCopyInput,
   DailyMealCopyResult,
+  NutritionAnalytics,
+  NutritionAnalyticsQuery,
   MealTemplate,
   SaveMealTemplateInput,
   ApplyMealTemplateInput,
@@ -48,9 +50,10 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
+import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
@@ -652,6 +655,31 @@ export const api = {
     }
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
     return filterDailyMealHistory(entries, query);
+  },
+
+  getNutritionAnalytics: async (rawInput: NutritionAnalyticsQuery): Promise<NutritionAnalytics> => {
+    const query = NutritionAnalyticsQuerySchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getNutritionAnalytics(query);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao calcular as médias nutricionais.');
+      return res.data;
+    }
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const storedLogs: Array<Record<string, unknown>> = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_LOGS) || '[]');
+    const loggedMeals: LoggedMealInput[] = storedLogs.filter(log =>
+      log.kind !== 'water'
+      && typeof log.date === 'string'
+      && typeof log.mealName === 'string'
+      && [log.calories, log.proteinG, log.carbsG, log.fatsG].every(value => typeof value === 'number' && Number.isFinite(value))
+    ).map(log => ({
+      date: log.date as string,
+      mealName: log.mealName as string,
+      calories: log.calories as number,
+      proteinG: log.proteinG as number,
+      carbsG: log.carbsG as number,
+      fatsG: log.fatsG as number
+    }));
+    return calculateNutritionAnalytics(query, entries, loggedMeals);
   },
 
   saveDailyMeal: async (input: DailyMealEntryInput): Promise<DailyMealEntry> => {
