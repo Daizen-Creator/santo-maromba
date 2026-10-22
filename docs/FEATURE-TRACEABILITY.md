@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.50. Estado após validação dos incrementos: **116 validadas, 33 parciais, 28 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.51. Estado após validação dos incrementos: **117 validadas, 32 parciais, 28 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -97,7 +97,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 56 | Exibir distribuição real de nutrientes por refeição. | NUTR; DIAR | — | V · combina lançamentos rápidos e itens consumidos/parciais; exclui pendentes, valida macros e data; SQLite reaberto e PWA testados |
 | 57 | Configurar faixas de metas e medir aderência. | NUTR; PERF | — | P · metas pontuais, sem faixa configurável |
 | 58 | Alertar quando fonte ou nutriente necessário estiver ausente. | NUTR | proveniência completa | P · alerta para dados não verificados; sem alerta por nutriente ausente |
-| 59 | Calcular custo por porção e por grama de proteína. | NUTR; DESP | preços atuais/usuário | P · custos fixos estimados, sem custo por proteína |
+| 59 | Calcular custo por porção e por grama de proteína. | NUTR; DESP | preços atuais/usuário | V · função determinística usa custo do lote e proteína total; plano exibe R$/porção, R$/g de proteína e a origem do preço; `recipe-cost.test.ts` valida preço informado, estimativa, proteína zero e custo ausente |
 | 60 | Testar fórmulas, arredondamentos e conversões. | NUTR | — | P · testes de macros/calorias; conversões ausentes |
 
 ## Funcionalidades 61–80 — alimentos e receitas
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.50 (ID 140): 244/244 testes em 77 arquivos, build, instalador NSIS, portable e smoke isolado de 12 segundos com criação do SQLite aprovados; publicação no GitHub Actions pendente.
+- Incremento 1.1.51 (ID 59): 245/245 testes em 77 arquivos, build, instalador NSIS, portable e smoke isolado de 12 segundos com criação do SQLite aprovados; publicação GitHub pendente.
+- Incremento 1.1.50 (ID 140): 244/244 testes em 77 arquivos, build, instalador NSIS, portable e smoke isolado de 12 segundos com criação do SQLite aprovados; GitHub Actions 39783249468 publicou setup, portable, blockmap e `latest.yml`.
 - Incremento 1.1.49 (ID 139): 241/241 testes em 75 arquivos, build, instalador NSIS, portable e smoke de abertura aprovados; GitHub Actions 39782262042 publicado com `latest.yml`, instalador e portable.
 - Incremento 1.1.48 (IDs 131 e 134; inclui atualização imediata do ID 130): 237/237 testes em 74 arquivos, build, instalador NSIS, portable e smoke de abertura aprovados; GitHub Actions 39781175595 publicou os artefatos.
 - Incremento 1.1.47 (ID 130): 233/233 testes em 73 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos com criação do SQLite aprovados; GitHub Actions 39780137364 publicou instalador, portable, blockmap e `latest.yml`.

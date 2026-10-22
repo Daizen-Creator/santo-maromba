@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveRecipeCost } from '../domain/recipe-cost';
+import { getRecipeCostPerGramProtein, getRecipeCostPerServing, resolveRecipeCost } from '../domain/recipe-cost';
 import { PantryItem, Recipe } from '../shared/types';
 
 const recipe: Recipe = {
@@ -22,5 +22,15 @@ describe('custo de receita com preços do usuário', () => {
 
   it('preserva a estimativa do catálogo se algum ingrediente não tiver preço informado', () => {
     expect(resolveRecipeCost(recipe, pantry.slice(0, 1))).toMatchObject({ estimatedCost: 12, costSource: 'catalog_estimate' });
+  });
+
+  it('calcula custo por porção e por grama de proteína apenas com custo e macros válidos', () => {
+    expect(getRecipeCostPerServing(recipe)).toBe(6);
+    expect(getRecipeCostPerGramProtein(recipe)).toBeCloseTo(12 / 69, 8);
+    const priced = resolveRecipeCost(recipe, pantry);
+    expect(getRecipeCostPerServing(priced)).toBe(4.5);
+    expect(getRecipeCostPerGramProtein(priced)).toBeCloseTo(9 / 69, 8);
+    expect(getRecipeCostPerGramProtein({ ...recipe, totalProteinG: 0 })).toBeUndefined();
+    expect(getRecipeCostPerGramProtein({ ...recipe, estimatedCost: undefined })).toBeUndefined();
   });
 });

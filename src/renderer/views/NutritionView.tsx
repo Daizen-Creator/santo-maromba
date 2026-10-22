@@ -37,7 +37,7 @@ import { WeeklyMealPlanner } from '../components/WeeklyMealPlanner';
 import { MealPrepCalendar } from '../components/MealPrepCalendar';
 import { getPantryExpiryReminder } from '../../domain/pantry-expiry';
 import { calculateCostPerProteinGram } from '../../domain/nutrition-cost';
-import { getRecipeCostPerServing } from '../../domain/recipe-cost';
+import { getRecipeCostPerGramProtein, getRecipeCostPerServing } from '../../domain/recipe-cost';
 import { getAverageMealBudget, prioritizeRecipesForMealBudget } from '../../domain/monthly-food-budget';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
@@ -1166,6 +1166,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               const hasPlannedChanges = baseChecklistItems.some(item => draftPlannedAmounts[`${slot.id}:${item.itemId}`] !== undefined);
               const recipePortion = recipe ? getRecipeNutritionPerServing(recipe) : null;
               const recipeCostPerServing = recipe ? getRecipeCostPerServing(recipe) : undefined;
+              const recipeCostPerGramProtein = recipe ? getRecipeCostPerGramProtein(recipe) : undefined;
               const amounts = getCurrentAmounts(slot.id, checklistItems);
               const nutritionComparison = compareMealNutrition(checklistItems, entry);
               const canEditIngredients = !entry || entry.status === 'pending';
@@ -1197,12 +1198,25 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                   </span>
                 </div>
 
-                {averageMealBudget !== undefined && recipe && (
-                  <p className={`mt-3 rounded-xl border px-3 py-2 text-[10px] ${recipeCostPerServing === undefined ? 'border-border/70 text-muted-foreground' : recipeCostPerServing <= averageMealBudget ? 'border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-200' : 'border-amber-500/20 bg-amber-500/[0.05] text-amber-100'}`}>
-                    {recipeCostPerServing === undefined
-                      ? 'Sem custo cadastrado para comparar com o orçamento.'
-                      : `${recipeCostPerServing <= averageMealBudget ? 'Dentro' : 'Acima'} da média por refeição: R$ ${recipeCostPerServing.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · ${recipe.costSource === 'user_prices' ? 'preços informados' : 'estimativa do catálogo'}`}
-                  </p>
+                {recipe && (recipeCostPerServing !== undefined || averageMealBudget !== undefined) && (
+                  <div className="mt-3 rounded-xl border border-border/70 bg-background/40 px-3 py-2 text-[10px] text-muted-foreground">
+                    <p>
+                      {recipeCostPerServing === undefined
+                        ? 'Custo por porção indisponível.'
+                        : `R$ ${recipeCostPerServing.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} por porção`}
+                      {' · '}
+                      {recipeCostPerGramProtein === undefined
+                        ? 'custo por proteína indisponível'
+                        : `R$ ${recipeCostPerGramProtein.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}/g de proteína`}
+                      {recipe.costSource && ` · ${recipe.costSource === 'user_prices' ? 'preços informados' : 'estimativa do catálogo'}`}
+                    </p>
+                    {averageMealBudget !== undefined && recipeCostPerServing !== undefined && (
+                      <p className={`mt-1 ${recipeCostPerServing <= averageMealBudget ? 'text-emerald-200' : 'text-amber-100'}`}>
+                        {recipeCostPerServing <= averageMealBudget ? 'Dentro' : 'Acima'} da média de R$ {averageMealBudget.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} por refeição.
+                      </p>
+                    )}
+                    {averageMealBudget !== undefined && recipeCostPerServing === undefined && <p className="mt-1">Sem custo cadastrado para comparar com o orçamento.</p>}
+                  </div>
                 )}
 
                 {slot.target || recipe || substitution ? (
