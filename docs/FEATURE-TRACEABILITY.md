@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.35. Estado após validação dos incrementos: **93 validadas, 38 parciais, 46 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.36. Estado após validação dos incrementos: **95 validadas, 38 parciais, 44 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -15,7 +15,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 |---|---|---|
 | PERF | `src/renderer/views/ProfileView.tsx`; `src/database/repositories/profile-repository.ts`; `src/database/schema.sql`; `src/domain/nutrition-calculator.ts` | `src/tests/nutrition-calculator.test.ts`; `src/tests/weight-analytics.test.ts`; `src/tests/validation.test.ts` |
 | DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts`; `src/domain/recent-foods.ts`; `src/domain/daily-meal-history.ts`; `src/domain/meal-status-summary.ts`; `src/domain/meal-leftovers.ts`; `src/domain/meal-nutrition-comparison.ts`; `src/domain/planned-meal-portion.ts`; `src/domain/nutrition-distribution.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/daily-meal-history.test.ts`; `src/tests/daily-meal-copy-persistence.test.ts`; `src/tests/meal-template-persistence.test.ts`; `src/tests/meal-status-summary.test.ts`; `src/tests/meal-leftovers.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/meal-schedule.test.ts`; `src/tests/meal-nutrition-comparison.test.ts`; `src/tests/planned-meal-portion.test.ts`; `src/tests/nutrition-distribution.test.ts` |
-| NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/views/DashboardView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-analytics.ts`; `src/domain/nutrition-balance.ts`; `src/domain/nutrition-distribution.ts`; `src/domain/nutrition-catalog.ts`; `src/domain/recipe-portions.ts`; `src/domain/recent-foods.ts`; `src/domain/meal-nutrition-comparison.ts`; `src/domain/planned-meal-portion.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-analytics.test.ts`; `src/tests/nutrition-balance.test.ts`; `src/tests/nutrition-distribution.test.ts`; `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/recipe-portions.test.ts`; `src/tests/recipe-final-yield.test.ts`; `src/tests/recent-foods.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts`; `src/tests/meal-nutrition-comparison.test.ts`; `src/tests/planned-meal-portion.test.ts` |
+| NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/views/DashboardView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-analytics.ts`; `src/domain/nutrition-balance.ts`; `src/domain/nutrition-distribution.ts`; `src/domain/nutrition-catalog.ts`; `src/domain/recipe-portions.ts`; `src/domain/recipe-compatibility.ts`; `src/domain/recent-foods.ts`; `src/domain/meal-nutrition-comparison.ts`; `src/domain/planned-meal-portion.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-analytics.test.ts`; `src/tests/nutrition-balance.test.ts`; `src/tests/nutrition-distribution.test.ts`; `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/recipe-portions.test.ts`; `src/tests/recipe-compatibility.test.ts`; `src/tests/recipe-final-yield.test.ts`; `src/tests/recipe-feedback-persistence.test.ts`; `src/tests/recent-foods.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts`; `src/tests/meal-nutrition-comparison.test.ts`; `src/tests/planned-meal-portion.test.ts` |
 | TREI | `src/renderer/views/WorkoutView.tsx`; `src/domain/workout-engine.ts`; `src/database/repositories/workout-repository.ts`; `src/database/repositories/exercise-media-repository.ts`; `src/database/schema.sql`; `src/database/migrations.ts` | `src/tests/workout-engine.test.ts`; `src/tests/workout-media-persistence.test.ts`; `src/tests/workout-migration.test.ts` |
 | SHAP | `src/renderer/views/ShapeCalendarView.tsx`; `src/renderer/views/ProjectionView.tsx`; `src/database/repositories/photo-repository.ts`; `src/database/repositories/measurement-repository.ts`; `src/services/photo-storage.ts`; `src/database/schema.sql` | `src/tests/photo-persistence.test.ts`; `src/tests/physique-projection.test.ts`; `src/tests/physique-projection-persistence.test.ts` |
 | DESP | `src/renderer/views/NutritionView.tsx`; `src/domain/substitution-engine.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/schema.sql` | `src/tests/substitution-engine.test.ts`; `src/tests/catalog-persistence.test.ts` |
@@ -121,9 +121,9 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 75 | Definir rendimento e número de porções. | NUTR; IPC | — | V · rendimento inteiro 1–50 editável e persistido; `catalog-persistence.test.ts` |
 | 76 | Calcular nutrição por porção usando rendimento. | NUTR | — | V · ingredientes e macros do lote são divididos pelo rendimento; `recipe-portions.test.ts` |
 | 77 | Sugerir substituições compatíveis nutricionalmente. | NUTR | grupos de equivalência do catálogo | V · `substitution-engine.test.ts` |
-| 78 | Filtrar receitas por categoria e restrições do perfil. | NUTR; PERF | — | P · categoria existe; preferências não filtram |
+| 78 | Filtrar receitas por categoria e restrições do perfil. | NUTR; PERF | — | V · categoria, alergias e restrições do perfil filtram a grade e sugestões da despensa; `recipe-compatibility.test.ts` |
 | 79 | Mostrar custo atualizado e estimado por porção. | NUTR | preços definidos pelo usuário | P · preços base fixos e estimados |
-| 80 | Avaliar receita, favoritar e salvar observações. | NUTR | — | A · sem fluxo de avaliação/notas |
+| 80 | Avaliar receita, favoritar e salvar observações. | NUTR; SQLite; IPC; PWA offline | — | V · nota de 1–5 estrelas e observação pessoal editáveis, validadas e persistidas; `recipe-feedback-persistence.test.ts` |
 
 ## Funcionalidades 81–100 — treino e exercícios
 
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.35: 194/194 testes, build do renderer e Electron e validação de persistência SQLite/PWA aprovados; publicação no GitHub pendente.
+- Incremento 1.1.36: 196/196 testes e build do renderer/Electron aprovados; publicação no GitHub pendente.
+- Incremento 1.1.35: 194/194 testes, build, instalador NSIS, portable e manifesto de auto-update publicados pelo workflow 39768247649.
 - Incremento 1.1.34: publicação automática do instalador NSIS, portable e manifesto de auto-update aprovada pelo workflow 39767396599.
 - Incremento 1.1.33: publicação automática do instalador NSIS, portable e manifesto de auto-update aprovada pelo workflow 39766733493.
 - `npm test`: 83/83 testes aprovados localmente; inclui cópia segura e busca por datas/texto no histórico.
@@ -340,6 +341,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 ## Incremento implementado após a auditoria
 
 - ID **51** está concluído e validado: o usuário registra o peso do lote preparado; o SQLite e a PWA reabrem o valor, calculam kcal e macros por 100 g e permitem remover a medição. `recipe-final-yield.test.ts` verifica cálculo, validação e persistência.
+- ID **80** está concluído e validado: a avaliação de 1–5 estrelas e observações pessoais são editáveis, limitadas a 2.000 caracteres, salvas e recuperadas no SQLite/PWA; `recipe-feedback-persistence.test.ts` cobre validação e reabertura.
+- ID **78** está concluído e validado: categoria filtra a lista e alergias/restrições removem receitas incompatíveis das listas e sugestões da despensa, com cenários para glúten, veganismo e vegetarianismo cobertos por `recipe-compatibility.test.ts`.
 - IDs **31, 46, 47, 58 e 157** receberam tratamento de transparência/proveniência, ainda **parcial**: qualidade, origem declarada, referência, data e confiança têm campos persistentes; a interface marca valores estimados/não verificados.
 - IDs **CAT-02, CAT-04, CAT-12 e CAT-13** avançaram parcialmente. Os seeds ainda não têm referências rastreáveis por item, densidade, micronutrientes ou 500 cadastros verificados, então esses critérios permanecem incompletos.
 - IDs **61, 65 e 67** estão concluídos e validados: busca de receitas/alimentos; cadastro e edição de alimento pessoal com rótulo de origem e persistência; favoritos e filtros de favoritos para receitas e alimentos no SQLite/PWA.
@@ -357,7 +360,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - ID **29** está concluído e validado: registros alimentares salvam a data e o timestamp de conclusão; reabrir ou editar porções não apaga o horário real registrado.
 - ID **146** está concluído e validado: saldo de calorias e macros usa o consumo salvo e distingue falta, excesso, meta atingida e ausência de registro.
 - ID **56** está concluído e validado: distribuição real por refeição combina registros rápidos e checklist consumido/parcial no desktop e na PWA, sem incluir planos pendentes.
-- ID **27** avançou parcialmente: quantidade e macros planejados são editáveis e persistidos; editar a lista de ingredientes da refeição ainda não está disponível.
+- ID **27** está concluído e validado: a composição pode receber ou remover alimento, recalcula macros e permanece após reabrir SQLite ou a PWA, sem permitir composição vazia.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas

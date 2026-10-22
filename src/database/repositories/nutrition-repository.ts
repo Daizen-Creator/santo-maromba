@@ -1,6 +1,6 @@
 import { IDatabase } from '../driver';
 import { randomUUID } from 'crypto';
-import { CustomFoodInput, FoodItem, FoodPortionPreference, PantryItem, Recipe } from '../../shared/types';
+import { CustomFoodInput, FoodItem, FoodPortionPreference, PantryItem, Recipe, RecipeFeedbackInput } from '../../shared/types';
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../seeds/nutrition-seeds';
 import { normalizeRecipeFinalWeight, normalizeRecipeServings } from '../../domain/recipe-portions';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
@@ -282,7 +282,9 @@ export class NutritionRepository {
         estimatedCost: Number(ingredients.reduce((sum, ingredient) =>
           sum + ingredient.priceEstimated * ingredient.amountG / 100, 0).toFixed(2)),
         budgetSwaps: row.budget_swaps ? JSON.parse(row.budget_swaps) : [],
-        isFavorite: Boolean(row.is_favorite)
+        isFavorite: Boolean(row.is_favorite),
+        userRating: row.user_rating == null ? undefined : Number(row.user_rating),
+        personalNotes: row.personal_notes || ''
       };
     });
   }
@@ -310,6 +312,22 @@ export class NutritionRepository {
     if (result.changes === 0) throw new Error('Receita não encontrada.');
     const recipe = this.getRecipes().find(item => item.id === id);
     if (!recipe) throw new Error('Não foi possível carregar o peso final da receita.');
+    return recipe;
+  }
+
+  setRecipeFeedback(id: string, feedback: Omit<RecipeFeedbackInput, 'id'>): Recipe {
+    if (feedback.rating !== null && (!Number.isInteger(feedback.rating) || feedback.rating < 1 || feedback.rating > 5)) {
+      throw new Error('A avaliação deve ser de 1 a 5 estrelas ou ficar vazia.');
+    }
+    const personalNotes = feedback.personalNotes.trim();
+    if (personalNotes.length > 2000) throw new Error('A observação pode ter no máximo 2.000 caracteres.');
+    const result = this.db.execute(
+      'UPDATE recipes SET user_rating = ?, personal_notes = ? WHERE id = ?',
+      [feedback.rating, personalNotes, id]
+    );
+    if (result.changes === 0) throw new Error('Receita não encontrada.');
+    const recipe = this.getRecipes().find(item => item.id === id);
+    if (!recipe) throw new Error('Não foi possível carregar a avaliação atualizada.');
     return recipe;
   }
 

@@ -16,7 +16,7 @@ import {
   ImagePlus,
   X
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecipeFeedbackInput, RecentlyUsedFood, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -87,6 +87,7 @@ interface NutritionViewProps {
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
   onSetRecipeServings: (id: string, servings: number) => Promise<void>;
   onSetRecipeFinalWeight: (id: string, finalWeightG: number | null) => Promise<void>;
+  onSetRecipeFeedback: (input: RecipeFeedbackInput) => Promise<void>;
   onSetFoodFavorite: (id: string, isFavorite: boolean) => Promise<void>;
 }
 
@@ -125,6 +126,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onSetRecipeFavorite,
   onSetRecipeServings,
   onSetRecipeFinalWeight,
+  onSetRecipeFeedback,
   onSetFoodFavorite
 }) => {
   const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat' | 'foods' | 'history'>('meals');
@@ -167,6 +169,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [recipeActionError, setRecipeActionError] = useState<string | null>(null);
   const [recipeServingDrafts, setRecipeServingDrafts] = useState<Record<string, string>>({});
   const [recipeFinalWeightDrafts, setRecipeFinalWeightDrafts] = useState<Record<string, string>>({});
+  const [recipeFeedbackOpenId, setRecipeFeedbackOpenId] = useState<string | null>(null);
+  const [recipeFeedbackDrafts, setRecipeFeedbackDrafts] = useState<Record<string, { rating: number | null; personalNotes: string }>>({});
+  const [savingRecipeFeedbackId, setSavingRecipeFeedbackId] = useState<string | null>(null);
   const [recentFoods, setRecentFoods] = useState<RecentlyUsedFood[]>([]);
   const [recentFoodsError, setRecentFoodsError] = useState<string | null>(null);
   const [foodPortionPreferences, setFoodPortionPreferences] = useState<FoodPortionPreference[]>([]);
@@ -436,6 +441,24 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     } catch (error) {
       setRecipeActionError(error instanceof Error ? error.message : 'Não foi possível salvar o peso final da receita.');
       setRecipeFinalWeightDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
+    }
+  };
+
+  const saveRecipeFeedback = async (recipe: Recipe) => {
+    const feedback = recipeFeedbackDrafts[recipe.id] ?? {
+      rating: recipe.userRating ?? null,
+      personalNotes: recipe.personalNotes ?? ''
+    };
+    setRecipeActionError(null);
+    setSavingRecipeFeedbackId(recipe.id);
+    try {
+      await onSetRecipeFeedback({ id: recipe.id, ...feedback });
+      setRecipeFeedbackDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
+      setRecipeFeedbackOpenId(null);
+    } catch (error) {
+      setRecipeActionError(error instanceof Error ? error.message : 'Não foi possível salvar a avaliação da receita.');
+    } finally {
+      setSavingRecipeFeedbackId(null);
     }
   };
 
@@ -1452,6 +1475,12 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             {visibleRecipes.map(recipe => {
               const servings = recipe.servings ?? 1;
               const portion = getRecipeNutritionPerServing(recipe);
+              const per100g = getRecipeNutritionPer100g(recipe);
+              const feedback = recipeFeedbackDrafts[recipe.id] ?? {
+                rating: recipe.userRating ?? null,
+                personalNotes: recipe.personalNotes ?? ''
+              };
+              const feedbackIsOpen = recipeFeedbackOpenId === recipe.id;
               return (
               <div
                 key={recipe.id}
@@ -1489,6 +1518,81 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                         {recipe.category}
                       </span>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      aria-expanded={feedbackIsOpen}
+                      aria-label={`${feedbackIsOpen ? 'Fechar' : 'Editar'} avaliação e observação de ${recipe.name}`}
+                      onClick={() => {
+                        setRecipeFeedbackDrafts(current => ({
+                          ...current,
+                          [recipe.id]: current[recipe.id] ?? { rating: recipe.userRating ?? null, personalNotes: recipe.personalNotes ?? '' }
+                        }));
+                        setRecipeFeedbackOpenId(current => current === recipe.id ? null : recipe.id);
+                      }}
+                      className="rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+                    >
+                      {recipe.userRating ? `Sua nota: ${recipe.userRating}/5 · editar` : 'Avaliar receita e anotar'}
+                    </button>
+                    {feedbackIsOpen && (
+                      <div className="space-y-2 rounded-xl border border-border/70 bg-secondary/20 p-3">
+                        <div className="flex flex-wrap items-center gap-1" role="group" aria-label={`Sua avaliação para ${recipe.name}`}>
+                          {[1, 2, 3, 4, 5].map(rating => (
+                            <button
+                              key={rating}
+                              type="button"
+                              aria-label={`${rating} ${rating === 1 ? 'estrela' : 'estrelas'}`}
+                              aria-pressed={feedback.rating === rating}
+                              onClick={() => setRecipeFeedbackDrafts(current => ({
+                                ...current,
+                                [recipe.id]: { ...feedback, rating }
+                              }))}
+                              className="rounded-md p-1 text-amber-300 transition hover:bg-amber-300/10"
+                            >
+                              <Star className="h-4 w-4" fill={feedback.rating !== null && rating <= feedback.rating ? 'currentColor' : 'none'} />
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setRecipeFeedbackDrafts(current => ({ ...current, [recipe.id]: { ...feedback, rating: null } }))}
+                            className="ml-1 rounded-md px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
+                          >
+                            Limpar nota
+                          </button>
+                        </div>
+                        <label className="block text-[10px] font-medium text-muted-foreground" htmlFor={`recipe-note-${recipe.id}`}>
+                          Observação pessoal
+                        </label>
+                        <textarea
+                          id={`recipe-note-${recipe.id}`}
+                          maxLength={2000}
+                          rows={2}
+                          value={feedback.personalNotes}
+                          onChange={event => setRecipeFeedbackDrafts(current => ({
+                            ...current,
+                            [recipe.id]: { ...feedback, personalNotes: event.target.value }
+                          }))}
+                          placeholder="Ex.: reduzir o sal ou usar banana mais madura"
+                          className="w-full resize-y rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground outline-none focus:border-primary"
+                        />
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-muted-foreground">{feedback.personalNotes.length}/2.000</span>
+                          <button
+                            type="button"
+                            disabled={savingRecipeFeedbackId === recipe.id}
+                            onClick={() => void saveRecipeFeedback(recipe)}
+                            className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-50"
+                          >
+                            {savingRecipeFeedbackId === recipe.id ? 'Salvando…' : 'Salvar avaliação'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {!feedbackIsOpen && recipe.personalNotes && (
+                      <p className="line-clamp-2 text-[10px] text-muted-foreground">Sua observação: {recipe.personalNotes}</p>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1566,9 +1670,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                   <p className="text-[10px] text-muted-foreground">
                     Lote completo: {recipe.totalCalories} kcal · {recipe.totalProteinG}g proteína · {recipe.totalCarbsG}g carboidratos · {servings} porção(ões).
                   </p>
-                  {getRecipeNutritionPer100g(recipe) && (
+                  {per100g && (
                     <p className="rounded-xl border border-primary/20 bg-primary/[0.05] px-3 py-2 text-[11px] text-foreground">
-                      Por 100 g preparados: {getRecipeNutritionPer100g(recipe)!.calories} kcal · {getRecipeNutritionPer100g(recipe)!.proteinG}g proteína · {getRecipeNutritionPer100g(recipe)!.carbsG}g carboidratos · {getRecipeNutritionPer100g(recipe)!.fatsG}g gorduras.
+                      Por 100 g preparados: {per100g.calories} kcal · {per100g.proteinG}g proteína · {per100g.carbsG}g carboidratos · {per100g.fatsG}g gorduras.
                     </p>
                   )}
                   {recipe.ingredients.some(ingredient => ingredient.dataQuality !== 'verified') && (

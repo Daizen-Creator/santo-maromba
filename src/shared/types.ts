@@ -696,6 +696,14 @@ export interface Recipe {
   imageUrl?: string;
   imageCredit?: string;
   isFavorite?: boolean;
+  userRating?: number;
+  personalNotes?: string;
+}
+
+export interface RecipeFeedbackInput {
+  id: string;
+  rating: number | null;
+  personalNotes: string;
 }
 
 export type SubstitutionLevel =

@@ -11,6 +11,7 @@ import {
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
+  RecipeFeedbackInput,
   SubstitutionOption,
   UserProfile,
   ProfileGoalHistoryRecord,
@@ -109,6 +110,7 @@ export interface FitTrackAPI {
   setRecipeFavorite: (id: string, isFavorite: boolean) => Promise<{ success: boolean; data?: Recipe; error?: string }>;
   setRecipeServings: (id: string, servings: number) => Promise<{ success: boolean; data?: Recipe; error?: string }>;
   setRecipeFinalWeight: (id: string, finalWeightG: number | null) => Promise<{ success: boolean; data?: Recipe; error?: string }>;
+  setRecipeFeedback: (input: RecipeFeedbackInput) => Promise<{ success: boolean; data?: Recipe; error?: string }>;
   getPantry: () => Promise<{ success: boolean; data?: PantryItem[]; error?: string }>;
   updatePantry: (foodId: string, amountG: number) => Promise<{ success: boolean; error?: string }>;
   getSubstitutions: (missingFoodId: string, amountG: number) => Promise<{ success: boolean; data?: SubstitutionOption[]; error?: string }>;
@@ -204,6 +206,7 @@ const api: FitTrackAPI = {
   setRecipeFavorite: (id, isFavorite) => ipcRenderer.invoke(IPC_CHANNELS.SET_RECIPE_FAVORITE, { id, isFavorite }),
   setRecipeServings: (id, servings) => ipcRenderer.invoke(IPC_CHANNELS.SET_RECIPE_SERVINGS, { id, servings }),
   setRecipeFinalWeight: (id, finalWeightG) => ipcRenderer.invoke(IPC_CHANNELS.SET_RECIPE_FINAL_WEIGHT, { id, finalWeightG }),
+  setRecipeFeedback: input => ipcRenderer.invoke(IPC_CHANNELS.SET_RECIPE_FEEDBACK, input),
   getPantry: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PANTRY),
   updatePantry: (foodId, amountG) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_PANTRY, { foodId, amountG }),
   getSubstitutions: (missingFoodId, amountG) => ipcRenderer.invoke(IPC_CHANNELS.GET_SUBSTITUTIONS, { missingFoodId, amountG }),

@@ -56,6 +56,7 @@ export const IPC_CHANNELS = {
   SET_RECIPE_FAVORITE: 'nutrition:set-recipe-favorite',
   SET_RECIPE_SERVINGS: 'nutrition:set-recipe-servings',
   SET_RECIPE_FINAL_WEIGHT: 'nutrition:set-recipe-final-weight',
+  SET_RECIPE_FEEDBACK: 'nutrition:set-recipe-feedback',
   GET_FOOD_PORTION_PREFERENCES: 'nutrition:get-food-portion-preferences',
   SAVE_FOOD_PORTION_PREFERENCE: 'nutrition:save-food-portion-preference',
   GET_PERSONAL_DIARY_ENTRIES: 'diary:get-entries',

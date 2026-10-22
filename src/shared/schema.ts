@@ -268,6 +268,11 @@ export const RecipeFinalWeightInputSchema = z.object({
   id: CustomFoodIdSchema,
   finalWeightG: z.number().min(1).max(50000).nullable()
 }).strict();
+export const RecipeFeedbackInputSchema = z.object({
+  id: CustomFoodIdSchema,
+  rating: z.number().int().min(1).max(5).nullable(),
+  personalNotes: z.string().trim().max(2000)
+}).strict();
 export const SaveFoodPortionPreferenceInputSchema = z.object({
   foodId: CustomFoodIdSchema,
   amountG: z.number().min(1).max(5000).nullable()

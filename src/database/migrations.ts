@@ -112,6 +112,12 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!recipeCatalogColumns.some(column => column.name === 'final_weight_g')) {
     db.exec('ALTER TABLE recipes ADD COLUMN final_weight_g REAL CHECK(final_weight_g IS NULL OR final_weight_g BETWEEN 1 AND 50000)');
   }
+  if (!recipeCatalogColumns.some(column => column.name === 'user_rating')) {
+    db.exec('ALTER TABLE recipes ADD COLUMN user_rating INTEGER CHECK(user_rating IS NULL OR user_rating BETWEEN 1 AND 5)');
+  }
+  if (!recipeCatalogColumns.some(column => column.name === 'personal_notes')) {
+    db.exec("ALTER TABLE recipes ADD COLUMN personal_notes TEXT NOT NULL DEFAULT ''");
+  }
   if (!recipeCatalogColumns.some(column => column.name === 'image_url')) {
     db.exec('ALTER TABLE recipes ADD COLUMN image_url TEXT');
   }
@@ -382,6 +388,13 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [27, 'Peso final da receita e macros por 100 g preparados', new Date().toISOString()]
+    );
+  }
+  const version28 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 28');
+  if (!version28) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [28, 'Avaliações e observações pessoais de receitas', new Date().toISOString()]
     );
   }
 }

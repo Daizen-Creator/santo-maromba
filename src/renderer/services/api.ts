@@ -16,6 +16,7 @@ import {
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
+  RecipeFeedbackInput,
   SubstitutionOption,
   UserProfile,
   WeightAnalyticsPoint,
@@ -74,7 +75,7 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -104,6 +105,7 @@ const LOCAL_STORAGE_KEY_PERSONAL_DIARY = 'fittrack_personal_diary';
 const LOCAL_STORAGE_KEY_FAVORITE_RECIPES = 'fittrack_favorite_recipes';
 const LOCAL_STORAGE_KEY_RECIPE_SERVINGS = 'fittrack_recipe_servings';
 const LOCAL_STORAGE_KEY_RECIPE_FINAL_WEIGHTS = 'fittrack_recipe_final_weights';
+const LOCAL_STORAGE_KEY_RECIPE_FEEDBACK = 'fittrack_recipe_feedback';
 const LOCAL_STORAGE_KEY_VISUAL_CUSTOMIZATION = 'fittrack_visual_customization';
 const LOCAL_STORAGE_KEY_MEASUREMENT_UNITS = 'fittrack_measurement_units';
 
@@ -624,7 +626,15 @@ export const api = {
     const favorites = new Set<string>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_FAVORITE_RECIPES) || '[]'));
     const servingValues = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_SERVINGS) || '{}') as Record<string, number>;
     const finalWeights = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_FINAL_WEIGHTS) || '{}') as Record<string, number>;
-    return INITIAL_RECIPES.map(recipe => ({ ...recipe, servings: servingValues[recipe.id] ?? 1, finalWeightG: finalWeights[recipe.id], isFavorite: favorites.has(recipe.id) }));
+    const feedbackValues = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_FEEDBACK) || '{}') as Record<string, { rating: number | null; personalNotes: string }>;
+    return INITIAL_RECIPES.map(recipe => ({
+      ...recipe,
+      servings: servingValues[recipe.id] ?? 1,
+      finalWeightG: finalWeights[recipe.id],
+      isFavorite: favorites.has(recipe.id),
+      userRating: feedbackValues[recipe.id]?.rating ?? undefined,
+      personalNotes: feedbackValues[recipe.id]?.personalNotes ?? ''
+    }));
   },
 
   setRecipeFavorite: async (id: string, isFavorite: boolean): Promise<Recipe> => {
@@ -675,6 +685,21 @@ export const api = {
     else finalWeights[id] = Math.round((finalWeightG + Number.EPSILON) * 10) / 10;
     localStorage.setItem(LOCAL_STORAGE_KEY_RECIPE_FINAL_WEIGHTS, JSON.stringify(finalWeights));
     return { ...recipe, finalWeightG: finalWeights[id] };
+  },
+
+  setRecipeFeedback: async (input: RecipeFeedbackInput): Promise<Recipe> => {
+    const validated = RecipeFeedbackInputSchema.parse(input);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.setRecipeFeedback(validated);
+      if (!res.success) throw new Error(res.error || 'Erro ao salvar avaliação da receita.');
+      return res.data!;
+    }
+    const recipe = INITIAL_RECIPES.find(item => item.id === validated.id);
+    if (!recipe) throw new Error('Receita não encontrada.');
+    const feedbackValues = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_FEEDBACK) || '{}') as Record<string, { rating: number | null; personalNotes: string }>;
+    feedbackValues[validated.id] = { rating: validated.rating, personalNotes: validated.personalNotes };
+    localStorage.setItem(LOCAL_STORAGE_KEY_RECIPE_FEEDBACK, JSON.stringify(feedbackValues));
+    return { ...recipe, userRating: validated.rating ?? undefined, personalNotes: validated.personalNotes };
   },
 
   getPantry: async (): Promise<PantryItem[]> => {

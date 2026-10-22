@@ -26,6 +26,7 @@ import {
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
+  RecipeFeedbackInput,
   UserProfile,
   WeightAnalyticsPoint,
   WeightRecord,
@@ -314,6 +315,11 @@ export const App: React.FC = () => {
     setRecipes(await api.getRecipes());
   };
 
+  const handleSetRecipeFeedback = async (input: RecipeFeedbackInput) => {
+    await api.setRecipeFeedback(input);
+    setRecipes(await api.getRecipes());
+  };
+
   const handleSetFoodFavorite = async (id: string, isFavorite: boolean) => {
     await api.setFoodFavorite(id, isFavorite);
     setFoods(await api.getFoods());
@@ -555,6 +561,7 @@ export const App: React.FC = () => {
               onSetRecipeFavorite={handleSetRecipeFavorite}
               onSetRecipeServings={handleSetRecipeServings}
               onSetRecipeFinalWeight={handleSetRecipeFinalWeight}
+              onSetRecipeFeedback={handleSetRecipeFeedback}
               onSetFoodFavorite={handleSetFoodFavorite}
             />
           )}

@@ -191,6 +191,10 @@ describe('Catálogos locais de alimentação e treino', () => {
       expect(foodColumns).toContain('source_date');
       expect(foodColumns).toContain('confidence_level');
       expect(oldDb.query<{ name: string }>('PRAGMA table_info(recipes)').some(column => column.name === 'servings')).toBe(true);
+      const recipeColumns = oldDb.query<{ name: string }>('PRAGMA table_info(recipes)').map(column => column.name);
+      expect(recipeColumns).toContain('final_weight_g');
+      expect(recipeColumns).toContain('user_rating');
+      expect(recipeColumns).toContain('personal_notes');
       expect(oldDb.queryOne<{ name: string }>('SELECT name FROM foods WHERE id = ?', ['food-legacy'])?.name)
         .toBe('Arroz antigo');
       expect(oldDb.queryOne<{ name: string }>(
