@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.52. Estado após validação dos incrementos: **118 validadas, 32 parciais, 27 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.53. Estado após validação dos incrementos: **119 validadas, 32 parciais, 26 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -171,7 +171,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 115 | Restringir acesso às fotos por usuário autenticado. | SHAP; IPC | autenticação/ACL (Firebase) | B · sem conta/configuração de autenticação |
 | 116 | Baixar original e excluir foto com confirmação. | SHAP; IPC | — | P · exclusão confirmada existe; download original não exposto |
 | 117 | Programar lembrete de fotos. | SHAP | notificações do sistema | A · sem lembrete |
-| 118 | Definir e acompanhar marcos de evolução. | SHAP | — | A · sem marcos |
+| 118 | Definir e acompanhar marcos de evolução por peso, gordura corporal e circunferências, com valor-alvo, direção, prazo e observações; comparar somente com a última medição real salva. | `ShapeMilestonesPanel.tsx`; `shape-milestones.ts`; `shape-milestone-repository.ts`; SQLite/migração 38; API/IPC/PWA | Medições corporais locais | V · SQLite e PWA persistem criar/editar/excluir/reabrir; meta atingida/distância usa somente a medição mais recente e ausência continua sem valor; `shape-milestone-persistence.test.ts`, `shape-milestone-api.test.ts`, `shape-milestones.test.ts`, `validation.test.ts` |
 | 119 | Organizar fotos por pose e período. | SHAP | — | V · pose/data e calendário |
 | 120 | Não inferir BF% por foto; sinalizar estimativa manual. | SHAP; NUTR | — | V · gordura é entrada manual, não análise automática |
 
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.52 (ID 136): 248/248 testes em 78 arquivos, build, instalador NSIS, portable e smoke isolado de 12 segundos com criação do SQLite aprovados; publicação GitHub pendente.
+- Incremento 1.1.53 (ID 118): 253/253 testes em 81 arquivos, build, instalador NSIS, portable e smoke isolado de 12 segundos com criação do SQLite aprovados; publicação GitHub pendente.
+- Incremento 1.1.52 (ID 136): 248/248 testes em 78 arquivos, build, instalador NSIS, portable e smoke isolado de 12 segundos com criação do SQLite aprovados; GitHub Actions 39785013721 publicou setup, portable, blockmap e `latest.yml`.
 - Incremento 1.1.51 (ID 59): 245/245 testes em 77 arquivos, build, instalador NSIS, portable e smoke isolado de 12 segundos com criação do SQLite aprovados; GitHub Actions 39783921646 publicou setup, portable, blockmap e `latest.yml`.
 - Incremento 1.1.50 (ID 140): 244/244 testes em 77 arquivos, build, instalador NSIS, portable e smoke isolado de 12 segundos com criação do SQLite aprovados; GitHub Actions 39783249468 publicou setup, portable, blockmap e `latest.yml`.
 - Incremento 1.1.49 (ID 139): 241/241 testes em 75 arquivos, build, instalador NSIS, portable e smoke de abertura aprovados; GitHub Actions 39782262042 publicado com `latest.yml`, instalador e portable.

@@ -138,6 +138,18 @@ export const SaveBodyMeasurementInputSchema = z.object({
   message: 'Informe ao menos um valor corporal para salvar a medição.'
 });
 
+export const ShapeMilestoneInputSchema = z.object({
+  id: z.string().regex(/^shape-milestone-[a-zA-Z0-9_-]{1,140}$/).optional(),
+  title: z.string().trim().min(1).max(100),
+  metric: z.enum(['weightKg', 'bodyFatPct', 'waistCircCm', 'armFlexedCm', 'chestCm', 'shoulderCircCm', 'thighCm', 'hipCm', 'calfCm']),
+  targetValue: z.number().finite().min(0.1).max(10000),
+  direction: z.enum(['increase', 'decrease']),
+  targetDate: z.string().refine(isRealCalendarDate, 'Informe uma data-alvo válida.').optional(),
+  notes: z.string().trim().max(1000).optional()
+}).strict();
+
+export const ShapeMilestoneIdSchema = z.string().regex(/^shape-milestone-[a-zA-Z0-9_-]{1,140}$/);
+
 export const WeightRecordInputSchema = z.object({
   id: z.string().optional(),
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),

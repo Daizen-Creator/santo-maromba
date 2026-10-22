@@ -1,6 +1,8 @@
 import {
   BodyMeasurementRecord,
   SaveBodyMeasurementInput,
+  ShapeMilestone,
+  ShapeMilestoneInput,
   ProfileGoalHistoryRecord,
   CustomBodyMeasurements,
   CustomMeasurementDefinition,
@@ -88,6 +90,7 @@ import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization'
 import { browserPhotoStore } from './browser-photo-store';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
 import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, MealPrepEventInputSchema, MealPrepEventIdSchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryItemUpdateInputSchema, PantryPriceUpdateInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
+import { ShapeMilestoneIdSchema, ShapeMilestoneInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -106,6 +109,7 @@ const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_PROFILE_GOAL_HISTORY = 'fittrack_profile_goal_history';
 const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
 const LOCAL_STORAGE_KEY_MEASUREMENTS = 'fittrack_measurements';
+const LOCAL_STORAGE_KEY_SHAPE_MILESTONES = 'fittrack_shape_milestones';
 const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENT_DEFINITIONS = 'fittrack_custom_measurement_definitions';
 const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENTS = 'fittrack_custom_measurements';
 const LOCAL_STORAGE_KEY_PANTRY = 'fittrack_pantry';
@@ -387,6 +391,50 @@ export const api = {
     }
     localStorage.setItem(LOCAL_STORAGE_KEY_MEASUREMENTS, JSON.stringify(list));
     return updatedRec;
+  },
+
+  getShapeMilestones: async (): Promise<ShapeMilestone[]> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getShapeMilestones();
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar os marcos do shape.');
+      return res.data || [];
+    }
+    return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_SHAPE_MILESTONES) || '[]') as ShapeMilestone[];
+  },
+
+  saveShapeMilestone: async (rawInput: ShapeMilestoneInput): Promise<ShapeMilestone> => {
+    const input = ShapeMilestoneInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveShapeMilestone(input);
+      if (!res.success) throw new Error(res.error || 'Erro ao salvar o marco.');
+      return res.data!;
+    }
+    const list = await api.getShapeMilestones();
+    const existing = input.id ? list.find(item => item.id === input.id) : undefined;
+    if (input.id && !existing) throw new Error('Este marco não existe mais. Atualize a lista antes de editar.');
+    const now = new Date().toISOString();
+    const saved: ShapeMilestone = {
+      ...input,
+      id: existing?.id || input.id || `shape-milestone-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY_SHAPE_MILESTONES, JSON.stringify([
+      ...list.filter(item => item.id !== saved.id), saved
+    ]));
+    return saved;
+  },
+
+  deleteShapeMilestone: async (rawId: string): Promise<void> => {
+    const id = ShapeMilestoneIdSchema.parse(rawId);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.deleteShapeMilestone(id);
+      if (!res.success) throw new Error(res.error || 'Erro ao excluir o marco.');
+      return;
+    }
+    const list = await api.getShapeMilestones();
+    if (!list.some(item => item.id === id)) throw new Error('Este marco já foi removido.');
+    localStorage.setItem(LOCAL_STORAGE_KEY_SHAPE_MILESTONES, JSON.stringify(list.filter(item => item.id !== id)));
   },
 
   getCustomMeasurements: async (): Promise<CustomBodyMeasurements> => {

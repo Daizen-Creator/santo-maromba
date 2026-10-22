@@ -545,4 +545,23 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [37, 'Identificação de sobras para priorizar receitas na despensa', new Date().toISOString()]
     );
   }
+  db.exec(`CREATE TABLE IF NOT EXISTS shape_milestones (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 100),
+    metric TEXT NOT NULL CHECK(metric IN ('weightKg', 'bodyFatPct', 'waistCircCm', 'armFlexedCm', 'chestCm', 'shoulderCircCm', 'thighCm', 'hipCm', 'calfCm')),
+    target_value REAL NOT NULL CHECK(target_value BETWEEN 0.1 AND 10000),
+    direction TEXT NOT NULL CHECK(direction IN ('increase', 'decrease')),
+    target_date TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_shape_milestones_target_date ON shape_milestones(target_date, created_at)');
+  const version38 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 38');
+  if (!version38) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [38, 'Marcos de evolução corporal com metas mensuráveis', new Date().toISOString()]
+    );
+  }
 }

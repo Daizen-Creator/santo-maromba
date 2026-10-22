@@ -11,9 +11,10 @@ import {
   Clock,
   Columns
 } from 'lucide-react';
-import { BodyMeasurementRecord, SaveBodyMeasurementInput, CustomBodyMeasurements, CustomMeasurementDefinition, CustomMeasurementRecord, PhotoCreateInput, PhotoPose, PhotoRecord, SaveCustomMeasurementDefinitionInput, SaveCustomMeasurementInput, WeightRecord, WorkoutSession } from '../../shared/types';
+import { BodyMeasurementRecord, SaveBodyMeasurementInput, CustomBodyMeasurements, CustomMeasurementDefinition, CustomMeasurementRecord, PhotoCreateInput, PhotoPose, PhotoRecord, SaveCustomMeasurementDefinitionInput, SaveCustomMeasurementInput, ShapeMilestone, ShapeMilestoneInput, WeightRecord, WorkoutSession } from '../../shared/types';
 import { buildMeasurementTrend, MEASUREMENT_METRICS, MeasurementMetric } from '../../domain/measurement-trend';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { ShapeMilestonesPanel } from '../components/ShapeMilestonesPanel';
 
 const localDateString = (date = new Date()): string => {
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -44,6 +45,9 @@ interface ShapeCalendarViewProps {
   onGetCustomMeasurements: () => Promise<CustomBodyMeasurements>;
   onSaveCustomMeasurementDefinition: (input: SaveCustomMeasurementDefinitionInput) => Promise<CustomMeasurementDefinition>;
   onSaveCustomMeasurement: (input: SaveCustomMeasurementInput) => Promise<CustomMeasurementRecord>;
+  onGetShapeMilestones: () => Promise<ShapeMilestone[]>;
+  onSaveShapeMilestone: (input: ShapeMilestoneInput) => Promise<ShapeMilestone>;
+  onDeleteShapeMilestone: (id: string) => Promise<void>;
   initialTab?: 'calendar' | 'compare';
 }
 
@@ -59,9 +63,12 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
   onGetCustomMeasurements,
   onSaveCustomMeasurementDefinition,
   onSaveCustomMeasurement,
+  onGetShapeMilestones,
+  onSaveShapeMilestone,
+  onDeleteShapeMilestone,
   initialTab = 'calendar'
 }) => {
-  const [activeTab, setActiveTab] = useState<'calendar' | 'compare' | 'timeline' | 'measurements'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'calendar' | 'compare' | 'timeline' | 'measurements' | 'milestones'>(initialTab);
   const [measurementMetric, setMeasurementMetric] = useState<MeasurementMetric>('waistCircCm');
   const measurementTrend = useMemo(() => buildMeasurementTrend(measurements, measurementMetric), [measurements, measurementMetric]);
   const [customMeasurements, setCustomMeasurements] = useState<CustomBodyMeasurements>({ definitions: [], records: [] });
@@ -355,7 +362,8 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
             { id: 'calendar', label: 'Calendário Mensal', icon: CalendarIcon },
             { id: 'compare', label: 'Comparador Antes & Depois', icon: Columns },
             { id: 'timeline', label: 'Linha do Tempo', icon: Clock },
-            { id: 'measurements', label: 'Medidas', icon: Ruler }
+            { id: 'measurements', label: 'Medidas', icon: Ruler },
+            { id: 'milestones', label: 'Marcos', icon: Plus }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1006,6 +1014,15 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
             {customMeasureError && <p role="alert" className="text-xs text-destructive">{customMeasureError}</p>}
           </section>
         </div>
+      )}
+
+      {activeTab === 'milestones' && (
+        <ShapeMilestonesPanel
+          measurements={measurements}
+          onGet={onGetShapeMilestones}
+          onSave={onSaveShapeMilestone}
+          onDelete={onDeleteShapeMilestone}
+        />
       )}
 
       {/* MODAL PARA ANEXAR FOTO (Permite colocar foto nos meses anteriores) */}

@@ -18,6 +18,8 @@ import {
   SaveCustomMeasurementDefinitionInputSchema,
   SaveCustomMeasurementInputSchema,
   SaveBodyMeasurementInputSchema,
+  ShapeMilestoneInputSchema,
+  ShapeMilestoneIdSchema,
   VisualCustomizationSchema,
   MeasurementUnitPreferencesSchema,
   CustomizationMediaInputSchema,
@@ -221,6 +223,34 @@ export function registerIpcHandlers(
       return { success: true, data: meas };
     } catch (err: any) {
       return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_SHAPE_MILESTONES, async event => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getShapeMilestones() };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível carregar os marcos.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_SHAPE_MILESTONE, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.saveShapeMilestone(ShapeMilestoneInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar o marco.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DELETE_SHAPE_MILESTONE, async (event, rawId) => {
+    try {
+      getCallingWindow(event);
+      service.deleteShapeMilestone(ShapeMilestoneIdSchema.parse(rawId));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível excluir o marco.' };
     }
   });
 

@@ -105,6 +105,18 @@ CREATE TABLE IF NOT EXISTS body_measurements (
   FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS shape_milestones (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 100),
+  metric TEXT NOT NULL CHECK(metric IN ('weightKg', 'bodyFatPct', 'waistCircCm', 'armFlexedCm', 'chestCm', 'shoulderCircCm', 'thighCm', 'hipCm', 'calfCm')),
+  target_value REAL NOT NULL CHECK(target_value BETWEEN 0.1 AND 10000),
+  direction TEXT NOT NULL CHECK(direction IN ('increase', 'decrease')),
+  target_date TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 -- 5. Fotos e Metadados do Físico
 CREATE TABLE IF NOT EXISTS photos (
   id TEXT PRIMARY KEY,

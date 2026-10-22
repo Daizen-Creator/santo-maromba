@@ -16,6 +16,7 @@ import { PersonalDiaryRepository } from '../database/repositories/personal-diary
 import { MealPhotoRepository } from '../database/repositories/meal-photo-repository';
 import { ShoppingListRepository } from '../database/repositories/shopping-list-repository';
 import { MealPrepRepository } from '../database/repositories/meal-prep-repository';
+import { ShapeMilestoneRepository } from '../database/repositories/shape-milestone-repository';
 import { seedDatabase } from '../database/seeds/seedDatabase';
 import { calculateNutritionPlan } from '../domain/nutrition-calculator';
 import { SubstitutionEngine } from '../domain/substitution-engine';
@@ -46,6 +47,8 @@ import {
   ShoppingExpenseSummary,
   MealPrepEvent,
   MealPrepEventInput,
+  ShapeMilestone,
+  ShapeMilestoneInput,
   PhotoRecord,
   PhotoCreateInput,
   Recipe,
@@ -117,6 +120,7 @@ export class FitTrackService {
   private mealPhotoRepo: MealPhotoRepository;
   private shoppingListRepo: ShoppingListRepository;
   private mealPrepRepo: MealPrepRepository;
+  private shapeMilestoneRepo: ShapeMilestoneRepository;
   private workoutEngine: WorkoutEngine;
   private photoStorage: PhotoStorage;
   private mealPhotoStorage: PhotoStorage;
@@ -148,6 +152,7 @@ export class FitTrackService {
     this.dailyLogRepo = new DailyLogRepository(db);
     this.shoppingListRepo = new ShoppingListRepository(db, this.dailyLogRepo, () => this.nutritionRepo.getFoods());
     this.mealPrepRepo = new MealPrepRepository(db);
+    this.shapeMilestoneRepo = new ShapeMilestoneRepository(db);
     this.customizationRepo = new CustomizationRepository(db);
     this.personalDiaryRepo = new PersonalDiaryRepository(db);
     this.workoutEngine = new WorkoutEngine(this.workoutRepo.getExercises());
@@ -269,6 +274,18 @@ export class FitTrackService {
 
   saveMeasurement(data: SaveBodyMeasurementInput): BodyMeasurementRecord {
     return this.measurementRepo.saveMeasurement(data);
+  }
+
+  getShapeMilestones(): ShapeMilestone[] {
+    return this.shapeMilestoneRepo.getAll();
+  }
+
+  saveShapeMilestone(input: ShapeMilestoneInput): ShapeMilestone {
+    return this.shapeMilestoneRepo.save(input);
+  }
+
+  deleteShapeMilestone(id: string): void {
+    this.shapeMilestoneRepo.delete(id);
   }
 
   getCustomMeasurements(): CustomBodyMeasurements {

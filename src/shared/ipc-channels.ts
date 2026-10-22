@@ -44,6 +44,9 @@ export const IPC_CHANNELS = {
   // Measurements
   GET_MEASUREMENTS: 'measurements:get',
   SAVE_MEASUREMENT: 'measurements:save',
+  GET_SHAPE_MILESTONES: 'shape-milestones:get',
+  SAVE_SHAPE_MILESTONE: 'shape-milestones:save',
+  DELETE_SHAPE_MILESTONE: 'shape-milestones:delete',
 
   // Physique projections
   SAVE_PHYSIQUE_PROJECTION: 'projections:save-physique',

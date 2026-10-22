@@ -3,6 +3,8 @@ import { IPC_CHANNELS } from '../shared/ipc-channels';
 import {
   BodyMeasurementRecord,
   SaveBodyMeasurementInput,
+  ShapeMilestone,
+  ShapeMilestoneInput,
   DashboardSummary,
   Exercise,
   FoodItem,
@@ -99,6 +101,9 @@ export interface FitTrackAPI {
   // Medidas
   getMeasurements: () => Promise<{ success: boolean; data?: BodyMeasurementRecord[]; error?: string }>;
   saveMeasurement: (data: SaveBodyMeasurementInput) => Promise<{ success: boolean; data?: BodyMeasurementRecord; error?: string }>;
+  getShapeMilestones: () => Promise<{ success: boolean; data?: ShapeMilestone[]; error?: string }>;
+  saveShapeMilestone: (input: ShapeMilestoneInput) => Promise<{ success: boolean; data?: ShapeMilestone; error?: string }>;
+  deleteShapeMilestone: (id: string) => Promise<{ success: boolean; error?: string }>;
   getCustomMeasurements: () => Promise<{ success: boolean; data?: CustomBodyMeasurements; error?: string }>;
   saveCustomMeasurementDefinition: (input: SaveCustomMeasurementDefinitionInput) => Promise<{ success: boolean; data?: CustomMeasurementDefinition; error?: string }>;
   saveCustomMeasurement: (input: SaveCustomMeasurementInput) => Promise<{ success: boolean; data?: CustomMeasurementRecord; error?: string }>;
@@ -207,6 +212,9 @@ const api: FitTrackAPI = {
 
   getMeasurements: () => ipcRenderer.invoke(IPC_CHANNELS.GET_MEASUREMENTS),
   saveMeasurement: (data) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_MEASUREMENT, data),
+  getShapeMilestones: () => ipcRenderer.invoke(IPC_CHANNELS.GET_SHAPE_MILESTONES),
+  saveShapeMilestone: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_SHAPE_MILESTONE, input),
+  deleteShapeMilestone: id => ipcRenderer.invoke(IPC_CHANNELS.DELETE_SHAPE_MILESTONE, id),
   getCustomMeasurements: () => ipcRenderer.invoke(IPC_CHANNELS.GET_CUSTOM_MEASUREMENTS),
   saveCustomMeasurementDefinition: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_CUSTOM_MEASUREMENT_DEFINITION, input),
   saveCustomMeasurement: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_CUSTOM_MEASUREMENT, input),

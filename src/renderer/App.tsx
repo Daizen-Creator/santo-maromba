@@ -541,6 +541,9 @@ export const App: React.FC = () => {
               onGetCustomMeasurements={api.getCustomMeasurements}
               onSaveCustomMeasurementDefinition={api.saveCustomMeasurementDefinition}
               onSaveCustomMeasurement={api.saveCustomMeasurement}
+              onGetShapeMilestones={api.getShapeMilestones}
+              onSaveShapeMilestone={api.saveShapeMilestone}
+              onDeleteShapeMilestone={api.deleteShapeMilestone}
               initialTab={shapeInitialTab}
             />
           )}

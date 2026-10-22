@@ -20,6 +20,7 @@ import {
   SaveCustomMeasurementInputSchema,
   ProfileGoalHistoryRecordSchema,
   SaveBodyMeasurementInputSchema,
+  ShapeMilestoneInputSchema,
   MeasurementUnitPreferencesSchema,
   PantryRecipeSearchInputSchema,
   PantryItemUpdateInputSchema,
@@ -345,5 +346,13 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(PhotoNotesUpdateSchema.parse({ id: 'photo-abc_123', notes: 'Luz natural' }).notes).toBe('Luz natural');
     expect(() => PhotoNotesUpdateSchema.parse({ id: '../photo', notes: '' })).toThrow();
     expect(() => PhotoNotesUpdateSchema.parse({ id: 'photo-1', notes: 'x'.repeat(301) })).toThrow();
+  });
+
+  it('valida marco de evolução com métrica, meta e data reais', () => {
+    const input = { title: 'Cintura de 80 cm', metric: 'waistCircCm', targetValue: 80, direction: 'decrease', targetDate: '2027-01-01' } as const;
+    expect(ShapeMilestoneInputSchema.parse(input)).toMatchObject(input);
+    expect(() => ShapeMilestoneInputSchema.parse({ ...input, targetValue: 0 })).toThrow();
+    expect(() => ShapeMilestoneInputSchema.parse({ ...input, targetDate: '2027-02-30' })).toThrow();
+    expect(() => ShapeMilestoneInputSchema.parse({ ...input, metric: 'unknown' })).toThrow();
   });
 });

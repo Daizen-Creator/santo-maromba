@@ -446,6 +446,24 @@ export interface SaveBodyMeasurementInput {
   notes?: string;
 }
 
+export type ShapeMilestoneMetric =
+  | 'weightKg' | 'bodyFatPct' | 'waistCircCm' | 'armFlexedCm' | 'chestCm'
+  | 'shoulderCircCm' | 'thighCm' | 'hipCm' | 'calfCm';
+
+export interface ShapeMilestone {
+  id: string;
+  title: string;
+  metric: ShapeMilestoneMetric;
+  targetValue: number;
+  direction: 'increase' | 'decrease';
+  targetDate?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ShapeMilestoneInput = Omit<ShapeMilestone, 'id' | 'createdAt' | 'updatedAt'> & { id?: string };
+
 export interface CustomMeasurementDefinition {
   id: string;
   name: string;
