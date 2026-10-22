@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.31. Estado após validação dos incrementos: **89 validadas, 41 parciais, 47 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.32. Estado após validação dos incrementos: **90 validadas, 40 parciais, 47 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -61,7 +61,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 25 | Favoritar alimento e consultá-lo em lista própria. | NUTR | — | V · catálogo mantém favoritos no SQLite/PWA e filtra a lista; testes `catalog-persistence.test.ts` e `daily-meal-api.test.ts` |
 | 26 | Copiar refeições de uma data para outra. | DIAR; IPC; PWA | — | V · copia para horários vazios, zera consumo e preserva destinos ocupados; SQLite reaberto e PWA local testados |
 | 27 | Em refeições planejadas, adicionar um alimento do catálogo ou remover um ingrediente, recalcular macros a partir dos dados por 100 g, salvar a nova composição e relê-la após reiniciar; preservar composição de refeições que já têm consumo real. | `NutritionView.tsx`; `meal-composition.ts`; `daily-log-repository.ts`; `api.ts`; checklist persistente | SQLite existente; armazenamento local offline da PWA | V · `meal-composition.test.ts` cobre cálculos, proteção do último ingrediente, persistência da composição após reabrir SQLite e armazenamento offline da PWA; `daily-log-persistence.test.ts` cobre edição persistida de quantidades |
-| 28 | Excluir um lançamento e desfazer a exclusão. | DIAR | — | P · checklist pode voltar a pendente; exclusão/undo de histórico ausente |
+| 28 | Excluir uma refeição do histórico após confirmação, removê-la do consumo e restaurar exatamente categoria, itens, macros e horário com “Desfazer”; manter a exclusão/restauração após reabrir o banco ou a PWA. | `NutritionView.tsx`; `daily-log-repository.ts`; `fittrack-service.ts`; `ipc-handlers.ts`; `preload/index.ts`; `ipc-channels.ts`; `api.ts`; `schema.ts` | SQLite local; armazenamento offline da PWA; IPC validado | V · `daily-meal-undo.test.ts` cobre exclusão/restauração e conflito de horário no SQLite com reabertura, PWA local e validação de entradas |
 | 29 | Guardar data e hora real do consumo. | DIAR | — | V · data, timestamp de conclusão e horário exibido persistem; edição posterior mantém o horário registrado; `daily-log-persistence.test.ts` |
 | 30 | Anexar e reabrir foto de refeição. | DIAR; IPC | — | A · sem mídia de refeições |
 | 31 | Identificar claramente dado confirmado versus estimado. | NUTR; DIAR | proveniência nutricional completa | P · rótulo de estimado/não verificado aparece no catálogo e checklist; fontes não têm referências comprováveis |

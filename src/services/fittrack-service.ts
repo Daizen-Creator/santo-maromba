@@ -61,6 +61,8 @@ import {
   LoggedMealInput,
   DailyMealEntryInput,
   DailyMealEntry,
+  DailyMealIdentityInput,
+  DailyMealRestoreInput,
   DailyMealHistoryQuery,
   DailyMealCopyInput,
   DailyMealCopyResult,
@@ -483,6 +485,14 @@ export class FitTrackService {
 
   saveDailyMeal(input: DailyMealEntryInput): DailyMealEntry {
     return this.dailyLogRepo.saveMeal(input);
+  }
+
+  deleteDailyMeal(input: DailyMealIdentityInput): DailyMealEntry {
+    return this.dailyLogRepo.deleteMeal(input);
+  }
+
+  restoreDailyMeal(input: DailyMealRestoreInput): DailyMealEntry {
+    return this.dailyLogRepo.restoreMeal(input);
   }
 
   // --- DASHBOARD & METAS ---

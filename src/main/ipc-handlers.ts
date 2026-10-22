@@ -29,6 +29,8 @@ import {
   SaveMealTemplateInputSchema,
   ApplyMealTemplateInputSchema,
   DailyMealEntryInputSchema,
+  DailyMealIdentityInputSchema,
+  DailyMealRestoreInputSchema,
   CustomFoodInputSchema,
   CustomFoodUpdateInputSchema,
   RecipeFavoriteInputSchema,
@@ -611,6 +613,24 @@ export function registerIpcHandlers(
       return { success: true, data: service.saveDailyMeal(input) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível salvar o checklist da refeição.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DELETE_DAILY_MEAL, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.deleteDailyMeal(DailyMealIdentityInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível excluir o lançamento alimentar.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.RESTORE_DAILY_MEAL, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.restoreDailyMeal(DailyMealRestoreInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível desfazer a exclusão do lançamento.' };
     }
   });
 

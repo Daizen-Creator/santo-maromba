@@ -34,6 +34,8 @@ import {
   LoggedMealInput,
   DailyMealEntry,
   DailyMealEntryInput,
+  DailyMealIdentityInput,
+  DailyMealRestoreInput,
   VisualCustomization,
   CustomizationMediaInput,
   CustomizationMediaRecord
@@ -250,6 +252,26 @@ export const App: React.FC = () => {
     ]);
     setDailyMealEntries(entries);
     setSummary(updatedSummary);
+  };
+
+  const handleDeleteDailyMeal = async (input: DailyMealIdentityInput): Promise<DailyMealEntry> => {
+    const deleted = await api.deleteDailyMeal(input);
+    if (input.date === getTodayDate()) {
+      const [entries, updatedSummary] = await Promise.all([api.getDailyMeals(input.date), api.getDashboardSummary()]);
+      setDailyMealEntries(entries);
+      setSummary(updatedSummary);
+    }
+    return deleted;
+  };
+
+  const handleRestoreDailyMeal = async (input: DailyMealRestoreInput): Promise<DailyMealEntry> => {
+    const restored = await api.restoreDailyMeal(input);
+    if (input.date === getTodayDate()) {
+      const [entries, updatedSummary] = await Promise.all([api.getDailyMeals(input.date), api.getDashboardSummary()]);
+      setDailyMealEntries(entries);
+      setSummary(updatedSummary);
+    }
+    return restored;
   };
 
   const refreshTodayMealsAfterPlanChange = async (targetDate: string) => {
@@ -511,6 +533,8 @@ export const App: React.FC = () => {
               onUpdatePantry={handleUpdatePantry}
               onFindRecipesFromPantry={api.findRecipesFromPantry}
               onSaveDailyMeal={handleSaveDailyMeal}
+              onDeleteDailyMeal={handleDeleteDailyMeal}
+              onRestoreDailyMeal={handleRestoreDailyMeal}
               onSaveCustomFood={handleSaveCustomFood}
               onGetRecentlyUsedFoods={api.getRecentlyUsedFoods}
               onGetFoodPortionPreferences={api.getFoodPortionPreferences}

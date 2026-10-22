@@ -14,7 +14,7 @@ import {
   Star,
   Trash2
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -68,6 +68,8 @@ interface NutritionViewProps {
   onUpdatePantry: (foodId: string, amountG: number) => Promise<void>;
   onFindRecipesFromPantry: (maxPrepTime?: number) => Promise<Array<Recipe & { matchRate: number }>>;
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
+  onDeleteDailyMeal: (input: DailyMealIdentityInput) => Promise<DailyMealEntry>;
+  onRestoreDailyMeal: (input: DailyMealRestoreInput) => Promise<DailyMealEntry>;
   onSaveCustomFood: (input: CustomFoodInput, id?: string) => Promise<FoodItem>;
   onGetRecentlyUsedFoods: () => Promise<RecentlyUsedFood[]>;
   onGetFoodPortionPreferences: () => Promise<FoodPortionPreference[]>;
@@ -100,6 +102,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onUpdatePantry,
   onFindRecipesFromPantry,
   onSaveDailyMeal,
+  onDeleteDailyMeal,
+  onRestoreDailyMeal,
   onSaveCustomFood,
   onGetRecentlyUsedFoods,
   onGetFoodPortionPreferences,
@@ -174,6 +178,10 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [historyEntries, setHistoryEntries] = useState<DailyMealEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [mealDeleteTarget, setMealDeleteTarget] = useState<DailyMealEntry | null>(null);
+  const [mealDeleteBusy, setMealDeleteBusy] = useState(false);
+  const [mealMutationError, setMealMutationError] = useState<string | null>(null);
+  const [deletedMealForUndo, setDeletedMealForUndo] = useState<DailyMealEntry | null>(null);
   const [copySourceDate, setCopySourceDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 1);
@@ -319,6 +327,41 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
       setHistoryEntries([]);
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  const confirmDeleteMeal = async () => {
+    if (!mealDeleteTarget) return;
+    setMealDeleteBusy(true);
+    setMealMutationError(null);
+    try {
+      const deleted = await onDeleteDailyMeal({ date: mealDeleteTarget.date, slotId: mealDeleteTarget.slotId });
+      setHistoryEntries(current => current.filter(entry => entry.id !== deleted.id));
+      setDeletedMealForUndo(deleted);
+      setMealDeleteTarget(null);
+    } catch (error) {
+      setMealMutationError(error instanceof Error ? error.message : 'Não foi possível excluir a refeição.');
+    } finally {
+      setMealDeleteBusy(false);
+    }
+  };
+
+  const undoDeleteMeal = async () => {
+    if (!deletedMealForUndo) return;
+    setMealDeleteBusy(true);
+    setMealMutationError(null);
+    try {
+      await onRestoreDailyMeal(deletedMealForUndo);
+      setHistoryEntries(await onGetMealHistory({
+        fromDate: historyFromDate,
+        toDate: historyToDate,
+        search: historySearch.trim()
+      }));
+      setDeletedMealForUndo(null);
+    } catch (error) {
+      setMealMutationError(error instanceof Error ? error.message : 'Não foi possível desfazer a exclusão.');
+    } finally {
+      setMealDeleteBusy(false);
     }
   };
 
@@ -1582,6 +1625,16 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             </button>
           </form>
           {historyError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{historyError}</p>}
+          {mealMutationError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealMutationError}</p>}
+          {deletedMealForUndo && (
+            <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-3 text-xs text-emerald-100">
+              <span>“{deletedMealForUndo.mealName}” foi excluída do histórico.</span>
+              <button type="button" onClick={() => void undoDeleteMeal()} disabled={mealDeleteBusy}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-emerald-400/30 px-3 py-1.5 font-semibold text-emerald-200 transition hover:bg-emerald-400/10 disabled:opacity-50">
+                <RefreshCw className="h-3.5 w-3.5" /> Desfazer
+              </button>
+            </div>
+          )}
           {historyEntries.length === 0 && !historyLoading ? (
             <div className="rounded-2xl border border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
               Nenhum lançamento encontrado nesse período. Registros futuros aparecerão aqui depois que forem salvos no checklist.
@@ -1595,9 +1648,16 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       <h3 className="text-sm font-semibold text-foreground">{entry.mealName}</h3>
                       <p className="mt-1 text-[11px] text-muted-foreground">{getMealTurnLabel(entry.mealTurn)} · {new Date(`${entry.date}T12:00:00`).toLocaleDateString('pt-BR')} · {entry.scheduledTime}</p>
                     </div>
-                    <span className="rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-[10px] text-muted-foreground">
-                      {{ pending: 'Pendente', preparing: 'Em preparo', consumed: 'Consumida', partial: 'Parcial', deferred: 'Adiada', skipped: 'Não consumida', cancelled: 'Cancelada' }[entry.status]}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-[10px] text-muted-foreground">
+                        {{ pending: 'Pendente', preparing: 'Em preparo', consumed: 'Consumida', partial: 'Parcial', deferred: 'Adiada', skipped: 'Não consumida', cancelled: 'Cancelada' }[entry.status]}
+                      </span>
+                      <button type="button" aria-label={`Excluir ${entry.mealName} de ${new Date(`${entry.date}T12:00:00`).toLocaleDateString('pt-BR')}`}
+                        onClick={() => { setMealMutationError(null); setMealDeleteTarget(entry); }}
+                        className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-border px-2 py-1 text-[10px] text-muted-foreground transition hover:border-destructive/40 hover:text-destructive">
+                        <Trash2 className="h-3 w-3" /> Excluir
+                      </button>
+                    </div>
                   </header>
                   <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {entry.items.map(item => (
@@ -1616,6 +1676,19 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                   {entry.note && <p className="mt-2 text-xs text-muted-foreground">{entry.note}</p>}
                 </article>
               ))}
+            </div>
+          )}
+          {mealDeleteTarget && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-4" role="presentation">
+              <div role="dialog" aria-modal="true" aria-labelledby="delete-meal-title" className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl">
+                <h3 id="delete-meal-title" className="text-base font-semibold text-foreground">Excluir refeição do histórico?</h3>
+                <p className="mt-2 text-sm text-muted-foreground">“{mealDeleteTarget.mealName}” será removida do dia {new Date(`${mealDeleteTarget.date}T12:00:00`).toLocaleDateString('pt-BR')}. Você poderá desfazer logo depois.</p>
+                {mealMutationError && <p role="alert" className="mt-3 text-xs text-red-300">{mealMutationError}</p>}
+                <div className="mt-5 flex justify-end gap-2">
+                  <button type="button" onClick={() => setMealDeleteTarget(null)} disabled={mealDeleteBusy} className="min-h-10 rounded-lg border border-border px-4 py-2 text-xs text-muted-foreground disabled:opacity-50">Cancelar</button>
+                  <button type="button" onClick={() => void confirmDeleteMeal()} disabled={mealDeleteBusy} className="min-h-10 rounded-lg bg-destructive px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">{mealDeleteBusy ? 'Excluindo…' : 'Confirmar exclusão'}</button>
+                </div>
+              </div>
             </div>
           )}
         </section>

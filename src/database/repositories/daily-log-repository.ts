@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, NutritionAnalytics, NutritionAnalyticsQuery, NutritionMealDistributionEntry, RecentlyUsedFood, SaveMealTemplateInput } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealRestoreInput, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, NutritionAnalytics, NutritionAnalyticsQuery, NutritionMealDistributionEntry, RecentlyUsedFood, SaveMealTemplateInput } from '../../shared/types';
 import { getRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
@@ -310,6 +310,32 @@ export class DailyLogRepository {
       [id, input.date, input.slotId, input.mealName.trim(), input.mealTurn || inferMealTurn(input.slotId, input.mealName), input.scheduledTime, input.recipeId || null,
         input.status, JSON.stringify(input.items), totals.calories, totals.proteinG, totals.carbsG,
         totals.fatsG, input.note?.trim() || null, completedAt, now]
+    );
+    return this.getMeals(input.date).find(meal => meal.slotId === input.slotId)!;
+  }
+
+  deleteMeal(input: DailyMealIdentityInput): DailyMealEntry {
+    const entry = this.getMeals(input.date).find(meal => meal.slotId === input.slotId);
+    if (!entry) throw new Error('O lançamento alimentar não foi encontrado.');
+    this.db.execute('DELETE FROM daily_meal_entries WHERE date = ? AND slot_id = ?', [input.date, input.slotId]);
+    return entry;
+  }
+
+  restoreMeal(input: DailyMealRestoreInput): DailyMealEntry {
+    const occupied = this.db.queryOne<{ present: number }>(
+      'SELECT 1 AS present FROM daily_meal_entries WHERE date = ? AND slot_id = ?',
+      [input.date, input.slotId]
+    );
+    if (occupied) throw new Error('Já existe uma refeição neste horário; a exclusão não pode ser desfeita sem sobrescrever esse registro.');
+    const mealTurn = input.mealTurn || inferMealTurn(input.slotId, input.mealName);
+    this.db.execute(
+      `INSERT INTO daily_meal_entries (
+        id, date, slot_id, meal_name, meal_turn, scheduled_time, recipe_id, status, items_json,
+        calories, protein_g, carbs_g, fats_g, note, completed_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [input.id, input.date, input.slotId, input.mealName, mealTurn, input.scheduledTime, input.recipeId || null,
+        input.status, JSON.stringify(input.items), input.calories, input.proteinG, input.carbsG, input.fatsG,
+        input.note || null, input.completedAt || null, input.updatedAt]
     );
     return this.getMeals(input.date).find(meal => meal.slotId === input.slotId)!;
   }

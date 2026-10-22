@@ -234,7 +234,14 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Permite adicionar alimentos do catálogo a refeições planejadas ou remover ingredientes, usando porções iniciais explícitas de 100 g e recalculando macros a partir dos valores locais por 100 g.
 - A nova composição é salva no SQLite ou no armazenamento offline da PWA e reaparece após reabrir; refeições com consumo registrado mantêm sua composição para preservar o histórico real.
 - A interface mantém ao menos um ingrediente por refeição; a troca de composição remove o vínculo com a receita original.
-- 178 testes em 53 arquivos passaram; build e executável Windows validados em perfil isolado. Publicação GitHub pendente.
+- 178 testes em 53 arquivos passaram; build, instalador NSIS, portable e abertura do executável em perfil isolado foram aprovados. GitHub Actions 39764327981 publicou os quatro artefatos.
+
+## v1.1.32
+
+- Adiciona exclusão confirmada de refeições no histórico com ação imediata de desfazer.
+- A restauração conserva a categoria, os ingredientes, macros, notas e horário original; conflitos com um horário já ocupado são recusados sem sobrescrever dados.
+- SQLite usa IPC validado no desktop; a PWA aplica o mesmo fluxo no armazenamento local offline.
+- 180 testes em 54 arquivos passaram; build, instalador NSIS e portable foram gerados. O executável abriu em perfil isolado e criou o SQLite com a migração 24. Publicação GitHub pendente.
 
 ## Publicar uma versão
 

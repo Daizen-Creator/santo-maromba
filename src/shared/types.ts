@@ -190,6 +190,13 @@ export interface DailyMealEntry extends DailyMealEntryInput {
   updatedAt: string;
 }
 
+export interface DailyMealIdentityInput {
+  date: string;
+  slotId: string;
+}
+
+export type DailyMealRestoreInput = DailyMealEntry;
+
 export interface DailyMealHistoryQuery {
   fromDate: string;
   toDate: string;

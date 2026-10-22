@@ -32,6 +32,8 @@ import {
   LoggedMealInput,
   DailyMealEntry,
   DailyMealEntryInput,
+  DailyMealIdentityInput,
+  DailyMealRestoreInput,
   DailyMealHistoryQuery,
   DailyMealCopyInput,
   DailyMealCopyResult,
@@ -68,7 +70,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -1085,6 +1087,39 @@ export const api = {
     else entries.push(entry);
     localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(entries));
     return entry;
+  },
+
+  deleteDailyMeal: async (rawInput: DailyMealIdentityInput): Promise<DailyMealEntry> => {
+    const input = DailyMealIdentityInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.deleteDailyMeal(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao excluir o lançamento alimentar.');
+      return res.data;
+    }
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const entry = entries.find(item => item.date === input.date && item.slotId === input.slotId);
+    if (!entry) throw new Error('O lançamento alimentar não foi encontrado.');
+    localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(entries.filter(item => item.id !== entry.id)));
+    return { ...entry, mealTurn: entry.mealTurn || inferMealTurn(entry.slotId, entry.mealName) };
+  },
+
+  restoreDailyMeal: async (rawInput: DailyMealRestoreInput): Promise<DailyMealEntry> => {
+    const input = DailyMealRestoreInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.restoreDailyMeal(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao desfazer a exclusão do lançamento.');
+      return res.data;
+    }
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    if (entries.some(item => item.date === input.date && item.slotId === input.slotId)) {
+      throw new Error('Já existe uma refeição neste horário; remova o novo registro antes de desfazer a exclusão.');
+    }
+    const restored: DailyMealEntry = {
+      ...input,
+      mealTurn: input.mealTurn || inferMealTurn(input.slotId, input.mealName)
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify([...entries, restored]));
+    return restored;
   },
 
   copyDailyMeals: async (rawInput: DailyMealCopyInput): Promise<DailyMealCopyResult> => {

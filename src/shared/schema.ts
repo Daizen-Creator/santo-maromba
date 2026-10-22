@@ -358,6 +358,19 @@ export const DailyMealEntryInputSchema = z.object({
 }).strict();
 
 export const DailyMealDateSchema = z.string().refine(isRealCalendarDate, 'Informe uma data válida.');
+export const DailyMealIdentityInputSchema = z.object({
+  date: DailyMealDateSchema,
+  slotId: z.string().trim().min(1).max(80).regex(/^[\w-]+$/)
+}).strict();
+export const DailyMealRestoreInputSchema = DailyMealEntryInputSchema.extend({
+  id: z.string().trim().min(1).max(180),
+  calories: z.number().min(0).max(10000),
+  proteinG: z.number().min(0).max(1000),
+  carbsG: z.number().min(0).max(2000),
+  fatsG: z.number().min(0).max(1000),
+  completedAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime()
+}).strict();
 export const DailyMealHistoryQuerySchema = z.object({
   fromDate: DailyMealDateSchema,
   toDate: DailyMealDateSchema,

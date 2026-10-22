@@ -33,6 +33,8 @@ import {
   LoggedMealInput,
   DailyMealEntry,
   DailyMealEntryInput,
+  DailyMealIdentityInput,
+  DailyMealRestoreInput,
   DailyMealHistoryQuery,
   DailyMealCopyInput,
   DailyMealCopyResult,
@@ -134,6 +136,8 @@ export interface FitTrackAPI {
   applyMealTemplate: (input: ApplyMealTemplateInput) => Promise<{ success: boolean; data?: ApplyMealTemplateResult; error?: string }>;
   getRecentlyUsedFoods: () => Promise<{ success: boolean; data?: RecentlyUsedFood[]; error?: string }>;
   saveDailyMeal: (input: DailyMealEntryInput) => Promise<{ success: boolean; data?: DailyMealEntry; error?: string }>;
+  deleteDailyMeal: (input: DailyMealIdentityInput) => Promise<{ success: boolean; data?: DailyMealEntry; error?: string }>;
+  restoreDailyMeal: (input: DailyMealRestoreInput) => Promise<{ success: boolean; data?: DailyMealEntry; error?: string }>;
   addHydrationLog: (input: HydrationLogInput) => Promise<{ success: boolean; data?: DashboardSummary; error?: string }>;
   getAppVersion: () => Promise<{ success: boolean; data?: string }>;
   onUpdateStatus: (listener: (status: AppUpdateStatus) => void) => () => void;
@@ -221,6 +225,8 @@ const api: FitTrackAPI = {
   applyMealTemplate: (input) => ipcRenderer.invoke(IPC_CHANNELS.APPLY_MEAL_TEMPLATE, input),
   getRecentlyUsedFoods: () => ipcRenderer.invoke(IPC_CHANNELS.GET_RECENTLY_USED_FOODS),
   saveDailyMeal: (input) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_DAILY_MEAL, input),
+  deleteDailyMeal: (input) => ipcRenderer.invoke(IPC_CHANNELS.DELETE_DAILY_MEAL, input),
+  restoreDailyMeal: (input) => ipcRenderer.invoke(IPC_CHANNELS.RESTORE_DAILY_MEAL, input),
   addHydrationLog: (input) => ipcRenderer.invoke(IPC_CHANNELS.ADD_HYDRATION_LOG, input),
   getAppVersion: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_VERSION),
   onUpdateStatus: (listener) => {

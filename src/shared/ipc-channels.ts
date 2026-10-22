@@ -26,6 +26,8 @@ export const IPC_CHANNELS = {
   SAVE_MEAL_TEMPLATE: 'nutrition:save-meal-template',
   APPLY_MEAL_TEMPLATE: 'nutrition:apply-meal-template',
   SAVE_DAILY_MEAL: 'nutrition:save-daily-meal',
+  DELETE_DAILY_MEAL: 'nutrition:delete-daily-meal',
+  RESTORE_DAILY_MEAL: 'nutrition:restore-daily-meal',
   ADD_HYDRATION_LOG: 'hydration:add-log',
 
   // Photos & Physique
