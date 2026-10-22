@@ -39,6 +39,8 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: 250 })).toEqual({ foodId: 'food-arroz', amountG: 250 });
     expect(PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: 0 }).amountG).toBe(0);
     expect(PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: 250, expiresAt: '2026-11-02' }).expiresAt).toBe('2026-11-02');
+    expect(PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: 250, isLeftover: true }).isLeftover).toBe(true);
+    expect(() => PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: 250, isLeftover: 'sim' })).toThrow();
     expect(() => PantryItemUpdateInputSchema.parse({ foodId: '../arroz', amountG: 250 })).toThrow();
     expect(() => PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: -1 })).toThrow();
     expect(() => PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: 100001 })).toThrow();

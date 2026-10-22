@@ -220,8 +220,8 @@ export const App: React.FC = () => {
     setMeasurements(updated);
   };
 
-  const handleUpdatePantry = async (foodId: string, amountG: number, expiresAt?: string | null) => {
-    await api.updatePantry(foodId, amountG, expiresAt);
+  const handleUpdatePantry = async (foodId: string, amountG: number, expiresAt?: string | null, isLeftover?: boolean) => {
+    await api.updatePantry(foodId, amountG, expiresAt, isLeftover);
     const updated = await api.getPantry();
     setPantry(updated);
   };

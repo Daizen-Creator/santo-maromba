@@ -48,6 +48,13 @@ describe('estoque e consumo confirmado no SQLite', () => {
     service.restoreDailyMeal(deleted);
     expect(service.getPantry().find(item => item.foodId === rice.id)?.amountAvailableG).toBe(300);
 
+    service.updatePantryItem(rice.id, 300, undefined, true);
+    expect(db.queryOne<{ deducted_g: number }>('SELECT deducted_g FROM pantry_consumption WHERE date = ? AND slot_id = ? AND food_id = ?',
+      [meal.date, meal.slotId, rice.id])?.deducted_g).toBe(200);
+    service.saveDailyMeal(meal);
+    expect(service.getPantry().find(item => item.foodId === rice.id)?.amountAvailableG).toBe(300);
+    expect(service.getPantry().find(item => item.foodId === rice.id)?.isLeftover).toBe(true);
+
     service.updatePantryItem(rice.id, 250);
     service.saveDailyMeal({ ...meal, status: 'pending', items: [{ ...meal.items[0], consumedAmountG: 0 }] });
     expect(service.getPantry().find(item => item.foodId === rice.id)?.amountAvailableG).toBe(250);

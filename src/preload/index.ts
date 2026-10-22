@@ -8,6 +8,7 @@ import {
   FoodItem,
   NutritionTargets,
   PantryItem,
+  PantryRecipeMatch,
   PantryPriceUpdateInput,
   PantryRecipeSearchInput,
   ShoppingListItem,
@@ -122,10 +123,10 @@ export interface FitTrackAPI {
   setRecipeFinalWeight: (id: string, finalWeightG: number | null) => Promise<{ success: boolean; data?: Recipe; error?: string }>;
   setRecipeFeedback: (input: RecipeFeedbackInput) => Promise<{ success: boolean; data?: Recipe; error?: string }>;
   getPantry: () => Promise<{ success: boolean; data?: PantryItem[]; error?: string }>;
-  updatePantry: (foodId: string, amountG: number, expiresAt?: string | null) => Promise<{ success: boolean; error?: string }>;
+  updatePantry: (foodId: string, amountG: number, expiresAt?: string | null, isLeftover?: boolean) => Promise<{ success: boolean; error?: string }>;
   updatePantryPrice: (input: PantryPriceUpdateInput) => Promise<{ success: boolean; error?: string }>;
   getSubstitutions: (missingFoodId: string, amountG: number) => Promise<{ success: boolean; data?: SubstitutionOption[]; error?: string }>;
-  findRecipesFromPantry: (input?: PantryRecipeSearchInput) => Promise<{ success: boolean; data?: Array<Recipe & { matchRate: number }>; error?: string }>;
+  findRecipesFromPantry: (input?: PantryRecipeSearchInput) => Promise<{ success: boolean; data?: PantryRecipeMatch[]; error?: string }>;
   getShoppingList: (weekStartDate: string) => Promise<{ success: boolean; data?: ShoppingListItem[]; error?: string }>;
   generateShoppingList: (weekStartDate: string) => Promise<{ success: boolean; data?: ShoppingListItem[]; error?: string }>;
   setShoppingItemPurchased: (input: ShoppingListPurchaseInput) => Promise<{ success: boolean; data?: ShoppingListItem[]; error?: string }>;
@@ -228,7 +229,7 @@ const api: FitTrackAPI = {
   setRecipeFinalWeight: (id, finalWeightG) => ipcRenderer.invoke(IPC_CHANNELS.SET_RECIPE_FINAL_WEIGHT, { id, finalWeightG }),
   setRecipeFeedback: input => ipcRenderer.invoke(IPC_CHANNELS.SET_RECIPE_FEEDBACK, input),
   getPantry: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PANTRY),
-  updatePantry: (foodId, amountG, expiresAt) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_PANTRY, { foodId, amountG, expiresAt }),
+  updatePantry: (foodId, amountG, expiresAt, isLeftover) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_PANTRY, { foodId, amountG, expiresAt, isLeftover }),
   updatePantryPrice: input => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_PANTRY_PRICE, input),
   getSubstitutions: (missingFoodId, amountG) => ipcRenderer.invoke(IPC_CHANNELS.GET_SUBSTITUTIONS, { missingFoodId, amountG }),
   findRecipesFromPantry: input => ipcRenderer.invoke(IPC_CHANNELS.FIND_RECIPES_FROM_PANTRY, input || {}),

@@ -1,4 +1,4 @@
-import { FoodItem, PantryItem, Recipe, SubstitutionOption } from '../shared/types';
+import { FoodItem, PantryItem, PantryRecipeMatch, Recipe, SubstitutionOption } from '../shared/types';
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../database/seeds/nutrition-seeds';
 
 /**
@@ -227,26 +227,33 @@ export class SubstitutionEngine {
    * Recurso: "O que posso comer com o que tenho?"
    * Avalia a despensa do usuário e classifica receitas por adequação
    */
-  findRecipesFromPantry(pantryItems: PantryItem[], maxPrepTime?: number, requireAllIngredients = false): Array<Recipe & { matchRate: number }> {
+  findRecipesFromPantry(pantryItems: PantryItem[], maxPrepTime?: number, requireAllIngredients = false): PantryRecipeMatch[] {
     const availableByFoodId = new Map(pantryItems.map(item => [item.foodId, item.amountAvailableG]));
+    const leftoverByFoodId = new Map(pantryItems.filter(item => item.isLeftover && item.amountAvailableG > 0)
+      .map(item => [item.foodId, item.amountAvailableG]));
     const scored = this.recipes.map(recipe => {
       const totalIngs = recipe.ingredients.length;
-      if (totalIngs === 0) return { ...recipe, matchRate: 0, allIngredientsAvailable: false };
+      if (totalIngs === 0) return { ...recipe, matchRate: 0, leftoverIngredientCount: 0, leftoverUseGrams: 0, allIngredientsAvailable: false };
 
       const matchedIngs = recipe.ingredients.filter(ing => (availableByFoodId.get(ing.foodId) || 0) >= ing.amountG).length;
       const matchRate = Math.floor((matchedIngs / totalIngs) * 100);
+      const leftoverIngredients = recipe.ingredients.filter(ing => (leftoverByFoodId.get(ing.foodId) || 0) > 0);
+      const leftoverUseGrams = Number(leftoverIngredients.reduce((sum, ingredient) =>
+        sum + Math.min(leftoverByFoodId.get(ingredient.foodId) || 0, ingredient.amountG), 0).toFixed(1));
 
       return {
         ...recipe,
         matchRate,
+        leftoverIngredientCount: leftoverIngredients.length,
+        leftoverUseGrams,
         allIngredientsAvailable: matchedIngs === totalIngs
       };
     });
 
     return scored
       .filter(r => !maxPrepTime || r.prepTimeMinutes <= maxPrepTime)
-      .filter(r => r.matchRate > 0 && (!requireAllIngredients || r.allIngredientsAvailable))
+      .filter(r => (r.matchRate > 0 || r.leftoverUseGrams > 0) && (!requireAllIngredients || r.allIngredientsAvailable))
       .map(({ allIngredientsAvailable: _allIngredientsAvailable, ...recipe }) => recipe)
-      .sort((a, b) => b.matchRate - a.matchRate || b.totalProteinG - a.totalProteinG);
+      .sort((a, b) => b.leftoverUseGrams - a.leftoverUseGrams || b.matchRate - a.matchRate || b.totalProteinG - a.totalProteinG);
   }
 }

@@ -477,6 +477,9 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     );
   }
   const updatedPantryColumns = db.query<{ name: string }>('PRAGMA table_info(pantry_items)');
+  if (!updatedPantryColumns.some(column => column.name === 'unit_price')) {
+    db.exec('ALTER TABLE pantry_items ADD COLUMN unit_price REAL CHECK(unit_price IS NULL OR unit_price >= 0)');
+  }
   if (!updatedPantryColumns.some(column => column.name === 'price_source')) {
     db.exec('ALTER TABLE pantry_items ADD COLUMN price_source TEXT');
   }
@@ -529,6 +532,17 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [36, 'Calendário persistente de preparo de refeições', new Date().toISOString()]
+    );
+  }
+  const pantryColumnsForLeftovers = db.query<{ name: string }>('PRAGMA table_info(pantry_items)');
+  if (!pantryColumnsForLeftovers.some(column => column.name === 'is_leftover')) {
+    db.exec('ALTER TABLE pantry_items ADD COLUMN is_leftover INTEGER NOT NULL DEFAULT 0 CHECK(is_leftover IN (0, 1))');
+  }
+  const version37 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 37');
+  if (!version37) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [37, 'Identificação de sobras para priorizar receitas na despensa', new Date().toISOString()]
     );
   }
 }

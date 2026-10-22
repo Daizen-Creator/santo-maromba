@@ -189,6 +189,7 @@ CREATE TABLE IF NOT EXISTS pantry_items (
   price_source TEXT,
   price_updated_at TEXT,
   expires_at TEXT,
+  is_leftover INTEGER NOT NULL DEFAULT 0 CHECK(is_leftover IN (0, 1)),
   updated_at TEXT NOT NULL,
   FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
 );

@@ -46,5 +46,22 @@ describe('despensa e consumo no armazenamento offline da PWA', () => {
     await api.restoreDailyMeal(deleted);
     expect((await api.getPantry()).find(item => item.foodId === food.id)?.amountAvailableG).toBe(300);
     expect(saved.status).toBe('consumed');
+
+    await api.updatePantry(food.id, 300, undefined, true);
+    await api.saveDailyMeal(input);
+    expect((await api.getPantry()).find(item => item.foodId === food.id))
+      .toMatchObject({ amountAvailableG: 300, isLeftover: true });
+  });
+
+  it('persiste o marcador de sobra e o usa para reordenar receitas offline', async () => {
+    await api.updatePantry('food-arroz', 500, undefined, true);
+    expect((await api.getPantry()).find(item => item.foodId === 'food-arroz')?.isLeftover).toBe(true);
+    const prioritized = await api.findRecipesFromPantry({ maxPrepTime: 360 });
+    expect(prioritized[0]?.leftoverUseGrams).toBeGreaterThan(0);
+    expect(prioritized[0]?.leftoverIngredientCount).toBeGreaterThan(0);
+
+    await api.updatePantry('food-arroz', 500, undefined, false);
+    expect((await api.getPantry()).find(item => item.foodId === 'food-arroz')?.isLeftover).toBe(false);
+    expect((await api.findRecipesFromPantry({ maxPrepTime: 360 })).every(recipe => recipe.leftoverUseGrams === 0)).toBe(true);
   });
 });

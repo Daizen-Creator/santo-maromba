@@ -13,6 +13,7 @@ import {
   FoodItem,
   NutritionTargets,
   PantryItem,
+  PantryRecipeMatch,
   PantryPriceUpdateInput,
   PantryRecipeSearchInput,
   ShoppingListItem,
@@ -732,22 +733,24 @@ export const api = {
       return res.data || [];
     }
     const json = localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY);
-    return json ? JSON.parse(json) : [];
+    return json ? (JSON.parse(json) as PantryItem[]).map(item => ({ ...item, isLeftover: Boolean(item.isLeftover) })) : [];
   },
 
-  updatePantry: async (foodId: string, amountG: number, expiresAt?: string | null): Promise<void> => {
-    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG, expiresAt });
+  updatePantry: async (foodId: string, amountG: number, expiresAt?: string | null, isLeftover?: boolean): Promise<void> => {
+    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG, expiresAt, isLeftover });
     if (api.isElectron()) {
-      const res = await window.fitTrackAPI.updatePantry(input.foodId, input.amountG, input.expiresAt);
+      const res = await window.fitTrackAPI.updatePantry(input.foodId, input.amountG, input.expiresAt, input.isLeftover);
       if (!res.success) throw new Error(res.error || 'Erro ao atualizar despensa.');
       return;
     }
     const pantry = await api.getPantry();
     const existing = pantry.find(p => p.foodId === input.foodId);
+    const stockChanged = !existing || existing.amountAvailableG !== input.amountG;
     if (existing) {
       existing.amountAvailableG = input.amountG;
       existing.updatedAt = new Date().toISOString().split('T')[0];
       if (input.expiresAt !== undefined) existing.expiresAt = input.expiresAt || undefined;
+      if (input.isLeftover !== undefined) existing.isLeftover = input.isLeftover;
     } else {
       const food = (await api.getFoods()).find(f => f.id === input.foodId);
       if (!food) throw new Error('Alimento não encontrado no catálogo.');
@@ -758,15 +761,18 @@ export const api = {
           foodName: food.name,
           amountAvailableG: input.amountG,
           expiresAt: input.expiresAt || undefined,
+          isLeftover: input.isLeftover ?? false,
           updatedAt: new Date().toISOString().split('T')[0]
         });
       }
     }
     localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY, JSON.stringify(pantry));
-    const consumption: PantryConsumptionRecord[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION) || '[]');
-    localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION, JSON.stringify(
-      consumption.map(record => record.foodId === input.foodId ? { ...record, deductedG: 0 } : record)
-    ));
+    if (stockChanged) {
+      const consumption: PantryConsumptionRecord[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION) || '[]');
+      localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION, JSON.stringify(
+        consumption.map(record => record.foodId === input.foodId ? { ...record, deductedG: 0 } : record)
+      ));
+    }
   },
 
   updatePantryPrice: async (rawInput: PantryPriceUpdateInput): Promise<void> => {
@@ -824,7 +830,7 @@ export const api = {
       }));
   },
 
-  findRecipesFromPantry: async (rawInput: PantryRecipeSearchInput = {}): Promise<Array<Recipe & { matchRate: number }>> => {
+  findRecipesFromPantry: async (rawInput: PantryRecipeSearchInput = {}): Promise<PantryRecipeMatch[]> => {
     const input = PantryRecipeSearchInputSchema.parse(rawInput);
     if (api.isElectron()) {
       const res = await window.fitTrackAPI.findRecipesFromPantry(input);

@@ -772,7 +772,15 @@ export interface PantryItem {
   priceSource?: string;
   priceUpdatedAt?: string;
   expiresAt?: string;
+  /** Explicitly marked surplus that recipe suggestions should prioritize using. */
+  isLeftover?: boolean;
   updatedAt: string;
+}
+
+export interface PantryRecipeMatch extends Recipe {
+  matchRate: number;
+  leftoverIngredientCount: number;
+  leftoverUseGrams: number;
 }
 
 export interface PantryPriceUpdateInput {

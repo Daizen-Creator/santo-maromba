@@ -17,7 +17,7 @@ import {
   X,
   CalendarDays
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPrepEvent, MealPrepEventInput, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionAnalyticsQuery, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryPriceUpdateInput, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, ShoppingExpenseSummary, ShoppingListItem, ShoppingListPurchaseInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPrepEvent, MealPrepEventInput, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionAnalyticsQuery, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryPriceUpdateInput, PantryRecipeMatch, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, ShoppingExpenseSummary, ShoppingListItem, ShoppingListPurchaseInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -75,9 +75,9 @@ interface NutritionViewProps {
   onGetNutritionDistribution: (date: string) => Promise<NutritionMealDistributionEntry[]>;
   pantry: PantryItem[];
   onGetSubstitutions: (foodId: string, amountG: number) => Promise<SubstitutionOption[]>;
-  onUpdatePantry: (foodId: string, amountG: number, expiresAt?: string | null) => Promise<void>;
+  onUpdatePantry: (foodId: string, amountG: number, expiresAt?: string | null, isLeftover?: boolean) => Promise<void>;
   onUpdatePantryPrice: (input: PantryPriceUpdateInput) => Promise<void>;
-  onFindRecipesFromPantry: (input?: PantryRecipeSearchInput) => Promise<Array<Recipe & { matchRate: number }>>;
+  onFindRecipesFromPantry: (input?: PantryRecipeSearchInput) => Promise<PantryRecipeMatch[]>;
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
   onDeleteDailyMeal: (input: DailyMealIdentityInput) => Promise<DailyMealEntry>;
   onRestoreDailyMeal: (input: DailyMealRestoreInput) => Promise<DailyMealEntry>;
@@ -209,7 +209,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [appliedSubMsg, setAppliedSubMsg] = useState<string | null>(null);
 
   // "O que posso comer com o que tenho"
-  const [pantryMatchedRecipes, setPantryMatchedRecipes] = useState<Array<Recipe & { matchRate: number }>>([]);
+  const [pantryMatchedRecipes, setPantryMatchedRecipes] = useState<PantryRecipeMatch[]>([]);
   const [findingPantryLoading, setFindingPantryLoading] = useState<boolean>(false);
   const [pantryRequiresFullStock, setPantryRequiresFullStock] = useState(false);
   const [pantryAnalysisRun, setPantryAnalysisRun] = useState(false);
@@ -782,7 +782,11 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     [compatibleRecipes, dietaryPreferences]
   );
   const preferredPantryRecipes = useMemo(
-    () => rankRecipesByPreferences(compatiblePantryRecipes, dietaryPreferences, recipe => recipe.matchRate * 100),
+    () => rankRecipesByPreferences(compatiblePantryRecipes, dietaryPreferences, recipe =>
+      recipe.leftoverUseGrams > 0
+        ? 1_000_000 + recipe.leftoverUseGrams * 100 + recipe.matchRate
+        : recipe.matchRate * 100
+    ),
     [compatiblePantryRecipes, dietaryPreferences]
   );
   const filteredRecipes = useMemo(() => {
@@ -917,6 +921,20 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
       setPantrySearchError(error instanceof Error ? error.message : 'Não foi possível analisar a despensa.');
     } finally {
       setFindingPantryLoading(false);
+    }
+  };
+
+  const handleTogglePantryLeftover = async (foodId: string, isLeftover: boolean) => {
+    const item = pantry.find(entry => entry.foodId === foodId);
+    try {
+      await onUpdatePantry(foodId, item?.amountAvailableG ?? 0, item?.expiresAt ?? null, isLeftover);
+      if (pantryAnalysisRun) {
+        const matched = await onFindRecipesFromPantry({ maxPrepTime: 30, requireAllIngredients: pantryRequiresFullStock });
+        setPantryMatchedRecipes(matched);
+      }
+      setPantrySearchError(null);
+    } catch (error) {
+      setPantrySearchError(error instanceof Error ? error.message : 'Não foi possível atualizar a sobra da despensa.');
     }
   };
 
@@ -2091,7 +2109,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               Sugestões Baseadas na Sua Despensa Cadastrada
             </h3>
             <p className="text-xs text-muted-foreground">
-              A disponibilidade considera a quantidade registrada para preparar a receita inteira.
+              A disponibilidade considera o estoque para preparar a receita inteira. Marque sobras para colocá-las primeiro nas sugestões.
             </p>
             <label className="flex cursor-pointer items-start gap-2 pt-1 text-xs text-foreground">
               <input
@@ -2151,6 +2169,11 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       </span>
                       <span className="text-xs text-muted-foreground">{recipe.prepTimeMinutes} min</span>
                     </div>
+                    {recipe.leftoverIngredientCount > 0 && (
+                      <p className="w-fit rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-100">
+                        Usa {recipe.leftoverIngredientCount} sobra(s) · {formatMass(recipe.leftoverUseGrams)}
+                      </p>
+                    )}
 
                     <h4 className="font-display text-sm font-bold text-foreground">{recipe.name}</h4>
 
@@ -2276,7 +2299,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <span className="text-[10px] text-muted-foreground capitalize">{f.category}</span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 pt-2">
+                    <div className="flex items-center justify-between gap-2 pt-2">
                     <span className="text-xs text-muted-foreground">Disponível:</span>
                     <div className="flex items-center gap-1.5">
                       <input
@@ -2285,12 +2308,22 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                         step={unitPreferences.foodMassUnit === 'kg' ? 0.05 : 50}
                         value={displayFoodMass(amountG)}
                         aria-label={`Quantidade de ${f.name} na despensa em ${unitPreferences.foodMassUnit}`}
-                        onChange={e => onUpdatePantry(f.id, displayMassToGrams(Number(e.target.value) || 0, unitPreferences.foodMassUnit), inPantry?.expiresAt ?? null)}
+                        onChange={e => onUpdatePantry(f.id, displayMassToGrams(Number(e.target.value) || 0, unitPreferences.foodMassUnit), inPantry?.expiresAt ?? null, inPantry?.isLeftover ?? false)}
                         className="w-20 rounded-lg border border-border bg-background p-1 text-xs font-bold text-foreground text-center focus:border-primary focus:outline-none"
                       />
                       <span className="text-xs text-muted-foreground">{unitPreferences.foodMassUnit}</span>
                     </div>
                   </div>
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/60 px-2.5 py-2 text-[11px] text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(inPantry?.isLeftover)}
+                      aria-label={`Priorizar ${f.name} como sobra nas sugestões de receitas`}
+                      onChange={event => void handleTogglePantryLeftover(f.id, event.target.checked)}
+                      className="accent-primary"
+                    />
+                    Priorizar como sobra nas sugestões
+                  </label>
                   <div className="space-y-2 border-t border-border/60 pt-2">
                     <label htmlFor={`pantry-price-${f.id}`} className="block text-xs text-muted-foreground">Preço informado por kg (R$):</label>
                     <input
@@ -2337,7 +2370,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       type="date"
                       value={inPantry?.expiresAt || ''}
                       aria-label={`Validade de ${f.name}`}
-                      onChange={e => onUpdatePantry(f.id, amountG, e.target.value || null)}
+                      onChange={e => onUpdatePantry(f.id, amountG, e.target.value || null, inPantry?.isLeftover ?? false)}
                       className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground"
                     />
                   </div>

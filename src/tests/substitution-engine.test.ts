@@ -81,4 +81,23 @@ describe('Motor de Substituição Inteligente (4 Níveis) e Despensa', () => {
     expect(search.findRecipesFromPantry(pantry).map(recipe => [recipe.id, recipe.matchRate])).toEqual([['rice-only', 100], ['almost', 99], ['rice-egg', 50]]);
     expect(search.findRecipesFromPantry(pantry, undefined, true).map(recipe => recipe.id)).toEqual(['rice-only']);
   });
+
+  it('prioriza receitas que usam alimentos explicitamente marcados como sobra', () => {
+    const recipes = [
+      { id: 'beans-meal', name: 'Feijão', category: 'lunch' as const, prepTimeMinutes: 10, instructions: '', servings: 1,
+        ingredients: [{ foodId: 'beans', foodName: 'Feijão', amountG: 50, calories: 40, proteinG: 3, carbsG: 7, fatsG: 0.2 }],
+        totalCalories: 40, totalProteinG: 3, totalCarbsG: 7, totalFatsG: 0.2 },
+      { id: 'egg-meal', name: 'Ovo', category: 'lunch' as const, prepTimeMinutes: 10, instructions: '', servings: 1,
+        ingredients: [{ foodId: 'egg', foodName: 'Ovo', amountG: 50, calories: 75, proteinG: 6, carbsG: 0, fatsG: 5 }],
+        totalCalories: 75, totalProteinG: 6, totalCarbsG: 0, totalFatsG: 5 }
+    ];
+    const engine = new SubstitutionEngine([], recipes);
+    const results = engine.findRecipesFromPantry([
+      { id: 'beans-stock', foodId: 'beans', foodName: 'Feijão', amountAvailableG: 500, updatedAt: '2026-10-22' },
+      { id: 'egg-leftover', foodId: 'egg', foodName: 'Ovo', amountAvailableG: 80, isLeftover: true, updatedAt: '2026-10-22' }
+    ]);
+    expect(results.map(recipe => recipe.id)).toEqual(['egg-meal', 'beans-meal']);
+    expect(results[0]).toMatchObject({ leftoverIngredientCount: 1, leftoverUseGrams: 50 });
+    expect(results[1]).toMatchObject({ leftoverIngredientCount: 0, leftoverUseGrams: 0 });
+  });
 });

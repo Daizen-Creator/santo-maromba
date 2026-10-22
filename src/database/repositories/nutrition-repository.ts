@@ -337,7 +337,7 @@ export class NutritionRepository {
   getPantry(): PantryItem[] {
     const rows = this.db.query<any>(
       `SELECT p.id, p.food_id, f.name as food_name, p.amount_available_g, p.unit_price, p.price_source,
-        p.price_updated_at, p.expires_at, p.updated_at
+        p.price_updated_at, p.expires_at, p.is_leftover, p.updated_at
        FROM pantry_items p
        JOIN foods f ON p.food_id = f.id
        ORDER BY f.name ASC`
@@ -352,34 +352,38 @@ export class NutritionRepository {
       priceSource: r.price_source || undefined,
       priceUpdatedAt: r.price_updated_at || undefined,
       expiresAt: r.expires_at || undefined,
+      isLeftover: Boolean(r.is_leftover),
       updatedAt: r.updated_at
     }));
   }
 
-  updatePantryItem(foodId: string, amountAvailableG: number, expiresAt?: string | null): void {
-    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG: amountAvailableG, expiresAt });
-    const existing = this.db.queryOne<any>('SELECT id FROM pantry_items WHERE food_id = ?', [input.foodId]);
-    const existingExpiry = existing
-      ? this.db.queryOne<{ expires_at: string | null }>('SELECT expires_at FROM pantry_items WHERE id = ?', [existing.id])?.expires_at
-      : null;
-    const savedExpiry = input.expiresAt === undefined ? existingExpiry : input.expiresAt;
+  updatePantryItem(foodId: string, amountAvailableG: number, expiresAt?: string | null, isLeftover?: boolean): void {
+    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG: amountAvailableG, expiresAt, isLeftover });
+    const existing = this.db.queryOne<{ id: string; expires_at: string | null; is_leftover: number; amount_available_g: number }>(
+      'SELECT id, expires_at, is_leftover, amount_available_g FROM pantry_items WHERE food_id = ?', [input.foodId]
+    );
+    const savedExpiry = input.expiresAt === undefined ? existing?.expires_at ?? null : input.expiresAt;
+    const savedLeftover = input.isLeftover === undefined ? Boolean(existing?.is_leftover) : input.isLeftover;
+    const stockChanged = !existing || Number(existing.amount_available_g) !== input.amountG;
     const now = new Date().toISOString();
 
     this.db.transaction(() => {
       if (existing) {
         this.db.execute(
-          'UPDATE pantry_items SET amount_available_g = ?, expires_at = ?, updated_at = ? WHERE id = ?',
-          [input.amountG, savedExpiry, now, existing.id]
+          'UPDATE pantry_items SET amount_available_g = ?, expires_at = ?, is_leftover = ?, updated_at = ? WHERE id = ?',
+          [input.amountG, savedExpiry, savedLeftover ? 1 : 0, now, existing.id]
         );
       } else {
         const id = `pantry-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
         this.db.execute(
-          'INSERT INTO pantry_items (id, food_id, amount_available_g, expires_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-          [id, input.foodId, input.amountG, savedExpiry, now]
+          'INSERT INTO pantry_items (id, food_id, amount_available_g, expires_at, is_leftover, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+          [id, input.foodId, input.amountG, savedExpiry, savedLeftover ? 1 : 0, now]
         );
       }
-      // A manual stock entry is authoritative, so later edits cannot refund older deductions twice.
-      this.db.execute('UPDATE pantry_consumption SET deducted_g = 0 WHERE food_id = ?', [input.foodId]);
+      if (stockChanged) {
+        // A manual stock correction is authoritative, so later edits cannot refund older deductions twice.
+        this.db.execute('UPDATE pantry_consumption SET deducted_g = 0 WHERE food_id = ?', [input.foodId]);
+      }
     });
   }
 

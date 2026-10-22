@@ -39,6 +39,7 @@ import {
   SavePersonalDiaryEntryInput,
   NutritionTargets,
   PantryItem,
+  PantryRecipeMatch,
   PantryRecipeSearchInput,
   ShoppingListItem,
   ShoppingListPurchaseInput,
@@ -355,8 +356,8 @@ export class FitTrackService {
     return this.nutritionRepo.getPantry();
   }
 
-  updatePantryItem(foodId: string, amountG: number, expiresAt?: string | null): void {
-    this.nutritionRepo.updatePantryItem(foodId, amountG, expiresAt);
+  updatePantryItem(foodId: string, amountG: number, expiresAt?: string | null, isLeftover?: boolean): void {
+    this.nutritionRepo.updatePantryItem(foodId, amountG, expiresAt, isLeftover);
   }
 
   updatePantryPrice(foodId: string, unitPrice: number | null, priceSource: string | null): void {
@@ -386,7 +387,7 @@ export class FitTrackService {
     }));
   }
 
-  findRecipesFromPantry(input: PantryRecipeSearchInput = {}): Array<Recipe & { matchRate: number }> {
+  findRecipesFromPantry(input: PantryRecipeSearchInput = {}): PantryRecipeMatch[] {
     const pantry = this.nutritionRepo.getPantry();
     return new SubstitutionEngine(this.nutritionRepo.getFoods(), this.nutritionRepo.getRecipes())
       .findRecipesFromPantry(pantry, input.maxPrepTime, input.requireAllIngredients);
