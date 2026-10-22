@@ -15,8 +15,9 @@ export function getRecentlyUsedFoods(entries: DailyMealEntry[], limit = 12): Rec
   for (const entry of orderedEntries) {
     if (entry.status !== 'consumed' && entry.status !== 'partial') continue;
     const usedItems = new Map<string, DailyMealItemLog>();
-    for (const item of entry.items) {
-      if (!Number.isFinite(item.consumedAmountG) || item.consumedAmountG <= 0 || !item.foodId.trim()) continue;
+    for (const item of Array.isArray(entry.items) ? entry.items : []) {
+      if (!item || typeof item.foodId !== 'string' || !item.foodId.trim() || typeof item.foodName !== 'string'
+        || !Number.isFinite(item.consumedAmountG) || item.consumedAmountG <= 0) continue;
       const previous = usedItems.get(item.foodId);
       if (previous) previous.consumedAmountG += item.consumedAmountG;
       else usedItems.set(item.foodId, { ...item });

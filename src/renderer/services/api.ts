@@ -21,6 +21,7 @@ import {
   LoggedMealInput,
   DailyMealEntry,
   DailyMealEntryInput,
+  DailyMealHistoryQuery,
   RecentlyUsedFood,
   HydrationLogInput,
   CustomizationMediaInput,
@@ -41,8 +42,9 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealHistoryQuerySchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
+import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
@@ -632,6 +634,17 @@ export const api = {
     }
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
     return selectRecentlyUsedFoods(entries);
+  },
+
+  getMealHistory: async (input: DailyMealHistoryQuery): Promise<DailyMealEntry[]> => {
+    const query = DailyMealHistoryQuerySchema.parse(input);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getMealHistory(query);
+      if (!res.success) throw new Error(res.error || 'Erro ao consultar o histórico alimentar.');
+      return res.data || [];
+    }
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    return filterDailyMealHistory(entries, query);
   },
 
   saveDailyMeal: async (input: DailyMealEntryInput): Promise<DailyMealEntry> => {

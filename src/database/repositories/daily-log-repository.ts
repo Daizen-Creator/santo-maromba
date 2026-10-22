@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { DailyIntakeProgress, DailyMealEntry, DailyMealEntryInput, HydrationLogInput, LoggedMealInput, RecentlyUsedFood } from '../../shared/types';
+import { DailyIntakeProgress, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, RecentlyUsedFood } from '../../shared/types';
 import { getRecentlyUsedFoods } from '../../domain/recent-foods';
+import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 
 export class DailyLogRepository {
   constructor(private db: IDatabase) {}
@@ -57,6 +58,8 @@ export class DailyLogRepository {
     const entries: DailyMealEntry[] = [];
     for (const row of rows) {
       try {
+        const items = JSON.parse(row.items_json || '[]');
+        if (!Array.isArray(items)) continue;
         entries.push({
           id: row.id,
           date: row.date,
@@ -65,7 +68,7 @@ export class DailyLogRepository {
           scheduledTime: row.scheduled_time,
           recipeId: row.recipe_id || undefined,
           status: row.status,
-          items: JSON.parse(row.items_json || '[]'),
+          items,
           calories: Number(row.calories),
           proteinG: Number(row.protein_g),
           carbsG: Number(row.carbs_g),
@@ -79,6 +82,41 @@ export class DailyLogRepository {
       }
     }
     return getRecentlyUsedFoods(entries, limit);
+  }
+
+  getMealHistory(query: DailyMealHistoryQuery): DailyMealEntry[] {
+    const rows = this.db.query<any>(
+      `SELECT * FROM daily_meal_entries WHERE date >= ? AND date <= ?
+       ORDER BY date DESC, scheduled_time DESC, updated_at DESC`,
+      [query.fromDate, query.toDate]
+    );
+    const entries: DailyMealEntry[] = [];
+    for (const row of rows) {
+      try {
+        const items = JSON.parse(row.items_json || '[]');
+        if (!Array.isArray(items)) continue;
+        entries.push({
+          id: row.id,
+          date: row.date,
+          slotId: row.slot_id,
+          mealName: row.meal_name,
+          scheduledTime: row.scheduled_time,
+          recipeId: row.recipe_id || undefined,
+          status: row.status,
+          items,
+          calories: Number(row.calories),
+          proteinG: Number(row.protein_g),
+          carbsG: Number(row.carbs_g),
+          fatsG: Number(row.fats_g),
+          note: row.note || undefined,
+          completedAt: row.completed_at || undefined,
+          updatedAt: row.updated_at
+        });
+      } catch {
+        // Ignora somente o registro inválido; os demais continuam pesquisáveis.
+      }
+    }
+    return filterDailyMealHistory(entries, query);
   }
 
   saveMeal(input: DailyMealEntryInput): DailyMealEntry {

@@ -13,7 +13,7 @@ import {
   Plus,
   Star
 } from 'lucide-react';
-import { CustomFoodInput, DailyMealEntry, DailyMealEntryInput, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SubstitutionOption } from '../../shared/types';
+import { CustomFoodInput, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
@@ -27,6 +27,9 @@ const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string
     default: return 'Fonte não verificada';
   }
 };
+
+const formatDateInput = (date: Date) =>
+  [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 
 interface NutritionViewProps {
   targets: NutritionTargets | null;
@@ -42,6 +45,7 @@ interface NutritionViewProps {
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
   onSaveCustomFood: (input: CustomFoodInput, id?: string) => Promise<FoodItem>;
   onGetRecentlyUsedFoods: () => Promise<RecentlyUsedFood[]>;
+  onGetMealHistory: (query: DailyMealHistoryQuery) => Promise<DailyMealEntry[]>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
   onSetRecipeServings: (id: string, servings: number) => Promise<void>;
   onSetFoodFavorite: (id: string, isFavorite: boolean) => Promise<void>;
@@ -61,11 +65,12 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onSaveDailyMeal,
   onSaveCustomFood,
   onGetRecentlyUsedFoods,
+  onGetMealHistory,
   onSetRecipeFavorite,
   onSetRecipeServings,
   onSetFoodFavorite
 }) => {
-  const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat' | 'foods'>('meals');
+  const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat' | 'foods' | 'history'>('meals');
 
   // Filtros do Catálogo de 200 Receitas
   const [selectedTurn, setSelectedTurn] = useState<MealTurn | 'all'>('all');
@@ -96,9 +101,19 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [recipeServingDrafts, setRecipeServingDrafts] = useState<Record<string, string>>({});
   const [recentFoods, setRecentFoods] = useState<RecentlyUsedFood[]>([]);
   const [recentFoodsError, setRecentFoodsError] = useState<string | null>(null);
+  const [historyFromDate, setHistoryFromDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 29);
+    return formatDateInput(date);
+  });
+  const [historyToDate, setHistoryToDate] = useState(() => formatDateInput(new Date()));
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyEntries, setHistoryEntries] = useState<DailyMealEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   const today = new Date();
-  const todayString = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+  const todayString = formatDateInput(today);
 
   const refreshRecentFoods = async () => {
     try {
@@ -148,6 +163,25 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     } catch (error) {
       setRecipeActionError(error instanceof Error ? error.message : 'Não foi possível salvar o rendimento da receita.');
       setRecipeServingDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
+    }
+  };
+
+  const searchMealHistory = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const entries = await onGetMealHistory({
+        fromDate: historyFromDate,
+        toDate: historyToDate,
+        search: historySearch.trim()
+      });
+      setHistoryEntries(entries);
+    } catch (error) {
+      setHistoryError(error instanceof Error ? error.message : 'Não foi possível pesquisar o histórico.');
+      setHistoryEntries([]);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -311,6 +345,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             { id: 'meals', label: 'Plano do Dia', icon: Utensils },
             { id: 'catalog200', label: '200 Variedades de Refeições', icon: ChefHat },
             { id: 'foods', label: 'Meus Alimentos', icon: Plus },
+            { id: 'history', label: 'Histórico', icon: Clock },
             { id: 'what_to_eat', label: 'O Que Comer Agora?', icon: Sparkles },
             { id: 'pantry', label: 'Minha Despensa', icon: ShoppingBag }
           ].map(t => {
@@ -837,6 +872,65 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           </section>
           <CustomFoodLibrary foods={foods} onSave={onSaveCustomFood} onSetFavorite={onSetFoodFavorite} />
         </div>
+      )}
+
+      {activeTab === 'history' && (
+        <section className="space-y-5" aria-label="Histórico alimentar">
+          <form onSubmit={searchMealHistory} className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_2fr_auto] lg:items-end">
+            <label className="space-y-1 text-xs text-muted-foreground">
+              De
+              <input type="date" value={historyFromDate} max={historyToDate} onChange={event => setHistoryFromDate(event.target.value)} className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" />
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              Até
+              <input type="date" value={historyToDate} min={historyFromDate} onChange={event => setHistoryToDate(event.target.value)} className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" />
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground sm:col-span-2 lg:col-span-1">
+              Buscar refeição, alimento ou anotação
+              <input value={historySearch} onChange={event => setHistorySearch(event.target.value)} maxLength={100} placeholder="Ex.: arroz, almoço, observação" className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground/60" />
+            </label>
+            <button type="submit" disabled={historyLoading} className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-50">
+              {historyLoading ? 'Pesquisando…' : 'Pesquisar'}
+            </button>
+          </form>
+          {historyError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{historyError}</p>}
+          {historyEntries.length === 0 && !historyLoading ? (
+            <div className="rounded-2xl border border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
+              Nenhum lançamento encontrado nesse período. Registros futuros aparecerão aqui depois que forem salvos no checklist.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {historyEntries.map(entry => (
+                <article key={entry.id} className="rounded-2xl border border-border bg-card p-4">
+                  <header className="flex flex-wrap items-start justify-between gap-2 border-b border-border/60 pb-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{entry.mealName}</h3>
+                      <p className="mt-1 text-[11px] text-muted-foreground">{new Date(`${entry.date}T12:00:00`).toLocaleDateString('pt-BR')} · {entry.scheduledTime}</p>
+                    </div>
+                    <span className="rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-[10px] text-muted-foreground">
+                      {{ pending: 'Pendente', preparing: 'Em preparo', consumed: 'Consumida', partial: 'Parcial', deferred: 'Adiada', skipped: 'Não consumida', cancelled: 'Cancelada' }[entry.status]}
+                    </span>
+                  </header>
+                  <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {entry.items.map(item => (
+                      <li key={item.itemId} className="rounded-xl bg-secondary/30 px-3 py-2 text-xs">
+                        <span className="font-medium text-foreground">{item.foodName}</span>
+                        <span className="ml-2 text-muted-foreground">{item.consumedAmountG} / {item.plannedAmountG} g</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                    <span>{Math.round(entry.calories)} kcal</span>
+                    <span>{entry.proteinG.toFixed(1)} g proteína</span>
+                    <span>{entry.carbsG.toFixed(1)} g carboidrato</span>
+                    <span>{entry.fatsG.toFixed(1)} g gordura</span>
+                  </div>
+                  {entry.note && <p className="mt-2 text-xs text-muted-foreground">{entry.note}</p>}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
       {/* 3. ABA O QUE POSSO COMER COM O QUE TENHO */}

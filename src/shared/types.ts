@@ -167,6 +167,12 @@ export interface DailyMealEntry extends DailyMealEntryInput {
   updatedAt: string;
 }
 
+export interface DailyMealHistoryQuery {
+  fromDate: string;
+  toDate: string;
+  search?: string;
+}
+
 export interface RecentlyUsedFood {
   foodId: string;
   foodName: string;

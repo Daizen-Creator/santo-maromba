@@ -17,6 +17,7 @@ export const IPC_CHANNELS = {
   ADD_LOGGED_MEAL: 'nutrition:add-logged-meal',
   GET_DAILY_MEALS: 'nutrition:get-daily-meals',
   GET_RECENTLY_USED_FOODS: 'nutrition:get-recently-used-foods',
+  GET_MEAL_HISTORY: 'nutrition:get-meal-history',
   SAVE_DAILY_MEAL: 'nutrition:save-daily-meal',
   ADD_HYDRATION_LOG: 'hydration:add-log',
 

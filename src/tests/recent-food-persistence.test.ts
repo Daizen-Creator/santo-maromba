@@ -45,5 +45,8 @@ describe('Alimentos recentes na persistência SQLite', () => {
     expect(new DailyLogRepository(db!).getRecentlyUsedFoods()).toMatchObject([
       { foodId: 'rice', foodName: 'Arroz', lastUsedDate: '2026-10-20', lastAmountG: 45, useCount: 1 }
     ]);
+    expect(new DailyLogRepository(db!).getMealHistory({
+      fromDate: '2026-10-20', toDate: '2026-10-21', search: 'arroz'
+    })).toMatchObject([{ id: 'daily-meal-2026-10-20-lunch', date: '2026-10-20', mealName: 'Almoço' }]);
   });
 });

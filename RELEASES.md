@@ -40,6 +40,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - A lista considera refeições consumidas ou parciais, ignora planejamentos pendentes e preserva itens históricos no SQLite.
 - Na PWA, a consulta usa o histórico alimentar local do dispositivo.
 
+## v1.1.0
+
+- Adiciona histórico alimentar cronológico por dia, com busca por nome da refeição, alimento ou anotação.
+- Permite delimitar o período consultado e mostra quantidades planejadas/consumidas e macros salvos.
+- O desktop consulta o SQLite por IPC validado; a PWA pesquisa o histórico local do próprio dispositivo.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

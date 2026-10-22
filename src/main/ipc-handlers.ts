@@ -17,6 +17,7 @@ import {
   CustomizationMediaInputSchema,
   CustomizationMediaIdSchema,
   DailyMealDateSchema,
+  DailyMealHistoryQuerySchema,
   DailyMealEntryInputSchema,
   CustomFoodInputSchema,
   CustomFoodUpdateInputSchema,
@@ -400,6 +401,15 @@ export function registerIpcHandlers(
       return { success: true, data: service.getRecentlyUsedFoods() };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível consultar alimentos recentes.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_MEAL_HISTORY, async (event, rawQuery) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getMealHistory(DailyMealHistoryQuerySchema.parse(rawQuery)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível consultar o histórico alimentar.' };
     }
   });
 

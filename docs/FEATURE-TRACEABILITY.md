@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas e atualizada até o incremento 1.0.9. Estado atual: **54 validadas, 62 parciais, 61 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas e atualizada até o incremento 1.1.0. Estado atual: **56 validadas, 62 parciais, 59 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -14,7 +14,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | Código | Arquivos principais | Testes/evidência |
 |---|---|---|
 | PERF | `src/renderer/views/ProfileView.tsx`; `src/database/repositories/profile-repository.ts`; `src/database/schema.sql`; `src/domain/nutrition-calculator.ts` | `src/tests/nutrition-calculator.test.ts`; `src/tests/weight-analytics.test.ts`; `src/tests/validation.test.ts` |
-| DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts`; `src/domain/recent-foods.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/meal-schedule.test.ts` |
+| DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts`; `src/domain/recent-foods.ts`; `src/domain/daily-meal-history.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/daily-meal-history.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/meal-schedule.test.ts` |
 | NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-catalog.ts`; `src/domain/recipe-portions.ts`; `src/domain/recent-foods.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/recipe-portions.test.ts`; `src/tests/recent-foods.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
 | TREI | `src/renderer/views/WorkoutView.tsx`; `src/domain/workout-engine.ts`; `src/database/repositories/workout-repository.ts`; `src/database/repositories/exercise-media-repository.ts`; `src/database/schema.sql`; `src/database/migrations.ts` | `src/tests/workout-engine.test.ts`; `src/tests/workout-media-persistence.test.ts`; `src/tests/workout-migration.test.ts` |
 | SHAP | `src/renderer/views/ShapeCalendarView.tsx`; `src/renderer/views/ProjectionView.tsx`; `src/database/repositories/photo-repository.ts`; `src/database/repositories/measurement-repository.ts`; `src/services/photo-storage.ts`; `src/database/schema.sql` | `src/tests/photo-persistence.test.ts`; `src/tests/physique-projection.test.ts`; `src/tests/physique-projection-persistence.test.ts` |
@@ -65,8 +65,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 29 | Guardar data e hora real do consumo. | DIAR | — | P · data/slot e horário de conclusão, sem hora de cada item |
 | 30 | Anexar e reabrir foto de refeição. | DIAR; IPC | — | A · sem mídia de refeições |
 | 31 | Identificar claramente dado confirmado versus estimado. | NUTR; DIAR | proveniência nutricional completa | P · rótulo de estimado/não verificado aparece no catálogo e checklist; fontes não têm referências comprováveis |
-| 32 | Pesquisar lançamentos antigos por texto e período. | DIAR | — | A · sem busca do histórico alimentar |
-| 33 | Percorrer linha do tempo alimentar por dia. | DIAR | — | A · só checklist do dia atual |
+| 32 | Pesquisar lançamentos antigos por texto e período. | DIAR; IPC | — | V · busca por refeição/alimento/anotação e intervalo, com validação de datas; `daily-meal-history.test.ts` |
+| 33 | Percorrer linha do tempo alimentar por dia. | DIAR; PWA | — | V · histórico ordenado por dia e horário com itens, quantidades e macros; SQLite e PWA local |
 | 34 | Salvar e reaplicar modelos de refeições. | DIAR; NUTR | — | A · sem modelos de usuário |
 | 35 | Cadastrar alimento caseiro com ingredientes e macros. | NUTR | — | A · sem cadastro de alimento pela interface |
 | 36 | Ler código de barras e localizar produto. | NUTR | API/base de produtos (ex.: Open Food Facts) | B · serviço de barcode não configurado |
@@ -295,10 +295,11 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- `npm test`: 79/79 testes aprovados localmente; inclui alimentos recentes no domínio, SQLite após reabertura e PWA local.
-- `npm run build`: build de renderer e Electron aprovado após consulta de alimentos recentes.
+- `npm test`: 81/81 testes aprovados localmente; inclui busca por datas/texto, histórico SQLite após reabertura e PWA local.
+- `npm run build`: build de renderer e Electron aprovado após tela de histórico alimentar.
 - Portable 1.0.8: abriu por 12 segundos e criou `fittrack.db` num perfil temporário isolado.
 - Portable 1.0.9: abriu por 12 segundos e criou `fittrack.db` num perfil temporário isolado.
+- Portable 1.1.0: abriu por 12 segundos e criou `fittrack.db` num perfil temporário isolado.
 - Instalador NSIS e portable 1.0.4: publicados; smoke test do portable criou `fittrack.db` num perfil temporário isolado.
 - Portable 1.0.5: empacotado e smoke test de 12 segundos criou `fittrack.db` num perfil isolado.
 - Portable 1.0.6: abriu por 12 segundos e criou `fittrack.db` num perfil isolado.
@@ -313,7 +314,9 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - Release 1.0.7: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.7.
 - GitHub Actions e release 1.0.8: 76 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39725504471).
 - Release 1.0.8: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.8.
-- Incremento 1.0.9: 79 testes e build aprovados; instalador e portable empacotados, smoke test isolado aprovado. Publicação pendente.
+- GitHub Actions e release 1.0.9: 79 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39726403916).
+- Release 1.0.9: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.9.
+- Incremento 1.1.0: 81 testes, build, empacotamento NSIS/portable e smoke test isolado aprovados localmente. Publicação pendente.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
@@ -324,6 +327,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - IDs **88, 91 e 92** estão concluídos e validados: cronômetro de descanso ligado ao intervalo planejado; marcação persistente por série; salvamento de sessão parcial sem tratá-la como treino concluído.
 - IDs **75 e 76** e critérios **CAT-06 e CAT-07** estão concluídos e validados: rendimento de 1–50 porções salvo no SQLite/PWA, macros e quantidades do checklist recalculados por porção, com migração v10 e testes de reabertura.
 - IDs **39 e 68** estão concluídos e validados: lista de alimentos realmente consumidos, quantidades e origem, persistida no desktop e derivada do armazenamento local da PWA; pendentes e itens zerados ficam de fora.
+- IDs **32 e 33** estão concluídos e validados: histórico cronológico por dia, busca sem distinção de acentos por refeição/alimento/anotação e filtro de período, local no SQLite e PWA.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas

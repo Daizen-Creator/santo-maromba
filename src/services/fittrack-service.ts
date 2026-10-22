@@ -44,6 +44,7 @@ import {
   LoggedMealInput,
   DailyMealEntryInput,
   DailyMealEntry,
+  DailyMealHistoryQuery,
   RecentlyUsedFood,
   HydrationLogInput,
   VisualCustomization,
@@ -379,6 +380,10 @@ export class FitTrackService {
 
   getRecentlyUsedFoods(): RecentlyUsedFood[] {
     return this.dailyLogRepo.getRecentlyUsedFoods();
+  }
+
+  getMealHistory(query: DailyMealHistoryQuery): DailyMealEntry[] {
+    return this.dailyLogRepo.getMealHistory(query);
   }
 
   saveDailyMeal(input: DailyMealEntryInput): DailyMealEntry {

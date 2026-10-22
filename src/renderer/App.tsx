@@ -477,6 +477,7 @@ export const App: React.FC = () => {
               onSaveDailyMeal={handleSaveDailyMeal}
               onSaveCustomFood={handleSaveCustomFood}
               onGetRecentlyUsedFoods={api.getRecentlyUsedFoods}
+              onGetMealHistory={api.getMealHistory}
               onSetRecipeFavorite={handleSetRecipeFavorite}
               onSetRecipeServings={handleSetRecipeServings}
               onSetFoodFavorite={handleSetFoodFavorite}

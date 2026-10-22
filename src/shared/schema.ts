@@ -248,3 +248,11 @@ export const DailyMealEntryInputSchema = z.object({
 }).strict();
 
 export const DailyMealDateSchema = z.string().refine(isRealCalendarDate, 'Informe uma data válida.');
+export const DailyMealHistoryQuerySchema = z.object({
+  fromDate: DailyMealDateSchema,
+  toDate: DailyMealDateSchema,
+  search: z.string().trim().max(100).optional()
+}).strict().refine(query => query.fromDate <= query.toDate, {
+  message: 'A data inicial deve ser anterior ou igual à data final.',
+  path: ['toDate']
+});
