@@ -19,10 +19,18 @@ import {
   SaveCustomMeasurementInputSchema,
   ProfileGoalHistoryRecordSchema,
   SaveBodyMeasurementInputSchema,
-  MeasurementUnitPreferencesSchema
+  MeasurementUnitPreferencesSchema,
+  PantryRecipeSearchInputSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
+  it('valida o limite de preparo e o filtro de estoque para receitas da despensa', () => {
+    expect(PantryRecipeSearchInputSchema.parse({ maxPrepTime: 30, requireAllIngredients: true }))
+      .toEqual({ maxPrepTime: 30, requireAllIngredients: true });
+    expect(() => PantryRecipeSearchInputSchema.parse({ maxPrepTime: 0 })).toThrow();
+    expect(() => PantryRecipeSearchInputSchema.parse({ requireAllIngredients: 'yes' })).toThrow();
+  });
+
   it('aceita rendimento inteiro de receita e rejeita valores fora de 1 a 50', () => {
     expect(RecipeServingsInputSchema.parse({ id: 'recipe-1', servings: 6 })).toEqual({ id: 'recipe-1', servings: 6 });
     expect(() => RecipeServingsInputSchema.parse({ id: 'recipe-1', servings: 0 })).toThrow();

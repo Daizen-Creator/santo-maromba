@@ -37,6 +37,7 @@ import {
   SavePersonalDiaryEntryInput,
   NutritionTargets,
   PantryItem,
+  PantryRecipeSearchInput,
   PhotoRecord,
   PhotoCreateInput,
   Recipe,
@@ -370,11 +371,10 @@ export class FitTrackService {
     }));
   }
 
-  findRecipesFromPantry(maxPrepTime?: number): Array<Recipe & { matchRate: number }> {
+  findRecipesFromPantry(input: PantryRecipeSearchInput = {}): Array<Recipe & { matchRate: number }> {
     const pantry = this.nutritionRepo.getPantry();
-    const pantryIds = pantry.map(p => p.foodId);
     return new SubstitutionEngine(this.nutritionRepo.getFoods(), this.nutritionRepo.getRecipes())
-      .findRecipesFromPantry(pantryIds, maxPrepTime);
+      .findRecipesFromPantry(pantry, input.maxPrepTime, input.requireAllIngredients);
   }
 
   // --- TREINOS E EXERCÍCIOS ---

@@ -128,6 +128,24 @@ describe('Checklist alimentar na versão web', () => {
     await expect(api.reorderDailyMeals({ date: '2026-10-21', slotIds: ['dinner', 'dinner'] })).rejects.toThrow();
   });
 
+  it('sugere receitas com estoque real e permite excluir qualquer ingrediente sem quantidade suficiente', async () => {
+    expect(await api.findRecipesFromPantry({ maxPrepTime: 360 })).toEqual([]);
+    const recipe = (await api.getRecipes()).find(item => item.ingredients.length > 0)!;
+    const requiredByFood = new Map<string, number>();
+    for (const ingredient of recipe.ingredients) {
+      requiredByFood.set(ingredient.foodId, (requiredByFood.get(ingredient.foodId) || 0) + ingredient.amountG);
+    }
+    for (const [foodId, amountG] of requiredByFood) await api.updatePantry(foodId, amountG);
+
+    const complete = await api.findRecipesFromPantry({ maxPrepTime: 360, requireAllIngredients: true });
+    expect(complete.find(item => item.id === recipe.id)?.matchRate).toBe(100);
+    expect(complete.every(item => item.matchRate === 100)).toBe(true);
+
+    const [foodId, amountG] = [...requiredByFood.entries()][0];
+    await api.updatePantry(foodId, amountG / 2);
+    expect((await api.findRecipesFromPantry({ maxPrepTime: 360, requireAllIngredients: true })).some(item => item.id === recipe.id)).toBe(false);
+  });
+
   it('calcula médias web com registros reais e exclui água e refeições pendentes', async () => {
     const date = '2026-10-20';
     await api.addLoggedMeal({ date, mealName: 'Lanche', calories: 200, proteinG: 10, carbsG: 20, fatsG: 5 });

@@ -30,6 +30,7 @@ import {
   ApplyMealTemplateInputSchema,
   ApplyWeeklyMealTemplateInputSchema,
   ReorderDailyMealsInputSchema,
+  PantryRecipeSearchInputSchema,
   DailyMealEntryInputSchema,
   DailyMealIdentityInputSchema,
   DailyMealRestoreInputSchema,
@@ -418,9 +419,11 @@ export function registerIpcHandlers(
     }
   });
 
-  ipcMain.handle(IPC_CHANNELS.FIND_RECIPES_FROM_PANTRY, async (_, maxPrepTime) => {
+  ipcMain.handle(IPC_CHANNELS.FIND_RECIPES_FROM_PANTRY, async (event, rawInput) => {
     try {
-      const matched = service.findRecipesFromPantry(maxPrepTime);
+      getCallingWindow(event);
+      const input = PantryRecipeSearchInputSchema.parse(rawInput || {});
+      const matched = service.findRecipesFromPantry(input);
       return { success: true, data: matched };
     } catch (err: any) {
       return { success: false, error: err.message };

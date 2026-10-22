@@ -372,6 +372,11 @@ export const HydrationLogInputSchema = z.object({
   amountMl: z.number().int().min(1).max(5000)
 }).strict();
 
+export const PantryRecipeSearchInputSchema = z.object({
+  maxPrepTime: z.number().int().min(1).max(360).optional(),
+  requireAllIngredients: z.boolean().optional()
+}).strict();
+
 export const DailyMealEntryInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),
   slotId: z.string().trim().min(1).max(80).regex(/^[\w-]+$/),

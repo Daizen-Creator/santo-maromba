@@ -8,6 +8,7 @@ import {
   FoodItem,
   NutritionTargets,
   PantryItem,
+  PantryRecipeSearchInput,
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
@@ -117,7 +118,7 @@ export interface FitTrackAPI {
   getPantry: () => Promise<{ success: boolean; data?: PantryItem[]; error?: string }>;
   updatePantry: (foodId: string, amountG: number) => Promise<{ success: boolean; error?: string }>;
   getSubstitutions: (missingFoodId: string, amountG: number) => Promise<{ success: boolean; data?: SubstitutionOption[]; error?: string }>;
-  findRecipesFromPantry: (maxPrepTime?: number) => Promise<{ success: boolean; data?: Array<Recipe & { matchRate: number }>; error?: string }>;
+  findRecipesFromPantry: (input?: PantryRecipeSearchInput) => Promise<{ success: boolean; data?: Array<Recipe & { matchRate: number }>; error?: string }>;
 
   // Treinos
   getExercises: () => Promise<{ success: boolean; data?: Exercise[]; error?: string }>;
@@ -215,7 +216,7 @@ const api: FitTrackAPI = {
   getPantry: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PANTRY),
   updatePantry: (foodId, amountG) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_PANTRY, { foodId, amountG }),
   getSubstitutions: (missingFoodId, amountG) => ipcRenderer.invoke(IPC_CHANNELS.GET_SUBSTITUTIONS, { missingFoodId, amountG }),
-  findRecipesFromPantry: (maxPrepTime) => ipcRenderer.invoke(IPC_CHANNELS.FIND_RECIPES_FROM_PANTRY, maxPrepTime),
+  findRecipesFromPantry: input => ipcRenderer.invoke(IPC_CHANNELS.FIND_RECIPES_FROM_PANTRY, input || {}),
 
   getExercises: () => ipcRenderer.invoke(IPC_CHANNELS.GET_EXERCISES),
   addExerciseMedia: (input) => ipcRenderer.invoke(IPC_CHANNELS.ADD_EXERCISE_MEDIA, input),

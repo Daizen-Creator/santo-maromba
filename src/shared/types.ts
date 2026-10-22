@@ -770,6 +770,11 @@ export interface PantryItem {
   updatedAt: string;
 }
 
+export interface PantryRecipeSearchInput {
+  maxPrepTime?: number;
+  requireAllIngredients?: boolean;
+}
+
 // ============================================================================
 // MÓDULO — TREINOS, EXERCÍCIOS E PROGRESSÃO DE CARGAS
 // ============================================================================

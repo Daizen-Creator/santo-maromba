@@ -16,7 +16,7 @@ import {
   ImagePlus,
   X
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -69,7 +69,7 @@ interface NutritionViewProps {
   pantry: PantryItem[];
   onGetSubstitutions: (foodId: string, amountG: number) => Promise<SubstitutionOption[]>;
   onUpdatePantry: (foodId: string, amountG: number) => Promise<void>;
-  onFindRecipesFromPantry: (maxPrepTime?: number) => Promise<Array<Recipe & { matchRate: number }>>;
+  onFindRecipesFromPantry: (input?: PantryRecipeSearchInput) => Promise<Array<Recipe & { matchRate: number }>>;
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
   onDeleteDailyMeal: (input: DailyMealIdentityInput) => Promise<DailyMealEntry>;
   onRestoreDailyMeal: (input: DailyMealRestoreInput) => Promise<DailyMealEntry>;
@@ -161,6 +161,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   // "O que posso comer com o que tenho"
   const [pantryMatchedRecipes, setPantryMatchedRecipes] = useState<Array<Recipe & { matchRate: number }>>([]);
   const [findingPantryLoading, setFindingPantryLoading] = useState<boolean>(false);
+  const [pantryRequiresFullStock, setPantryRequiresFullStock] = useState(false);
+  const [pantryAnalysisRun, setPantryAnalysisRun] = useState(false);
+  const [pantrySearchError, setPantrySearchError] = useState<string | null>(null);
   const [draftAmounts, setDraftAmounts] = useState<Record<string, number>>({});
   const [draftPlannedAmounts, setDraftPlannedAmounts] = useState<Record<string, number>>({});
   const [ingredientSelections, setIngredientSelections] = useState<Record<string, string>>({});
@@ -830,12 +833,16 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   };
 
   // Handler para executar "O que comer com o que tenho"
-  const handleRunPantryMatch = async () => {
+  const handleRunPantryMatch = async (requireAllIngredients = pantryRequiresFullStock) => {
     setFindingPantryLoading(true);
+    setPantrySearchError(null);
     try {
-      const matched = await onFindRecipesFromPantry(30);
+      const matched = await onFindRecipesFromPantry({ maxPrepTime: 30, requireAllIngredients });
       setPantryMatchedRecipes(matched);
+      setPantryAnalysisRun(true);
       setActiveTab('what_to_eat');
+    } catch (error) {
+      setPantrySearchError(error instanceof Error ? error.message : 'Não foi possível analisar a despensa.');
     } finally {
       setFindingPantryLoading(false);
     }
@@ -1402,7 +1409,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               </p>
             </div>
             <button
-              onClick={handleRunPantryMatch}
+              onClick={() => void handleRunPantryMatch()}
               disabled={findingPantryLoading}
               className="rounded-2xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary-hover active:scale-95 transition-all"
             >
@@ -1978,20 +1985,40 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               Sugestões Baseadas na Sua Despensa Cadastrada
             </h3>
             <p className="text-xs text-muted-foreground">
-              Receitas ranqueadas pelo índice de correspondência dos ingredientes que você possui em casa.
+              A disponibilidade considera a quantidade registrada para preparar a receita inteira.
             </p>
+            <label className="flex cursor-pointer items-start gap-2 pt-1 text-xs text-foreground">
+              <input
+                type="checkbox"
+                checked={pantryRequiresFullStock}
+                disabled={findingPantryLoading}
+                onChange={event => {
+                  const requireAll = event.target.checked;
+                  setPantryRequiresFullStock(requireAll);
+                  void handleRunPantryMatch(requireAll);
+                }}
+                className="mt-0.5 accent-primary"
+              />
+              Mostrar somente receitas com todos os ingredientes e quantidades disponíveis
+            </label>
+            {pantrySearchError && <p role="alert" className="text-xs text-red-300">{pantrySearchError}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {preferredPantryRecipes.length === 0 ? (
               <div className="col-span-full py-12 text-center text-xs text-muted-foreground">
                 <ChefHat className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
-                <p>Nenhuma análise executada ainda. Clique no botão abaixo para analisar sua despensa.</p>
+                <p>{pantryAnalysisRun
+                  ? pantryRequiresFullStock
+                    ? 'Nenhuma receita de até 30 minutos tem todos os ingredientes nas quantidades registradas.'
+                    : 'Nenhuma receita de até 30 minutos usa alimentos com estoque disponível.'
+                  : 'Nenhuma análise executada ainda. Clique abaixo para consultar sua despensa.'}</p>
                 <button
-                  onClick={handleRunPantryMatch}
+                  disabled={findingPantryLoading}
+                  onClick={() => void handleRunPantryMatch()}
                   className="mt-3 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground"
                 >
-                  Analisar Ingredientes Disponíveis
+                  {findingPantryLoading ? 'Analisando…' : 'Analisar Ingredientes Disponíveis'}
                 </button>
               </div>
             ) : (
@@ -2029,11 +2056,15 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
                     <ul className="text-[11px] text-muted-foreground space-y-1">
                       {recipe.ingredients.map((ing, iIdx) => (
-                        <li key={iIdx} className="flex items-center justify-between">
+                        <li key={iIdx} className="flex items-center justify-between gap-2">
                           <span>{formatMass(ing.amountG)} {ing.foodName}</span>
-                          <span className={pantry.some(p => p.foodId === ing.foodId) ? 'text-emerald-400 font-bold' : 'text-amber-400'}>
-                            {pantry.some(p => p.foodId === ing.foodId) ? '✓ Tem' : 'Falta'}
-                          </span>
+                          {(() => {
+                            const availableG = pantry.find(item => item.foodId === ing.foodId)?.amountAvailableG || 0;
+                            const enough = availableG >= ing.amountG;
+                            return <span className={enough ? 'shrink-0 font-bold text-emerald-400' : 'shrink-0 text-amber-400'}>
+                              {enough ? '✓ Quantidade suficiente' : availableG > 0 ? `Faltam ${formatMass(ing.amountG - availableG)}` : 'Falta'}
+                            </span>;
+                          })()}
                         </li>
                       ))}
                     </ul>

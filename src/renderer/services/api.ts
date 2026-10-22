@@ -13,6 +13,7 @@ import {
   FoodItem,
   NutritionTargets,
   PantryItem,
+  PantryRecipeSearchInput,
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
@@ -78,7 +79,7 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryRecipeSearchInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -767,16 +768,16 @@ export const api = {
       }));
   },
 
-  findRecipesFromPantry: async (maxPrepTime?: number): Promise<Array<Recipe & { matchRate: number }>> => {
+  findRecipesFromPantry: async (rawInput: PantryRecipeSearchInput = {}): Promise<Array<Recipe & { matchRate: number }>> => {
+    const input = PantryRecipeSearchInputSchema.parse(rawInput);
     if (api.isElectron()) {
-      const res = await window.fitTrackAPI.findRecipesFromPantry(maxPrepTime);
+      const res = await window.fitTrackAPI.findRecipesFromPantry(input);
       if (!res.success) throw new Error(res.error || 'Erro ao buscar receitas.');
       return res.data || [];
     }
     const pantry = await api.getPantry();
-    const pantryIds = pantry.map(p => p.foodId);
     const [foods, recipes] = await Promise.all([api.getFoods(), api.getRecipes()]);
-    return new SubstitutionEngine(foods, recipes).findRecipesFromPantry(pantryIds, maxPrepTime);
+    return new SubstitutionEngine(foods, recipes).findRecipesFromPantry(pantry, input.maxPrepTime, input.requireAllIngredients);
   },
 
   // --- TREINOS ---

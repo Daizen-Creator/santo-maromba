@@ -227,22 +227,26 @@ export class SubstitutionEngine {
    * Recurso: "O que posso comer com o que tenho?"
    * Avalia a despensa do usuário e classifica receitas por adequação
    */
-  findRecipesFromPantry(pantryFoodIds: string[], maxPrepTime?: number): Array<Recipe & { matchRate: number }> {
+  findRecipesFromPantry(pantryItems: PantryItem[], maxPrepTime?: number, requireAllIngredients = false): Array<Recipe & { matchRate: number }> {
+    const availableByFoodId = new Map(pantryItems.map(item => [item.foodId, item.amountAvailableG]));
     const scored = this.recipes.map(recipe => {
       const totalIngs = recipe.ingredients.length;
-      if (totalIngs === 0) return { ...recipe, matchRate: 0 };
+      if (totalIngs === 0) return { ...recipe, matchRate: 0, allIngredientsAvailable: false };
 
-      const matchedIngs = recipe.ingredients.filter(ing => pantryFoodIds.includes(ing.foodId)).length;
-      const matchRate = Math.round((matchedIngs / totalIngs) * 100);
+      const matchedIngs = recipe.ingredients.filter(ing => (availableByFoodId.get(ing.foodId) || 0) >= ing.amountG).length;
+      const matchRate = Math.floor((matchedIngs / totalIngs) * 100);
 
       return {
         ...recipe,
-        matchRate
+        matchRate,
+        allIngredientsAvailable: matchedIngs === totalIngs
       };
     });
 
     return scored
       .filter(r => !maxPrepTime || r.prepTimeMinutes <= maxPrepTime)
+      .filter(r => r.matchRate > 0 && (!requireAllIngredients || r.allIngredientsAvailable))
+      .map(({ allIngredientsAvailable: _allIngredientsAvailable, ...recipe }) => recipe)
       .sort((a, b) => b.matchRate - a.matchRate || b.totalProteinG - a.totalProteinG);
   }
 }

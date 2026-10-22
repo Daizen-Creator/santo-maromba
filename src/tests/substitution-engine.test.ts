@@ -46,11 +46,39 @@ describe('Motor de Substituição Inteligente (4 Níveis) e Despensa', () => {
 
   it('deve classificar receitas na despensa pelo match rate ("O que posso comer agora")', () => {
     // Usuário tem apenas arroz, feijão e ovos
-    const pantryFoodIds = ['food-arroz', 'food-feijao', 'food-ovo'];
-    const matched = engine.findRecipesFromPantry(pantryFoodIds, 30);
+    const pantryItems = ['food-arroz', 'food-feijao', 'food-ovo'].map(foodId => ({
+      id: `pantry-${foodId}`, foodId, foodName: foodId, amountAvailableG: 5000, updatedAt: '2026-10-22T12:00:00.000Z'
+    }));
+    const matched = engine.findRecipesFromPantry(pantryItems, 30);
 
     expect(matched.length).toBeGreaterThan(0);
+    expect(matched.every(recipe => recipe.matchRate > 0)).toBe(true);
     // As primeiras opções devem ter maior matchRate
     expect(matched[0].matchRate).toBeGreaterThanOrEqual(matched[matched.length - 1].matchRate);
+
+    const completeRecipes = engine.findRecipesFromPantry(pantryItems, 30, true);
+    expect(completeRecipes.length).toBeGreaterThan(0);
+    expect(completeRecipes.every(recipe => recipe.matchRate === 100)).toBe(true);
+  });
+
+  it('calcula disponibilidade pela quantidade em estoque e exclui itens insuficientes no filtro estrito', () => {
+    const food = { id: 'rice', name: 'Arroz', category: 'carb' as const, servingSizeG: 100, calories: 130, proteinG: 2, carbsG: 28, fatsG: 0.3, isCooked: true, source: 'Teste' };
+    const recipes = [
+      { id: 'rice-egg', name: 'Arroz e ovo', category: 'lunch' as const, prepTimeMinutes: 10, instructions: '', servings: 1,
+        ingredients: [
+          { foodId: 'rice', foodName: 'Arroz', amountG: 100, calories: 130, proteinG: 2, carbsG: 28, fatsG: 0.3 },
+          { foodId: 'egg', foodName: 'Ovo', amountG: 50, calories: 75, proteinG: 6, carbsG: 0, fatsG: 5 }
+        ], totalCalories: 205, totalProteinG: 8, totalCarbsG: 28, totalFatsG: 5.3 },
+      { id: 'rice-only', name: 'Arroz', category: 'lunch' as const, prepTimeMinutes: 5, instructions: '', servings: 1,
+        ingredients: [{ foodId: 'rice', foodName: 'Arroz', amountG: 100, calories: 130, proteinG: 2, carbsG: 28, fatsG: 0.3 }], totalCalories: 130, totalProteinG: 2, totalCarbsG: 28, totalFatsG: 0.3 },
+      { id: 'almost', name: 'Quase completo', category: 'lunch' as const, prepTimeMinutes: 15, instructions: '', servings: 1,
+        ingredients: [...Array.from({ length: 199 }, () => ({ foodId: 'rice', foodName: 'Arroz', amountG: 1, calories: 1, proteinG: 0, carbsG: 1, fatsG: 0 })),
+          { foodId: 'egg', foodName: 'Ovo', amountG: 1, calories: 1, proteinG: 0, carbsG: 0, fatsG: 0 }],
+        totalCalories: 200, totalProteinG: 0, totalCarbsG: 199, totalFatsG: 0 }
+    ];
+    const pantry = [{ id: 'rice-stock', foodId: 'rice', foodName: 'Arroz', amountAvailableG: 150, updatedAt: '2026-10-22T12:00:00.000Z' }];
+    const search = new SubstitutionEngine([food], recipes);
+    expect(search.findRecipesFromPantry(pantry).map(recipe => [recipe.id, recipe.matchRate])).toEqual([['rice-only', 100], ['almost', 99], ['rice-egg', 50]]);
+    expect(search.findRecipesFromPantry(pantry, undefined, true).map(recipe => recipe.id)).toEqual(['rice-only']);
   });
 });
