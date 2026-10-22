@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.33. Estado após validação dos incrementos: **91 validadas, 40 parciais, 46 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.34. Estado após validação dos incrementos: **92 validadas, 39 parciais, 46 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -68,7 +68,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 32 | Pesquisar lançamentos antigos por texto e período. | DIAR; IPC | — | V · busca por refeição/alimento/anotação e intervalo, com validação de datas; `daily-meal-history.test.ts` |
 | 33 | Percorrer linha do tempo alimentar por dia. | DIAR; PWA | — | V · histórico ordenado por dia e horário com itens, quantidades e macros; SQLite e PWA local |
 | 34 | Salvar refeições de uma data como modelo nomeado e aplicá-lo a outra data sem sobrescrever horários preenchidos. | DIAR; IPC; PWA | — | V · SQLite e localStorage; refeições voltam como planejadas; persistência após reabertura e preservação de destinos ocupados testadas em `meal-template-persistence.test.ts` e `daily-meal-api.test.ts` |
-| 35 | Cadastrar alimento caseiro com ingredientes e macros. | NUTR | — | P · `CustomFoodLibrary.tsx` permite cadastrar alimento com macros por 100 g e persiste no catálogo (`catalog-persistence.test.ts`); composição a partir de ingredientes e seus cálculos ainda falta |
+| 35 | Cadastrar alimento caseiro escolhendo ingredientes do catálogo e calcular macros por 100 g com base em porções explícitas e no peso final opcional; permitir editar e reabrir a composição. | `CustomFoodLibrary.tsx`; `custom-food-composition.ts`; `nutrition-repository.ts`; `api.ts`; `types.ts`; `schema.ts`; migrations; SQLite e PWA local | Catálogo nutricional local e alimento personalizado | V · recusa ingrediente ausente/duplicado e autorreferência; usa dados por porção base, mantém fibras desconhecidas como ausentes, persiste macros e composição no SQLite/PWA e reabre; `custom-food-composition.test.ts`, `catalog-persistence.test.ts` |
 | 36 | Ler código de barras e localizar produto. | NUTR | API/base de produtos (ex.: Open Food Facts) | B · serviço de barcode não configurado |
 | 37 | Converter unidade doméstica para massa com hipótese explícita. | NUTR | densidade/tabela de medidas verificadas | A · sem conversor geral |
 | 38 | Registrar sobras e ajustar o consumido real. | DIAR; PWA | — | V · campo de sobras recalcula o consumo; quantidades planejadas e consumidas permanecem salvas e permitem reconstruir as sobras após reabrir; `meal-leftovers.test.ts` e `daily-log-persistence.test.ts` |

@@ -134,6 +134,8 @@ CREATE TABLE IF NOT EXISTS foods (
   carbs_g REAL NOT NULL,
   fats_g REAL NOT NULL,
   fiber_g REAL,
+  composition_json TEXT NOT NULL DEFAULT '[]',
+  composition_final_weight_g REAL CHECK(composition_final_weight_g IS NULL OR composition_final_weight_g BETWEEN 1 AND 50000),
   is_cooked INTEGER NOT NULL DEFAULT 0, -- 0 = cru, 1 = cozido
   price_estimated REAL,
     substitute_group_id TEXT,

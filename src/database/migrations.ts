@@ -98,6 +98,12 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!foodColumns.some(column => column.name === 'confidence_level')) {
     db.exec("ALTER TABLE foods ADD COLUMN confidence_level TEXT NOT NULL DEFAULT 'unknown'");
   }
+  if (!foodColumns.some(column => column.name === 'composition_json')) {
+    db.exec("ALTER TABLE foods ADD COLUMN composition_json TEXT NOT NULL DEFAULT '[]'");
+  }
+  if (!foodColumns.some(column => column.name === 'composition_final_weight_g')) {
+    db.exec('ALTER TABLE foods ADD COLUMN composition_final_weight_g REAL CHECK(composition_final_weight_g IS NULL OR composition_final_weight_g BETWEEN 1 AND 50000)');
+  }
   db.exec('CREATE INDEX IF NOT EXISTS idx_foods_substitute_group ON foods(substitute_group_id)');
   const recipeCatalogColumns = db.query<{ name: string }>('PRAGMA table_info(recipes)');
   if (!recipeCatalogColumns.some(column => column.name === 'servings')) {
@@ -359,6 +365,13 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [25, 'Fotos locais vinculadas ao checklist de refeições', new Date().toISOString()]
+    );
+  }
+  const version26 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 26');
+  if (!version26) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [26, 'Composição e rendimento de alimentos caseiros', new Date().toISOString()]
     );
   }
 }

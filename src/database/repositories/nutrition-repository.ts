@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { CustomFoodInput, FoodItem, FoodPortionPreference, PantryItem, Recipe } from '../../shared/types';
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../seeds/nutrition-seeds';
 import { normalizeRecipeServings } from '../../domain/recipe-portions';
+import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
 
 export class NutritionRepository {
   constructor(private db: IDatabase) {
@@ -114,6 +115,8 @@ export class NutritionRepository {
       imageUrl: r.image_url || undefined,
       imageCredit: r.image_credit || undefined,
       isCustom: Boolean(r.is_custom),
+      composition: this.parseComposition(r.composition_json),
+      compositionFinalWeightG: r.composition_final_weight_g == null ? undefined : Number(r.composition_final_weight_g),
       isFavorite: favorites.has(r.id)
     }));
   }
@@ -173,15 +176,17 @@ export class NutritionRepository {
   }
 
   createCustomFood(input: CustomFoodInput): FoodItem {
+    input = calculateCustomFoodInput(input, this.getFoods());
     this.assertFoodNameAvailable(input.name);
     const id = `custom-food-${randomUUID()}`;
     this.db.execute(
       `INSERT INTO foods (
         id, name, category, serving_size_g, calories, protein_g, carbs_g, fats_g, fiber_g,
-        is_cooked, substitute_group_id, source, data_quality, confidence_level, is_custom, created_at
-      ) VALUES (?, ?, ?, 100, ?, ?, ?, ?, ?, ?, ?, 'Informado pelo usuário', 'user_reported', 'unknown', 1, ?)`,
+        composition_json, composition_final_weight_g, is_cooked, substitute_group_id, source, data_quality, confidence_level, is_custom, created_at
+      ) VALUES (?, ?, ?, 100, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Informado pelo usuário', 'user_reported', 'unknown', 1, ?)`,
       [id, input.name.trim(), input.category, input.calories, input.proteinG, input.carbsG, input.fatsG,
-        input.fiberG ?? null, input.isCooked ? 1 : 0, input.substituteGroupId?.trim() || null, new Date().toISOString()]
+        input.fiberG ?? null, JSON.stringify(input.ingredients || []), input.finalWeightG ?? null,
+        input.isCooked ? 1 : 0, input.substituteGroupId?.trim() || null, new Date().toISOString()]
     );
     return this.requireFood(id);
   }
@@ -191,14 +196,16 @@ export class NutritionRepository {
       'SELECT id FROM foods WHERE id = ? AND is_custom = 1', [id]
     );
     if (!existing) throw new Error('Alimento personalizado não encontrado.');
+    input = calculateCustomFoodInput(input, this.getFoods(), id);
     this.assertFoodNameAvailable(input.name, id);
     this.db.execute(
       `UPDATE foods SET name = ?, category = ?, serving_size_g = 100, calories = ?, protein_g = ?,
-       carbs_g = ?, fats_g = ?, fiber_g = ?, is_cooked = ?, substitute_group_id = ?,
+       carbs_g = ?, fats_g = ?, fiber_g = ?, composition_json = ?, composition_final_weight_g = ?, is_cooked = ?, substitute_group_id = ?,
        source = 'Informado pelo usuário', data_quality = 'user_reported', confidence_level = 'unknown'
        WHERE id = ? AND is_custom = 1`,
       [input.name.trim(), input.category, input.calories, input.proteinG, input.carbsG, input.fatsG,
-        input.fiberG ?? null, input.isCooked ? 1 : 0, input.substituteGroupId?.trim() || null, id]
+        input.fiberG ?? null, JSON.stringify(input.ingredients || []), input.finalWeightG ?? null,
+        input.isCooked ? 1 : 0, input.substituteGroupId?.trim() || null, id]
     );
     return this.requireFood(id);
   }
@@ -215,6 +222,17 @@ export class NutritionRepository {
     const food = this.getFoods().find(item => item.id === id);
     if (!food) throw new Error('Não foi possível carregar o alimento salvo.');
     return food;
+  }
+
+  private parseComposition(value: string | null | undefined): FoodItem['composition'] {
+    try {
+      const parsed = JSON.parse(value || '[]');
+      if (!Array.isArray(parsed)) return undefined;
+      const ingredients = parsed.filter(item => item && typeof item.foodId === 'string' && Number.isFinite(item.amountG));
+      return ingredients.length ? ingredients : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   getRecipes(): Recipe[] {

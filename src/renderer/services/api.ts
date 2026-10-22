@@ -81,6 +81,7 @@ import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
 import { calculateNutritionDistribution } from '../../domain/nutrition-distribution';
 import { inferMealTurn } from '../../domain/meal-turn';
+import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_PROFILE_GOAL_HISTORY = 'fittrack_profile_goal_history';
@@ -579,9 +580,10 @@ export const api = {
       return res.data!;
     }
 
+    const composedInput = calculateCustomFoodInput(validatedInput, await api.getFoods(), id);
     const customFoods = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_CUSTOM_FOODS) || '[]') as FoodItem[];
     const duplicate = [...INITIAL_FOODS, ...customFoods].find(food =>
-      food.name.localeCompare(validatedInput.name, undefined, { sensitivity: 'accent' }) === 0 && food.id !== id
+      food.name.localeCompare(composedInput.name, undefined, { sensitivity: 'accent' }) === 0 && food.id !== id
     );
     if (duplicate) throw new Error('Já existe um alimento com esse nome no catálogo.');
 
@@ -589,19 +591,21 @@ export const api = {
     if (id && !existing) throw new Error('Alimento personalizado não encontrado.');
     const food: FoodItem = {
       id: existing?.id || `custom-food-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
-      name: validatedInput.name,
-      category: validatedInput.category,
+      name: composedInput.name,
+      category: composedInput.category,
       servingSizeG: 100,
-      calories: validatedInput.calories,
-      proteinG: validatedInput.proteinG,
-      carbsG: validatedInput.carbsG,
-      fatsG: validatedInput.fatsG,
-      fiberG: validatedInput.fiberG,
-      isCooked: validatedInput.isCooked ?? false,
+      calories: composedInput.calories,
+      proteinG: composedInput.proteinG,
+      carbsG: composedInput.carbsG,
+      fatsG: composedInput.fatsG,
+      fiberG: composedInput.fiberG,
+      isCooked: composedInput.isCooked ?? false,
       source: 'Informado pelo usuário',
       dataQuality: 'user_reported',
       confidenceLevel: 'unknown',
-      substituteGroupId: validatedInput.substituteGroupId?.trim() || undefined,
+      substituteGroupId: composedInput.substituteGroupId?.trim() || undefined,
+      composition: composedInput.ingredients,
+      compositionFinalWeightG: composedInput.finalWeightG,
       isCustom: true
     };
     localStorage.setItem(LOCAL_STORAGE_KEY_CUSTOM_FOODS, JSON.stringify([

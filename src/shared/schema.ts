@@ -235,8 +235,21 @@ export const CustomFoodInputSchema = z.object({
   fatsG: z.number().finite().min(0).max(100),
   fiberG: z.number().finite().min(0).max(100).optional(),
   isCooked: z.boolean().default(false),
-  substituteGroupId: z.string().trim().min(1).max(80).optional()
-}).strict();
+  substituteGroupId: z.string().trim().min(1).max(80).optional(),
+  ingredients: z.array(z.object({
+    foodId: z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/),
+    amountG: z.number().finite().min(0.1).max(50000)
+  }).strict()).min(1).max(40).optional(),
+  finalWeightG: z.number().finite().min(1).max(50000).optional()
+}).strict().superRefine((value, context) => {
+  if (value.finalWeightG !== undefined && !value.ingredients?.length) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['finalWeightG'], message: 'Informe ingredientes para usar o peso final.' });
+  }
+  const ids = value.ingredients?.map(ingredient => ingredient.foodId) || [];
+  if (new Set(ids).size !== ids.length) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['ingredients'], message: 'Cada ingrediente deve aparecer uma única vez.' });
+  }
+});
 
 export const CustomFoodIdSchema = z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/);
 export const CustomFoodUpdateInputSchema = z.object({

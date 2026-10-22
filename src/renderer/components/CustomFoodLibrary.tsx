@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Pencil, Plus, Save, Search, Star, X } from 'lucide-react';
-import { CustomFoodInput, FoodCategory, FoodItem } from '../../shared/types';
+import { CustomFoodIngredient, CustomFoodInput, FoodCategory, FoodItem } from '../../shared/types';
 import { searchFoods } from '../../domain/nutrition-catalog';
+import { calculateCustomFoodComposition } from '../../domain/custom-food-composition';
 
 interface CustomFoodLibraryProps {
   foods: FoodItem[];
@@ -40,10 +41,27 @@ export const CustomFoodLibrary: React.FC<CustomFoodLibraryProps> = ({ foods, onS
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const [updatingFavoriteId, setUpdatingFavoriteId] = useState<string | null>(null);
+  const [compositionEnabled, setCompositionEnabled] = useState(false);
+  const [compositionIngredients, setCompositionIngredients] = useState<CustomFoodIngredient[]>([]);
+  const [ingredientFoodId, setIngredientFoodId] = useState('');
+  const [ingredientAmountG, setIngredientAmountG] = useState('100');
+  const [finalWeightG, setFinalWeightG] = useState('');
   const visibleFoods = useMemo(
     () => searchFoods(foods, searchTerm).filter(food => !favoritesOnly || food.isFavorite),
     [foods, searchTerm, favoritesOnly]
   );
+  const compositionPreview = useMemo(() => {
+    if (!compositionEnabled || compositionIngredients.length === 0) return null;
+    try {
+      return calculateCustomFoodComposition(
+        compositionIngredients,
+        foods,
+        finalWeightG.trim() ? Number(finalWeightG) : undefined
+      );
+    } catch {
+      return null;
+    }
+  }, [compositionEnabled, compositionIngredients, finalWeightG, foods]);
 
   const editFood = (food: FoodItem) => {
     setEditingId(food.id);
@@ -53,6 +71,10 @@ export const CustomFoodLibrary: React.FC<CustomFoodLibraryProps> = ({ foods, onS
       fiberG: food.fiberG == null ? '' : String(food.fiberG), isCooked: food.isCooked,
       substituteGroupId: food.substituteGroupId || ''
     });
+    setCompositionEnabled(Boolean(food.composition?.length));
+    setCompositionIngredients(food.composition || []);
+    setFinalWeightG(food.compositionFinalWeightG == null ? '' : String(food.compositionFinalWeightG));
+    setIngredientFoodId('');
     setError(null);
   };
 
@@ -60,12 +82,17 @@ export const CustomFoodLibrary: React.FC<CustomFoodLibraryProps> = ({ foods, onS
     setForm(EMPTY_FORM);
     setEditingId(null);
     setError(null);
+    setCompositionEnabled(false);
+    setCompositionIngredients([]);
+    setFinalWeightG('');
+    setIngredientFoodId('');
+    setIngredientAmountG('100');
   };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-    const input: CustomFoodInput = {
+    let input: CustomFoodInput = {
       name: form.name.trim(), category: form.category,
       calories: Number(form.calories), proteinG: Number(form.proteinG),
       carbsG: Number(form.carbsG), fatsG: Number(form.fatsG),
@@ -73,6 +100,26 @@ export const CustomFoodLibrary: React.FC<CustomFoodLibraryProps> = ({ foods, onS
       isCooked: form.isCooked,
       substituteGroupId: form.substituteGroupId.trim() || undefined
     };
+
+    if (compositionEnabled) {
+      try {
+        const finalWeight = finalWeightG.trim() ? Number(finalWeightG) : undefined;
+        const calculated = calculateCustomFoodComposition(compositionIngredients, foods, finalWeight);
+        input = {
+          ...input,
+          calories: calculated.calories,
+          proteinG: calculated.proteinG,
+          carbsG: calculated.carbsG,
+          fatsG: calculated.fatsG,
+          fiberG: calculated.fiberG,
+          ingredients: compositionIngredients,
+          finalWeightG: calculated.finalWeightG
+        };
+      } catch (compositionError) {
+        setError(compositionError instanceof Error ? compositionError.message : 'Verifique os ingredientes e o peso final.');
+        return;
+      }
+    }
 
     if (!input.name || [input.calories, input.proteinG, input.carbsG, input.fatsG].some(value => !Number.isFinite(value))) {
       setError('Preencha o nome e os valores nutricionais por 100 g.');
@@ -119,12 +166,85 @@ export const CustomFoodLibrary: React.FC<CustomFoodLibraryProps> = ({ foods, onS
               {CATEGORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
-          <label className="space-y-1">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground sm:col-span-2">
+            <input type="checkbox" checked={compositionEnabled} onChange={event => {
+              setCompositionEnabled(event.target.checked);
+              setError(null);
+            }} />
+            Calcular macros a partir dos ingredientes do catálogo
+          </label>
+          {compositionEnabled && (
+            <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/[0.04] p-3 sm:col-span-2">
+              <div>
+                <h4 className="text-xs font-semibold text-foreground">Composição da receita</h4>
+                <p className="mt-1 text-[10px] text-muted-foreground">Escolha os alimentos e informe o peso usado. Sem peso final, o cálculo considera a soma dos ingredientes.</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_110px_auto]">
+                <label className="space-y-1 text-[10px] text-muted-foreground">
+                  Ingrediente
+                  <select aria-label="Ingrediente da receita caseira" value={ingredientFoodId} onChange={event => setIngredientFoodId(event.target.value)}
+                    className="block w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground">
+                    <option value="">Selecione do catálogo</option>
+                    {foods.filter(food => food.id !== editingId && !compositionIngredients.some(item => item.foodId === food.id))
+                      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+                      .map(food => <option key={food.id} value={food.id}>{food.name}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-1 text-[10px] text-muted-foreground">
+                  Quantidade (g)
+                  <input type="number" min="0.1" max="50000" step="0.1" value={ingredientAmountG} onChange={event => setIngredientAmountG(event.target.value)}
+                    className="block w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground" />
+                </label>
+                <button type="button" disabled={!ingredientFoodId} onClick={() => {
+                  const amount = Number(ingredientAmountG);
+                  if (!Number.isFinite(amount) || amount <= 0 || amount > 50000) {
+                    setError('A quantidade do ingrediente deve estar entre 0,1 e 50.000 g.');
+                    return;
+                  }
+                  setCompositionIngredients(current => [...current, { foodId: ingredientFoodId, amountG: amount }]);
+                  setIngredientFoodId('');
+                  setError(null);
+                }} className="self-end inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary disabled:opacity-40">
+                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                </button>
+              </div>
+              {compositionIngredients.length > 0 && (
+                <ul className="space-y-2" aria-label="Ingredientes da receita caseira">
+                  {compositionIngredients.map((ingredient, index) => {
+                    const food = foods.find(item => item.id === ingredient.foodId);
+                    return <li key={ingredient.foodId} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-background/35 p-2">
+                      <span className="min-w-28 flex-1 text-xs text-foreground">{food?.name || 'Ingrediente indisponível'}</span>
+                      <label className="flex items-center gap-1 text-[10px] text-muted-foreground">g
+                        <input aria-label={`Quantidade de ${food?.name || 'ingrediente'}`} type="number" min="0.1" max="50000" step="0.1" value={ingredient.amountG}
+                          onChange={event => setCompositionIngredients(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, amountG: Number(event.target.value) } : item))}
+                          className="w-24 rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground" />
+                      </label>
+                      <button type="button" aria-label={`Remover ${food?.name || 'ingrediente'}`} onClick={() => setCompositionIngredients(current => current.filter((_, itemIndex) => itemIndex !== index))}
+                        className="rounded-md border border-border p-1.5 text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                    </li>;
+                  })}
+                </ul>
+              )}
+              <label className="block space-y-1 text-[10px] text-muted-foreground">
+                Peso final preparado em gramas (opcional)
+                <input type="number" min="1" max="50000" step="1" value={finalWeightG} onChange={event => setFinalWeightG(event.target.value)}
+                  placeholder={compositionIngredients.reduce((sum, item) => sum + item.amountG, 0).toFixed(0)}
+                  className="block w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground" />
+              </label>
+              {compositionPreview ? (
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] p-3" aria-live="polite">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-200">Cálculo por 100 g · rendimento {compositionPreview.finalWeightG} g</p>
+                  <p className="mt-1 text-xs text-foreground">{compositionPreview.calories} kcal · P {compositionPreview.proteinG} g · C {compositionPreview.carbsG} g · G {compositionPreview.fatsG} g{compositionPreview.fiberG === undefined ? '' : ` · fibras ${compositionPreview.fiberG} g`}</p>
+                </div>
+              ) : <p className="text-[10px] text-muted-foreground">Adicione ingredientes com quantidades válidas para ver os macros calculados.</p>}
+            </div>
+          )}
+          {!compositionEnabled && <label className="space-y-1">
             <span className="text-xs font-medium text-muted-foreground">Calorias por 100 g</span>
             <input required type="number" min="0" max="1000" step="0.1" value={form.calories} onChange={e => setForm({ ...form, calories: e.target.value })}
               className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary" />
-          </label>
-          {([
+          </label>}
+          {!compositionEnabled && ([
             ['proteinG', 'Proteína (g)'], ['carbsG', 'Carboidratos (g)'], ['fatsG', 'Gorduras (g)'], ['fiberG', 'Fibras (g, opcional)']
           ] as const).map(([key, label]) => (
             <label key={key} className="space-y-1">
@@ -177,6 +297,7 @@ export const CustomFoodLibrary: React.FC<CustomFoodLibraryProps> = ({ foods, onS
             <div className="min-w-0">
               <h4 className="truncate text-sm font-semibold text-foreground">{food.name}</h4>
               <p className="mt-1 text-[11px] text-muted-foreground">{food.calories} kcal · P {food.proteinG} g · C {food.carbsG} g · G {food.fatsG} g por 100 g</p>
+              {food.composition?.length ? <p className="mt-1 text-[10px] text-muted-foreground">Ingredientes: {food.composition.map(item => `${item.amountG} g ${foods.find(candidate => candidate.id === item.foodId)?.name || 'ingrediente'}`).join(' · ')} · rendimento {food.compositionFinalWeightG} g</p> : null}
               <span className={`mt-2 inline-flex rounded-full border px-2 py-1 text-[10px] font-medium ${food.dataQuality === 'user_reported' ? 'border-amber-500/25 bg-amber-500/10 text-amber-200' : 'border-border text-muted-foreground'}`}>
                 {food.dataQuality === 'user_reported' ? 'Informado pelo usuário' : `${food.dataQuality || 'unverified'} · ${food.source}`}
               </span>

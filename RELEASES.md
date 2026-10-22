@@ -248,7 +248,14 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Permite anexar uma foto ao registro salvo de uma refeição, ampliá-la, trocar o arquivo e removê-lo com confirmação.
 - No desktop, a imagem fica em `userData/meal_photos` e os metadados no SQLite; na PWA, os bytes ficam no IndexedDB. O vínculo usa o ID do registro para não exibir a foto em outra refeição do mesmo horário.
 - Verifica data, horário, tamanho, MIME e assinatura do arquivo; não envia as fotos para servidores.
-- 187 testes em 56 arquivos passaram; build, instalador NSIS e portable concluídos. Smoke test iniciou o executável e aplicou a migração 25 no SQLite. Publicação GitHub pendente.
+- 187 testes em 56 arquivos passaram; build, instalador NSIS e portable concluídos. Smoke test iniciou o executável e aplicou a migração 25 no SQLite. GitHub Actions `39766733493` publicou instalador NSIS, portable, blockmap e `latest.yml`.
+
+## v1.1.34
+
+- Alimentos caseiros podem ser compostos por itens do catálogo, com quantidades em gramas e peso final preparado opcional.
+- Os macros por 100 g são calculados de forma determinística; fibras permanecem ausentes se algum ingrediente não tiver esse dado.
+- SQLite e PWA guardam a composição para edição e reabertura; a migração 26 é aditiva e não substitui os valores já salvos.
+- 191 testes em 57 arquivos passaram; build concluído. Publicação GitHub pendente.
 
 ## Publicar uma versão
 

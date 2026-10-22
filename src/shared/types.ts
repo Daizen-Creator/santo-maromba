@@ -627,6 +627,13 @@ export interface FoodItem {
   imageCredit?: string;
   isCustom?: boolean;
   isFavorite?: boolean;
+  composition?: CustomFoodIngredient[];
+  compositionFinalWeightG?: number;
+}
+
+export interface CustomFoodIngredient {
+  foodId: string;
+  amountG: number;
 }
 
 export interface CustomFoodInput {
@@ -639,6 +646,8 @@ export interface CustomFoodInput {
   fiberG?: number;
   isCooked?: boolean;
   substituteGroupId?: string;
+  ingredients?: CustomFoodIngredient[];
+  finalWeightG?: number;
 }
 
 export type NutritionDataQuality = 'verified' | 'estimated' | 'user_reported' | 'unverified';
