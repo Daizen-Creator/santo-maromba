@@ -59,8 +59,41 @@ function allocate(total: number, shares: number[], precision: number): number[] 
   return values;
 }
 
-export function buildMealSchedule(mealsPerDay: number, targets: NutritionTargets | null): MealSlot[] {
-  const base = SCHEDULES[mealsPerDay] ?? SCHEDULES[4];
+export interface MealScheduleRoutine {
+  wakeTime?: string;
+  sleepTime?: string;
+}
+
+function parseTime(value?: string): number | null {
+  const match = value?.match(/^(?:([01]\d|2[0-3])):([0-5]\d)$/);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+function formatTime(minutes: number): string {
+  const normalized = ((minutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(normalized / 60)).padStart(2, '0')}:${String(normalized % 60).padStart(2, '0')}`;
+}
+
+function applyRoutineTimes(base: Array<Omit<MealSlot, 'target'>>, routine?: MealScheduleRoutine): Array<Omit<MealSlot, 'target'>> {
+  const wake = parseTime(routine?.wakeTime);
+  const sleep = parseTime(routine?.sleepTime);
+  if (wake === null || sleep === null || wake === sleep) return base;
+
+  const sleepAfterWake = sleep <= wake ? sleep + 1440 : sleep;
+  const firstMeal = wake + 30;
+  const lastMeal = sleepAfterWake - 60;
+  const interval = lastMeal - firstMeal;
+  if (interval < (base.length - 1) * 30) return base;
+
+  return base.map((slot, index) => ({
+    ...slot,
+    time: formatTime(Math.round(firstMeal + (interval * index) / (base.length - 1)))
+  }));
+}
+
+export function buildMealSchedule(mealsPerDay: number, targets: NutritionTargets | null, routine?: MealScheduleRoutine): MealSlot[] {
+  const configuredBase = SCHEDULES[mealsPerDay] ?? SCHEDULES[4];
+  const base = applyRoutineTimes(configuredBase, routine);
   if (!targets) return base.map(slot => ({ ...slot }));
 
   const shares = base.map(slot => slot.share);

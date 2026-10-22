@@ -33,6 +33,8 @@ export class ProfileRepository {
       workSchedule: row.work_schedule || undefined,
       studySchedule: row.study_schedule || undefined,
       sleepSchedule: row.sleep_schedule || undefined,
+      wakeTime: row.wake_time || undefined,
+      sleepTime: row.sleep_time || undefined,
       trainingSchedule: row.training_schedule || undefined,
       availableEquipment: row.available_equipment ? JSON.parse(row.available_equipment) : [],
       interruptionHistoryNotes: row.interruption_history_notes || undefined,
@@ -74,6 +76,8 @@ export class ProfileRepository {
     const dietaryRestrictions = JSON.stringify(profile.dietaryRestrictions || existing?.dietaryRestrictions || []);
     const allergies = JSON.stringify(profile.allergies || existing?.allergies || []);
     const availableEquipment = JSON.stringify(profile.availableEquipment || existing?.availableEquipment || []);
+    const wakeTime = Object.prototype.hasOwnProperty.call(profile, 'wakeTime') ? profile.wakeTime || null : existing?.wakeTime ?? null;
+    const sleepTime = Object.prototype.hasOwnProperty.call(profile, 'sleepTime') ? profile.sleepTime || null : existing?.sleepTime ?? null;
 
     const targetWeightKg = Object.prototype.hasOwnProperty.call(profile, 'targetWeightKg')
       ? profile.targetWeightKg ?? null
@@ -106,6 +110,8 @@ export class ProfileRepository {
           work_schedule = ?,
           study_schedule = ?,
           sleep_schedule = ?,
+          wake_time = ?,
+          sleep_time = ?,
           training_schedule = ?,
           available_equipment = ?,
           interruption_history_notes = ?,
@@ -130,6 +136,8 @@ export class ProfileRepository {
           profile.workSchedule ?? existing.workSchedule ?? null,
           profile.studySchedule ?? existing.studySchedule ?? null,
           profile.sleepSchedule ?? existing.sleepSchedule ?? null,
+          wakeTime,
+          sleepTime,
           profile.trainingSchedule ?? existing.trainingSchedule ?? null,
           availableEquipment,
           profile.interruptionHistoryNotes ?? existing.interruptionHistoryNotes ?? null,
@@ -147,9 +155,9 @@ export class ProfileRepository {
           training_experience, fitness_goal, target_weight_kg, dietary_restrictions,
           allergies, dietary_preferences, food_budget_monthly, meals_per_day,
           training_days_per_week, work_schedule, study_schedule, sleep_schedule,
-          training_schedule, available_equipment, interruption_history_notes,
+          wake_time, sleep_time, training_schedule, available_equipment, interruption_history_notes,
           initial_history_confirmed, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           profile.name,
@@ -169,6 +177,8 @@ export class ProfileRepository {
           profile.workSchedule ?? null,
           profile.studySchedule ?? null,
           profile.sleepSchedule ?? null,
+          wakeTime,
+          sleepTime,
           profile.trainingSchedule ?? null,
           availableEquipment,
           profile.interruptionHistoryNotes ?? null,

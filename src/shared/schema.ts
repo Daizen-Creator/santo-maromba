@@ -82,10 +82,18 @@ export const ProfileInputSchema = z.object({
   workSchedule: z.string().max(100).optional(),
   studySchedule: z.string().max(100).optional(),
   sleepSchedule: z.string().max(100).optional(),
+  wakeTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, 'Informe um horário válido.').optional(),
+  sleepTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, 'Informe um horário válido.').optional(),
   trainingSchedule: z.string().max(100).optional(),
   availableEquipment: z.array(z.string()).optional(),
   interruptionHistoryNotes: z.string().max(1000).optional(),
   initialHistoryConfirmed: z.boolean().optional()
+}).refine(profile => Boolean(profile.wakeTime) === Boolean(profile.sleepTime), {
+  message: 'Informe os horários de acordar e dormir juntos para ajustar o plano diário.',
+  path: ['sleepTime']
+}).refine(profile => !profile.wakeTime || profile.wakeTime !== profile.sleepTime, {
+  message: 'Os horários de acordar e dormir precisam ser diferentes.',
+  path: ['sleepTime']
 });
 
 export const ProfileGoalHistoryRecordSchema = z.object({

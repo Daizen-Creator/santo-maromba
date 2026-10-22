@@ -37,6 +37,8 @@ export interface UserProfile {
   workSchedule?: string;
   studySchedule?: string;
   sleepSchedule?: string;
+  wakeTime?: string;
+  sleepTime?: string;
   trainingSchedule?: string;
   availableEquipment?: string[];
   interruptionHistoryNotes?: string;

@@ -491,6 +491,8 @@ export const App: React.FC = () => {
               targets={summary?.nutritionTargets || null}
               summary={summary}
               mealsPerDay={mealCount}
+              wakeTime={profile?.wakeTime}
+              sleepTime={profile?.sleepTime}
               foods={foods}
               recipes={recipes}
               dailyMealEntries={dailyMealEntries}

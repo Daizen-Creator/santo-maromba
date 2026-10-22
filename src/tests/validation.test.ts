@@ -95,6 +95,20 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(Object.prototype.hasOwnProperty.call(ProfileInputSchema.parse({ ...validProfile, targetWeightKg: undefined }), 'targetWeightKg')).toBe(true);
   });
 
+  it('valida horários de rotina completos e rejeita horários parciais ou inválidos', () => {
+    const base = {
+      name: 'João Silva', birthDate: '2008-05-14', heightCm: 182,
+      biologicalSex: 'male', activityLevel: 'moderate', trainingExperience: 'intermediate',
+      fitnessGoal: 'muscle_gain', mealsPerDay: 4, trainingDaysPerWeek: 5
+    };
+    expect(ProfileInputSchema.parse({ ...base, wakeTime: '06:30', sleepTime: '22:45' })).toMatchObject({
+      wakeTime: '06:30', sleepTime: '22:45'
+    });
+    expect(() => ProfileInputSchema.parse({ ...base, wakeTime: '06:30' })).toThrow();
+    expect(() => ProfileInputSchema.parse({ ...base, wakeTime: '24:10', sleepTime: '22:45' })).toThrow();
+    expect(() => ProfileInputSchema.parse({ ...base, wakeTime: '06:30', sleepTime: '06:30' })).toThrow();
+  });
+
   it('deve rejeitar perfil com dados inconsistentes ou fora dos limites clínicos', () => {
     expect(() =>
       ProfileInputSchema.parse({

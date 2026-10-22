@@ -49,6 +49,8 @@ interface NutritionViewProps {
   targets: NutritionTargets | null;
   summary: DashboardSummary | null;
   mealsPerDay: number;
+  wakeTime?: string;
+  sleepTime?: string;
   foods: FoodItem[];
   recipes: Recipe[];
   dailyMealEntries: DailyMealEntry[];
@@ -74,6 +76,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   targets,
   summary,
   mealsPerDay,
+  wakeTime,
+  sleepTime,
   foods,
   recipes,
   dailyMealEntries,
@@ -404,7 +408,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const recipePageCount = Math.max(1, Math.ceil(filteredRecipes.length / recipesPerPage));
 
   const mealPlan = useMemo(() => {
-    const slots = buildMealSchedule(mealsPerDay, targets);
+    const slots = buildMealSchedule(mealsPerDay, targets, { wakeTime, sleepTime });
     const usedRecipeIds = new Set<string>();
     return slots.map(slot => {
       const candidates = recipes
@@ -422,7 +426,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
       if (recipe) usedRecipeIds.add(recipe.id);
       return { slot, recipe, substitution: selectedSubstitutions[slot.id] };
     });
-  }, [mealsPerDay, recipes, selectedSubstitutions, targets]);
+  }, [mealsPerDay, recipes, selectedSubstitutions, targets, wakeTime, sleepTime]);
 
   const visibleMealPlan = mealPlan.filter(({ slot }) => {
     if (mealListFilter === 'all') return true;

@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.21. Estado após validação do incremento: **78 validadas, 49 parciais, 50 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.22. Estado após validação do incremento: **79 validadas, 48 parciais, 50 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -38,7 +38,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 7 | Escolher atividade e recalcular GET. | PERF | — | V · `nutrition-calculator.test.ts` |
 | 8 | Calcular idade válida pela data de nascimento. | PERF | — | V · `nutrition-calculator.test.ts` |
 | 9 | Registrar e consultar mudanças de altura por data. | PERF; SHAP; IPC; PWA | SQLite desktop; armazenamento local da PWA | V · `height-history-persistence.test.ts` valida inclusão, edição, reabertura, migração preservando medições antigas e armazenamento offline; `measurement-trend.test.ts` valida a série cronológica; `validation.test.ts` valida data e faixa de altura |
-| 10 | Registrar rotina diária e usá-la no planejamento. | PERF | — | P · perfil guarda campos, regra incompleta |
+| 10 | Registrar horários habituais de acordar e dormir; gerar as refeições dentro da janela de vigília, respeitando a quantidade diária e os macros. | PERF, DIAR | `ProfileView.tsx`; `NutritionView.tsx`; `meal-schedule.ts`; `profile-repository.ts`; `schema.sql`; `migrations.ts`; `ProfileInputSchema` | V · migração 19, SQLite/PWA após reabrir, horários regulares e noturnos, validação e macros cobertos por testes |
 | 11 | Definir dias disponíveis e adaptar a divisão de treino. | PERF; TREI | — | P · gerador existe, sem editor persistente completo |
 | 12 | Salvar alergias/restrições e excluir receitas incompatíveis. | PERF; NUTR | — | P · dados de perfil não filtram o catálogo |
 | 13 | Salvar preferências e aplicá-las às sugestões. | PERF; NUTR | — | P · preferências não filtram receitas |

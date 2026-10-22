@@ -45,4 +45,23 @@ describe('Plano diário de refeições', () => {
     expect(meals).toHaveLength(5);
     expect(meals.every(meal => meal.target === undefined)).toBe(true);
   });
+
+  it('distribui as refeições dentro da janela acordada e preserva a divisão de macros', () => {
+    const meals = buildMealSchedule(5, targets, { wakeTime: '06:30', sleepTime: '22:30' });
+
+    expect(meals.map(meal => meal.time)).toEqual(['07:00', '10:38', '14:15', '17:53', '21:30']);
+    expect(meals[0].target?.calories).toBe(605);
+    expect(meals.reduce((sum, meal) => sum + meal.target!.calories, 0)).toBe(targets.targetCalories);
+  });
+
+  it('distribui corretamente uma rotina que atravessa a meia-noite', () => {
+    const meals = buildMealSchedule(4, null, { wakeTime: '21:00', sleepTime: '07:00' });
+    expect(meals.map(meal => meal.time)).toEqual(['21:30', '00:20', '03:10', '06:00']);
+  });
+
+  it('mantém os horários-base quando a janela informada não comporta refeições espaçadas', () => {
+    const defaultTimes = buildMealSchedule(6, null).map(meal => meal.time);
+    const tightWindow = buildMealSchedule(6, null, { wakeTime: '08:00', sleepTime: '11:00' });
+    expect(tightWindow.map(meal => meal.time)).toEqual(defaultTimes);
+  });
 });

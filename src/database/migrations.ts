@@ -248,4 +248,19 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [18, 'Histórico de altura corporal por data', new Date().toISOString()]
     );
   }
+
+  const profileColumns = db.query<{ name: string }>('PRAGMA table_info(profiles)');
+  if (!profileColumns.some(column => column.name === 'wake_time')) {
+    db.exec("ALTER TABLE profiles ADD COLUMN wake_time TEXT CHECK(wake_time IS NULL OR (wake_time GLOB '[0-2][0-9]:[0-5][0-9]' AND substr(wake_time, 1, 2) BETWEEN '00' AND '23'))");
+  }
+  if (!profileColumns.some(column => column.name === 'sleep_time')) {
+    db.exec("ALTER TABLE profiles ADD COLUMN sleep_time TEXT CHECK(sleep_time IS NULL OR (sleep_time GLOB '[0-2][0-9]:[0-5][0-9]' AND substr(sleep_time, 1, 2) BETWEEN '00' AND '23'))");
+  }
+  const version19 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 19');
+  if (!version19) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [19, 'Horários estruturados de acordar e dormir para o plano alimentar', new Date().toISOString()]
+    );
+  }
 }

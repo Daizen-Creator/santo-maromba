@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   work_schedule TEXT,
   study_schedule TEXT,
   sleep_schedule TEXT,
+  wake_time TEXT CHECK(wake_time IS NULL OR (wake_time GLOB '[0-2][0-9]:[0-5][0-9]' AND substr(wake_time, 1, 2) BETWEEN '00' AND '23')),
+  sleep_time TEXT CHECK(sleep_time IS NULL OR (sleep_time GLOB '[0-2][0-9]:[0-5][0-9]' AND substr(sleep_time, 1, 2) BETWEEN '00' AND '23')),
   training_schedule TEXT,
   available_equipment TEXT,  -- JSON Array
   interruption_history_notes TEXT,

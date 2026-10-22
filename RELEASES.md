@@ -168,7 +168,13 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Permite escolher g ou kg para porções e estoque de alimentos, e mL ou L para registro e metas de hidratação.
 - Converte entradas para gramas/mililitros antes de calcular e persistir; preferências ficam em `app_settings` no desktop e no armazenamento local da PWA.
-- 145 testes, build React/Electron e instalador/portátil aprovados; executável abriu em perfil isolado e criou SQLite com `app_settings` e migração 18; publicação GitHub pendente.
+- 145 testes, build React/Electron e instalador/portátil aprovados; executável abriu em perfil isolado e criou SQLite com `app_settings` e migração 18; GitHub Actions 39745663489 publicou instalador, portátil, manifesto e blockmap.
+
+## v1.1.22
+
+- Salva horários estruturados de acordar e dormir no SQLite e no armazenamento offline da PWA, preservando os demais dados do perfil.
+- Distribui os horários das refeições ao longo da janela de vigília, inclusive em rotinas que atravessam a meia-noite; as porções de macros permanecem somadas exatamente à meta diária.
+- Migração 19, validações de horário, bancos legados e reabertura aprovados; 151 testes em 46 arquivos e build React/Electron aprovados. Empacotamento Windows e publicação pendentes.
 
 ## Publicar uma versão
 

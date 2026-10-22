@@ -77,6 +77,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [workSchedule, setWorkSchedule] = useState<string>(profile?.workSchedule || '');
   const [studySchedule, setStudySchedule] = useState<string>(profile?.studySchedule || '');
   const [sleepSchedule, setSleepSchedule] = useState<string>(profile?.sleepSchedule || '');
+  const [wakeTime, setWakeTime] = useState<string>(profile?.wakeTime || '');
+  const [sleepTime, setSleepTime] = useState<string>(profile?.sleepTime || '');
   const [trainingSchedule, setTrainingSchedule] = useState<string>(profile?.trainingSchedule || '');
   const [availableEquipment, setAvailableEquipment] = useState<string>(
     (profile?.availableEquipment || []).join(', ')
@@ -140,6 +142,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         workSchedule,
         studySchedule,
         sleepSchedule,
+        wakeTime: wakeTime || undefined,
+        sleepTime: sleepTime || undefined,
         trainingSchedule,
         interruptionHistoryNotes: interruptionNotes
       });
@@ -497,9 +501,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">Sono / Descanso</label>
+              <label className="text-xs font-semibold text-muted-foreground">Acordar</label>
+              <input
+                type="time"
+                value={wakeTime}
+                onChange={e => setWakeTime(e.target.value)}
+                className="w-full rounded-xl border border-border bg-secondary/50 px-3.5 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">Dormir</label>
+              <input
+                type="time"
+                value={sleepTime}
+                onChange={e => setSleepTime(e.target.value)}
+                className="w-full rounded-xl border border-border bg-secondary/50 px-3.5 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">Observações de sono</label>
               <input
                 type="text"
                 value={sleepSchedule}
