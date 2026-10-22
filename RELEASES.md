@@ -58,6 +58,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Aplicação dos modelos cria refeições planejadas com consumo zerado e mantém intactos os horários que já têm registros.
 - Os modelos persistem no SQLite no desktop e no armazenamento local da PWA; testes verificam reabertura e duplicidade de nomes.
 
+## v1.1.3
+
+- O plano alimentar mostra quantas refeições estão pendentes, em preparo, consumidas, parciais, adiadas, não consumidas e canceladas.
+- Horários do plano ainda sem lançamento entram na contagem de pendentes.
+- Cópias e modelos aplicados para hoje recarregam o painel diário e suas contagens a partir dos dados salvos.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

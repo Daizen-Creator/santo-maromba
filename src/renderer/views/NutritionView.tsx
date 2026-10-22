@@ -18,6 +18,7 @@ import { buildMealSchedule } from '../../domain/meal-schedule';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
 import { getIngredientPerServing, getRecipeNutritionPerServing } from '../../domain/recipe-portions';
+import { DAILY_MEAL_STATUSES, summarizeDailyMealStatuses } from '../../domain/meal-status-summary';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -384,6 +385,14 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     const eaten = entry?.status === 'consumed' || entry?.status === 'partial';
     return mealListFilter === 'eaten' ? eaten : !eaten && entry?.status !== 'skipped' && entry?.status !== 'cancelled';
   });
+  const mealStatusCounts = useMemo(() => summarizeDailyMealStatuses(
+    mealPlan.map(({ slot }) => slot.id),
+    dailyMealEntries.filter(entry => entry.date === todayString)
+  ), [mealPlan, dailyMealEntries, todayString]);
+  const mealStatusLabels: Record<DailyMealStatus, string> = {
+    pending: 'Pendente', preparing: 'Em preparo', consumed: 'Consumida', partial: 'Parcial',
+    deferred: 'Adiada', skipped: 'Não consumida', cancelled: 'Cancelada'
+  };
 
   // Handler para acionar substituição de ingrediente
   const handleTriggerSubstitution = async (foodId: string, foodName: string, amountG: number, slotId: string) => {
@@ -489,6 +498,13 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             <span className="text-[11px] text-muted-foreground">
               {dailyMealEntries.filter(entry => entry.date === todayString && (entry.status === 'consumed' || entry.status === 'partial')).length} de {mealPlan.length} refeições registradas
             </span>
+            <div className="flex basis-full flex-wrap gap-1.5" aria-label="Contagem por estado das refeições">
+              {DAILY_MEAL_STATUSES.map(status => (
+                <span key={status} className="rounded-lg border border-border/70 bg-background/50 px-2 py-1 text-[10px] text-muted-foreground">
+                  {mealStatusLabels[status]} <strong className="text-foreground">{mealStatusCounts[status]}</strong>
+                </span>
+              ))}
+            </div>
           </div>
           {mealSaveError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealSaveError}</p>}
 

@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.2. Estado atual: **58 validadas, 62 parciais, 57 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.3. Estado atual: **59 validadas, 61 parciais, 57 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -14,7 +14,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | Código | Arquivos principais | Testes/evidência |
 |---|---|---|
 | PERF | `src/renderer/views/ProfileView.tsx`; `src/database/repositories/profile-repository.ts`; `src/database/schema.sql`; `src/domain/nutrition-calculator.ts` | `src/tests/nutrition-calculator.test.ts`; `src/tests/weight-analytics.test.ts`; `src/tests/validation.test.ts` |
-| DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts`; `src/domain/recent-foods.ts`; `src/domain/daily-meal-history.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/daily-meal-history.test.ts`; `src/tests/daily-meal-copy-persistence.test.ts`; `src/tests/meal-template-persistence.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/meal-schedule.test.ts` |
+| DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts`; `src/domain/recent-foods.ts`; `src/domain/daily-meal-history.ts`; `src/domain/meal-status-summary.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/daily-meal-history.test.ts`; `src/tests/daily-meal-copy-persistence.test.ts`; `src/tests/meal-template-persistence.test.ts`; `src/tests/meal-status-summary.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/meal-schedule.test.ts` |
 | NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-catalog.ts`; `src/domain/recipe-portions.ts`; `src/domain/recent-foods.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/recipe-portions.test.ts`; `src/tests/recent-foods.test.ts`; `src/tests/recent-food-persistence.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
 | TREI | `src/renderer/views/WorkoutView.tsx`; `src/domain/workout-engine.ts`; `src/database/repositories/workout-repository.ts`; `src/database/repositories/exercise-media-repository.ts`; `src/database/schema.sql`; `src/database/migrations.ts` | `src/tests/workout-engine.test.ts`; `src/tests/workout-media-persistence.test.ts`; `src/tests/workout-migration.test.ts` |
 | SHAP | `src/renderer/views/ShapeCalendarView.tsx`; `src/renderer/views/ProjectionView.tsx`; `src/database/repositories/photo-repository.ts`; `src/database/repositories/measurement-repository.ts`; `src/services/photo-storage.ts`; `src/database/schema.sql` | `src/tests/photo-persistence.test.ts`; `src/tests/physique-projection.test.ts`; `src/tests/physique-projection-persistence.test.ts` |
@@ -73,7 +73,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 37 | Converter unidade doméstica para massa com hipótese explícita. | NUTR | densidade/tabela de medidas verificadas | A · sem conversor geral |
 | 38 | Registrar sobras e ajustar o consumido real. | DIAR | — | A · sem registro de sobras |
 | 39 | Consultar alimentos usados recentemente. | NUTR; DIAR | — | V · consulta os registros consumidos/parciais mais recentes; ignora planos e itens sem consumo; `recent-foods.test.ts` |
-| 40 | Contar estados pendente, consumido, parcial, adiado e pulado. | DIAR | — | P · filtros/contagem limitada; sem resumo completo de estados |
+| 40 | Contar estados pendente, consumido, parcial, adiado e pulado. | DIAR; PWA | — | V · resumo deriva dos horários do plano e registros salvos, contando também em preparo e cancelado; teste cobre todos os estados e evita duplicidade (`meal-status-summary.test.ts`) |
 
 ## Funcionalidades 41–60 — cálculo nutricional
 
@@ -321,7 +321,9 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - Release 1.1.0: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.1.0.
 - GitHub Actions e release 1.1.1: 83 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39727531026).
 - Release 1.1.1: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.1.1.
-- Incremento 1.1.2: 87 testes e build aprovados; publicação pendente.
+- GitHub Actions e release 1.1.2: 87 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39728219096).
+- Release 1.1.2: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.1.2.
+- Incremento 1.1.3: 89 testes e build aprovados; empacotamento e publicação pendentes.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
@@ -335,6 +337,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - IDs **32 e 33** estão concluídos e validados: histórico cronológico por dia, busca sem distinção de acentos por refeição/alimento/anotação e filtro de período, local no SQLite e PWA.
 - ID **26** está concluído e validado: cópia entre dias cria refeições pendentes, zera gramas consumidas, não replica notas diárias e preserva os slots já preenchidos no destino.
 - ID **34** está concluído e validado: salva no SQLite/PWA modelos nomeados a partir de refeições registradas, reabre os dados e aplica-os em outra data como pendentes, mantendo os horários de destino já preenchidos.
+- ID **40** está concluído e validado: mostra contagens dos sete estados reais do checklist; horários planejados sem registro contam como pendentes e as ações em lote atualizam o estado do painel no mesmo dia.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas

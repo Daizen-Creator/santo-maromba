@@ -250,6 +250,25 @@ export const App: React.FC = () => {
     setSummary(updatedSummary);
   };
 
+  const refreshTodayMealsAfterPlanChange = async (targetDate: string) => {
+    if (targetDate !== getTodayDate()) return;
+    const [entries, updatedSummary] = await Promise.all([api.getDailyMeals(targetDate), api.getDashboardSummary()]);
+    setDailyMealEntries(entries);
+    setSummary(updatedSummary);
+  };
+
+  const handleCopyDailyMeals = async (input: { sourceDate: string; targetDate: string }) => {
+    const result = await api.copyDailyMeals(input);
+    await refreshTodayMealsAfterPlanChange(input.targetDate);
+    return result;
+  };
+
+  const handleApplyMealTemplate = async (input: { templateId: string; targetDate: string }) => {
+    const result = await api.applyMealTemplate(input);
+    await refreshTodayMealsAfterPlanChange(input.targetDate);
+    return result;
+  };
+
   const handleSaveCustomFood = async (input: CustomFoodInput, id?: string): Promise<FoodItem> => {
     const saved = await api.saveCustomFood(input, id);
     setFoods(await api.getFoods());
@@ -478,10 +497,10 @@ export const App: React.FC = () => {
               onSaveCustomFood={handleSaveCustomFood}
               onGetRecentlyUsedFoods={api.getRecentlyUsedFoods}
               onGetMealHistory={api.getMealHistory}
-              onCopyDailyMeals={api.copyDailyMeals}
+              onCopyDailyMeals={handleCopyDailyMeals}
               onGetMealTemplates={api.getMealTemplates}
               onSaveMealTemplate={api.saveMealTemplate}
-              onApplyMealTemplate={api.applyMealTemplate}
+              onApplyMealTemplate={handleApplyMealTemplate}
               onSetRecipeFavorite={handleSetRecipeFavorite}
               onSetRecipeServings={handleSetRecipeServings}
               onSetFoodFavorite={handleSetFoodFavorite}
