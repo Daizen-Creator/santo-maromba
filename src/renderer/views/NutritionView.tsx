@@ -13,7 +13,7 @@ import {
   Plus,
   Star
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTemplate, MealTurn, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
@@ -50,6 +50,7 @@ interface NutritionViewProps {
   foods: FoodItem[];
   recipes: Recipe[];
   dailyMealEntries: DailyMealEntry[];
+  onGetNutritionDistribution: (date: string) => Promise<NutritionMealDistributionEntry[]>;
   pantry: PantryItem[];
   onGetSubstitutions: (foodId: string, amountG: number) => Promise<SubstitutionOption[]>;
   onUpdatePantry: (foodId: string, amountG: number) => Promise<void>;
@@ -74,6 +75,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   foods,
   recipes,
   dailyMealEntries,
+  onGetNutritionDistribution,
   pantry,
   onGetSubstitutions,
   onUpdatePantry,
@@ -114,6 +116,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [findingPantryLoading, setFindingPantryLoading] = useState<boolean>(false);
   const [draftAmounts, setDraftAmounts] = useState<Record<string, number>>({});
   const [draftPlannedAmounts, setDraftPlannedAmounts] = useState<Record<string, number>>({});
+  const [nutritionDistribution, setNutritionDistribution] = useState<NutritionMealDistributionEntry[]>([]);
+  const [nutritionDistributionLoading, setNutritionDistributionLoading] = useState(true);
+  const [nutritionDistributionError, setNutritionDistributionError] = useState<string | null>(null);
   const [savingMealSlot, setSavingMealSlot] = useState<string | null>(null);
   const [mealListFilter, setMealListFilter] = useState<'all' | 'eaten' | 'remaining'>('all');
   const [mealSaveError, setMealSaveError] = useState<string | null>(null);
@@ -163,6 +168,19 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   };
 
   useEffect(() => { void refreshRecentFoods(); }, [onGetRecentlyUsedFoods]);
+
+  useEffect(() => {
+    let active = true;
+    setNutritionDistributionLoading(true);
+    setNutritionDistributionError(null);
+    onGetNutritionDistribution(todayString)
+      .then(entries => { if (active) setNutritionDistribution(entries); })
+      .catch(error => {
+        if (active) setNutritionDistributionError(error instanceof Error ? error.message : 'Não foi possível consultar a distribuição alimentar.');
+      })
+      .finally(() => { if (active) setNutritionDistributionLoading(false); });
+    return () => { active = false; };
+  }, [onGetNutritionDistribution, todayString, dailyMealEntries, summary]);
 
   const itemsForMeal = (recipe: Recipe | null, substitution?: SubstitutionOption): DailyMealItemLog[] => {
     const ingredients = substitution?.items ?? recipe?.ingredients ?? [];
@@ -541,6 +559,42 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               ))}
             </div>
           </div>
+          <section className="rounded-2xl border border-border bg-card/70 p-4" aria-label="Distribuição real de nutrientes por refeição">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="text-sm font-semibold text-foreground">Consumo real por refeição</h3>
+              <span className="text-[10px] text-muted-foreground">Inclui lançamentos rápidos e refeições consumidas ou parciais do checklist</span>
+            </div>
+            {nutritionDistributionLoading ? (
+              <p className="text-xs text-muted-foreground">Consultando registros de hoje…</p>
+            ) : nutritionDistributionError ? (
+              <p role="alert" className="text-xs text-red-300">{nutritionDistributionError}</p>
+            ) : nutritionDistribution.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Ainda não há consumo registrado por refeição hoje.</p>
+            ) : (
+              <div className="space-y-2">
+                {nutritionDistribution.map(meal => {
+                  const parsedTime = meal.loggedAt ? new Date(meal.loggedAt) : null;
+                  const timeLabel = parsedTime && Number.isFinite(parsedTime.getTime())
+                    ? parsedTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    : 'horário não registrado';
+                  return (
+                    <article key={`${meal.source}:${meal.id}`} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-border/60 bg-background/35 px-3 py-2.5">
+                      <div className="min-w-[150px]">
+                        <p className="text-xs font-medium text-foreground">{meal.mealName}</p>
+                        <p className="text-[10px] text-muted-foreground">{meal.source === 'quick_log' ? 'Registro rápido' : 'Checklist'} · {timeLabel}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted-foreground" aria-label={`Macros consumidos em ${meal.mealName}`}>
+                        <span>{Math.round(meal.calories)} kcal</span>
+                        <span>{meal.proteinG.toFixed(1)} g proteína</span>
+                        <span>{meal.carbsG.toFixed(1)} g carboidratos</span>
+                        <span>{meal.fatsG.toFixed(1)} g gorduras</span>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
           {mealSaveError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">{mealSaveError}</p>}
 
           {/* Blocos calculados na hora a partir do perfil e das metas atuais */}

@@ -426,6 +426,15 @@ export function registerIpcHandlers(
     }
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_NUTRITION_DISTRIBUTION, async (event, rawDate) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getNutritionDistribution(DailyMealDateSchema.parse(rawDate)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível consultar a distribuição alimentar.' };
+    }
+  });
+
   ipcMain.handle(IPC_CHANNELS.COPY_DAILY_MEALS, async (event, rawInput) => {
     try {
       getCallingWindow(event);

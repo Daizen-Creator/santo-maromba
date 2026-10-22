@@ -68,6 +68,24 @@ describe('Checklist alimentar na versão web', () => {
     expect((await api.getDailyMeals(input.date))[0].items[0]).toMatchObject({ plannedAmountG: 150, consumedAmountG: 40 });
   });
 
+  it('mostra a distribuição da PWA com lançamentos reais e checklist, sem planos pendentes', async () => {
+    const date = '2026-10-25';
+    await api.addLoggedMeal({ date, mealName: 'Lanche', calories: 220, proteinG: 12, carbsG: 24, fatsG: 7 });
+    const meal = {
+      date, slotId: 'lunch', mealName: 'Almoço', scheduledTime: '13:00', status: 'partial' as const,
+      items: [{ itemId: 'rice-0', foodId: 'rice', foodName: 'Arroz', plannedAmountG: 100, consumedAmountG: 50,
+        calories: 260, proteinG: 5, carbsG: 56, fatsG: 0.6 }]
+    };
+    await api.saveDailyMeal(meal);
+    await api.saveDailyMeal({ ...meal, slotId: 'dinner', mealName: 'Plano futuro', scheduledTime: '20:00', status: 'pending' });
+    const distribution = await api.getNutritionDistribution(date);
+    expect(distribution).toHaveLength(2);
+    expect(distribution).toEqual(expect.arrayContaining([
+      expect.objectContaining({ mealName: 'Lanche', source: 'quick_log', calories: 220, loggedAt: expect.any(String) }),
+      expect.objectContaining({ mealName: 'Almoço', source: 'checklist', calories: 130 })
+    ]));
+  });
+
   it('salva modelos no armazenamento local e aplica apenas em horários vazios', async () => {
     const sourceDate = '2026-10-20';
     await api.saveDailyMeal({

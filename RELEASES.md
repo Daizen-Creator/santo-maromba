@@ -92,6 +92,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Exibe o saldo diário de calorias, proteínas, carboidratos e gorduras em relação às metas.
 - Distingue quantidade restante, meta atingida, excesso e ausência de consumo registrado.
 
+## v1.1.9
+
+- Mostra calorias e macros realmente consumidos em cada refeição do dia.
+- Combina lançamentos rápidos e refeições consumidas ou parciais do checklist, no desktop e na PWA.
+- Exclui refeições apenas planejadas e exibe a origem e o horário registrado quando disponível.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

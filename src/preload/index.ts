@@ -27,6 +27,7 @@ import {
   DailyMealCopyResult,
   NutritionAnalytics,
   NutritionAnalyticsQuery,
+  NutritionMealDistributionEntry,
   MealTemplate,
   SaveMealTemplateInput,
   ApplyMealTemplateInput,
@@ -96,6 +97,7 @@ export interface FitTrackAPI {
   getDailyMeals: (date: string) => Promise<{ success: boolean; data?: DailyMealEntry[]; error?: string }>;
   getMealHistory: (query: DailyMealHistoryQuery) => Promise<{ success: boolean; data?: DailyMealEntry[]; error?: string }>;
   getNutritionAnalytics: (query: NutritionAnalyticsQuery) => Promise<{ success: boolean; data?: NutritionAnalytics; error?: string }>;
+  getNutritionDistribution: (date: string) => Promise<{ success: boolean; data?: NutritionMealDistributionEntry[]; error?: string }>;
   copyDailyMeals: (input: DailyMealCopyInput) => Promise<{ success: boolean; data?: DailyMealCopyResult; error?: string }>;
   getMealTemplates: () => Promise<{ success: boolean; data?: MealTemplate[]; error?: string }>;
   saveMealTemplate: (input: SaveMealTemplateInput) => Promise<{ success: boolean; data?: MealTemplate; error?: string }>;
@@ -167,6 +169,7 @@ const api: FitTrackAPI = {
   getDailyMeals: (date) => ipcRenderer.invoke(IPC_CHANNELS.GET_DAILY_MEALS, date),
   getMealHistory: (query) => ipcRenderer.invoke(IPC_CHANNELS.GET_MEAL_HISTORY, query),
   getNutritionAnalytics: (query) => ipcRenderer.invoke(IPC_CHANNELS.GET_NUTRITION_ANALYTICS, query),
+  getNutritionDistribution: (date) => ipcRenderer.invoke(IPC_CHANNELS.GET_NUTRITION_DISTRIBUTION, date),
   copyDailyMeals: (input) => ipcRenderer.invoke(IPC_CHANNELS.COPY_DAILY_MEALS, input),
   getMealTemplates: () => ipcRenderer.invoke(IPC_CHANNELS.GET_MEAL_TEMPLATES),
   saveMealTemplate: (input) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_MEAL_TEMPLATE, input),

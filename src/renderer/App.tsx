@@ -490,6 +490,7 @@ export const App: React.FC = () => {
               foods={foods}
               recipes={recipes}
               dailyMealEntries={dailyMealEntries}
+              onGetNutritionDistribution={api.getNutritionDistribution}
               pantry={pantry}
               onGetSubstitutions={api.getSubstitutions}
               onUpdatePantry={handleUpdatePantry}

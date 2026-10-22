@@ -195,6 +195,19 @@ export interface NutritionAnalytics {
   days: NutritionDayTotals[];
 }
 
+export type NutritionDistributionSource = 'quick_log' | 'checklist';
+
+export interface NutritionMealDistributionEntry {
+  id: string;
+  mealName: string;
+  source: NutritionDistributionSource;
+  loggedAt?: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatsG: number;
+}
+
 export interface DailyMealCopyInput {
   sourceDate: string;
   targetDate: string;

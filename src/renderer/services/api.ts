@@ -26,6 +26,7 @@ import {
   DailyMealCopyResult,
   NutritionAnalytics,
   NutritionAnalyticsQuery,
+  NutritionMealDistributionEntry,
   MealTemplate,
   SaveMealTemplateInput,
   ApplyMealTemplateInput,
@@ -50,10 +51,11 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
+import { calculateNutritionDistribution } from '../../domain/nutrition-distribution';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
@@ -621,7 +623,8 @@ export const api = {
       return res.data!;
     }
     const logs: any[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_LOGS) || '[]');
-    logs.push(input);
+    const id = `quick-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${logs.length}`}`;
+    logs.push({ ...input, id, createdAt: new Date().toISOString() });
     localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_LOGS, JSON.stringify(logs));
     return api.getDashboardSummary();
   },
@@ -680,6 +683,32 @@ export const api = {
       fatsG: log.fatsG as number
     }));
     return calculateNutritionAnalytics(query, entries, loggedMeals);
+  },
+
+  getNutritionDistribution: async (rawDate: string): Promise<NutritionMealDistributionEntry[]> => {
+    const date = DailyMealDateSchema.parse(rawDate);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getNutritionDistribution(date);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao consultar refeições consumidas.');
+      return res.data;
+    }
+    const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
+    const storedLogs: Array<Record<string, unknown>> = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_LOGS) || '[]');
+    const loggedMeals = storedLogs.flatMap((log, index) => {
+      if (log.kind === 'water' || log.date !== date || typeof log.mealName !== 'string'
+        || ![log.calories, log.proteinG, log.carbsG, log.fatsG].every(value => typeof value === 'number' && Number.isFinite(value))) return [];
+      return [{
+        id: typeof log.id === 'string' ? log.id : `quick-${date}-${index}`,
+        date,
+        mealName: log.mealName,
+        calories: log.calories as number,
+        proteinG: log.proteinG as number,
+        carbsG: log.carbsG as number,
+        fatsG: log.fatsG as number,
+        loggedAt: typeof log.createdAt === 'string' ? log.createdAt : undefined
+      }];
+    });
+    return calculateNutritionDistribution(date, entries, loggedMeals);
   },
 
   saveDailyMeal: async (input: DailyMealEntryInput): Promise<DailyMealEntry> => {

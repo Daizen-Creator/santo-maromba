@@ -174,4 +174,27 @@ describe('Registros reais do painel diário', () => {
       items: [{ plannedAmountG: 150, consumedAmountG: 40, calories: 450 }]
     });
   });
+
+  it('consulta a distribuição real do dia após reabrir o SQLite e exclui refeições pendentes', async () => {
+    const date = localDate();
+    service.logMeal({ date, mealName: 'Lanche rápido', calories: 220, proteinG: 12, carbsG: 24, fatsG: 7 });
+    const item = { itemId: 'rice-0', foodId: 'rice', foodName: 'Arroz', plannedAmountG: 100, consumedAmountG: 50,
+      calories: 260, proteinG: 5, carbsG: 56, fatsG: 0.6 };
+    service.saveDailyMeal({ date, slotId: 'lunch', mealName: 'Almoço', scheduledTime: '13:00', status: 'partial', items: [item] });
+    service.saveDailyMeal({ date, slotId: 'dinner', mealName: 'Jantar planejado', scheduledTime: '20:00', status: 'pending', items: [item] });
+    expect(service.getNutritionDistribution(date)).toHaveLength(2);
+
+    db!.close();
+    db = null;
+    const reopened = await createDatabaseDriver(dbPath);
+    db = reopened;
+    await runMigrations(reopened);
+    service = new FitTrackService(reopened);
+    const distribution = service.getNutritionDistribution(date);
+    expect(distribution).toHaveLength(2);
+    expect(distribution).toEqual(expect.arrayContaining([
+      expect.objectContaining({ mealName: 'Lanche rápido', source: 'quick_log', calories: 220 }),
+      expect.objectContaining({ mealName: 'Almoço', source: 'checklist', calories: 130 })
+    ]));
+  });
 });

@@ -49,6 +49,7 @@ import {
   DailyMealCopyResult,
   NutritionAnalytics,
   NutritionAnalyticsQuery,
+  NutritionMealDistributionEntry,
   RecentlyUsedFood,
   MealTemplate,
   SaveMealTemplateInput,
@@ -396,6 +397,10 @@ export class FitTrackService {
 
   getNutritionAnalytics(query: NutritionAnalyticsQuery): NutritionAnalytics {
     return this.dailyLogRepo.getNutritionAnalytics(query);
+  }
+
+  getNutritionDistribution(date: string): NutritionMealDistributionEntry[] {
+    return this.dailyLogRepo.getNutritionDistribution(date);
   }
 
   copyDailyMeals(input: DailyMealCopyInput): DailyMealCopyResult {

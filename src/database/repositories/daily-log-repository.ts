@@ -1,9 +1,10 @@
 import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, NutritionAnalytics, NutritionAnalyticsQuery, RecentlyUsedFood, SaveMealTemplateInput } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, NutritionAnalytics, NutritionAnalyticsQuery, NutritionMealDistributionEntry, RecentlyUsedFood, SaveMealTemplateInput } from '../../shared/types';
 import { getRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
+import { calculateNutritionDistribution } from '../../domain/nutrition-distribution';
 
 export class DailyLogRepository {
   constructor(private db: IDatabase) {}
@@ -135,6 +136,19 @@ export class DailyLogRepository {
     } satisfies LoggedMealInput));
     const mealEntries = this.getMealHistory(query);
     return calculateNutritionAnalytics(query, mealEntries, loggedMeals);
+  }
+
+  getNutritionDistribution(date: string): NutritionMealDistributionEntry[] {
+    const loggedMeals = this.db.query<any>(
+      `SELECT id, date, meal_name, calories, protein_g, carbs_g, fats_g, created_at
+       FROM logged_meals WHERE date = ? ORDER BY created_at`,
+      [date]
+    ).map(row => ({
+      id: String(row.id), date: String(row.date), mealName: String(row.meal_name),
+      calories: Number(row.calories), proteinG: Number(row.protein_g), carbsG: Number(row.carbs_g),
+      fatsG: Number(row.fats_g), loggedAt: String(row.created_at)
+    }));
+    return calculateNutritionDistribution(date, this.getMeals(date), loggedMeals);
   }
 
   copyMeals(input: DailyMealCopyInput): DailyMealCopyResult {
