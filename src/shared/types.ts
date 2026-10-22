@@ -45,6 +45,11 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+export interface MeasurementUnitPreferences {
+  foodMassUnit: 'g' | 'kg';
+  waterVolumeUnit: 'ml' | 'l';
+}
+
 export type ProfileGoalChangeField = 'fitnessGoal' | 'targetWeightKg';
 
 export interface ProfileGoalHistoryRecord {

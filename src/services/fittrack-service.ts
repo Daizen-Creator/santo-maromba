@@ -70,7 +70,8 @@ import {
   HydrationLogInput,
   VisualCustomization,
   CustomizationMediaInput,
-  CustomizationMediaRecord
+  CustomizationMediaRecord,
+  MeasurementUnitPreferences
 } from '../shared/types';
 import { calculatePhysiqueProjection } from '../domain/physique-projection';
 import { PhotoStorage, StoredPhotoImage } from './photo-storage';
@@ -523,6 +524,14 @@ export class FitTrackService {
 
   saveVisualCustomization(config: VisualCustomization): VisualCustomization {
     return this.customizationRepo.saveConfig(config);
+  }
+
+  getMeasurementUnits(): MeasurementUnitPreferences {
+    return this.customizationRepo.getMeasurementUnits();
+  }
+
+  saveMeasurementUnits(preferences: MeasurementUnitPreferences): MeasurementUnitPreferences {
+    return this.customizationRepo.saveMeasurementUnits(preferences);
   }
 
   listCustomizationMedia(): CustomizationMediaRecord[] {

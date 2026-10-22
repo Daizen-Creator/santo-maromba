@@ -19,6 +19,7 @@ import {
   SaveCustomMeasurementInputSchema,
   SaveBodyMeasurementInputSchema,
   VisualCustomizationSchema,
+  MeasurementUnitPreferencesSchema,
   CustomizationMediaInputSchema,
   CustomizationMediaIdSchema,
   DailyMealDateSchema,
@@ -589,6 +590,24 @@ export function registerIpcHandlers(
       return { success: true, data: service.saveVisualCustomization(VisualCustomizationSchema.parse(rawInput)) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível salvar a personalização.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_MEASUREMENT_UNITS, async event => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getMeasurementUnits() };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível carregar as unidades.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_MEASUREMENT_UNITS, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.saveMeasurementUnits(MeasurementUnitPreferencesSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar as unidades.' };
     }
   });
 

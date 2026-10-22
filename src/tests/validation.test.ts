@@ -18,7 +18,8 @@ import {
   SaveCustomMeasurementDefinitionInputSchema,
   SaveCustomMeasurementInputSchema,
   ProfileGoalHistoryRecordSchema,
-  SaveBodyMeasurementInputSchema
+  SaveBodyMeasurementInputSchema,
+  MeasurementUnitPreferencesSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
@@ -176,6 +177,13 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(() => SaveBodyMeasurementInputSchema.parse({ date: '2026-02-30', heightCm: 175 })).toThrow();
     expect(() => SaveBodyMeasurementInputSchema.parse({ date: '2026-10-22', heightCm: 99 })).toThrow();
     expect(() => SaveBodyMeasurementInputSchema.parse({ date: '2026-10-22' })).toThrow();
+  });
+
+  it('aceita apenas unidades compatíveis de massa alimentar e volume de água', () => {
+    expect(MeasurementUnitPreferencesSchema.parse({ foodMassUnit: 'kg', waterVolumeUnit: 'l' }))
+      .toEqual({ foodMassUnit: 'kg', waterVolumeUnit: 'l' });
+    expect(() => MeasurementUnitPreferencesSchema.parse({ foodMassUnit: 'lb', waterVolumeUnit: 'ml' })).toThrow();
+    expect(() => MeasurementUnitPreferencesSchema.parse({ foodMassUnit: 'g', waterVolumeUnit: 'gal' })).toThrow();
   });
 
   it('deve validar registros de peso com formato correto', () => {

@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.20. Estado após validação do incremento: **77 validadas, 49 parciais, 51 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.21. Estado após validação do incremento: **78 validadas, 49 parciais, 50 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -30,7 +30,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | ID | Comportamento verificável (critério de aceitação) | Arquivos | Dependência | Estado / teste |
 |---:|---|---|---|---|
 | 1 | Editar perfil e reabrir com os mesmos dados. | PERF | — | V · validação/perfil parcial |
-| 2 | Alternar kg/lb e ver valores convertidos sem alterar o valor original. | PERF | — | A · sem teste |
+| 2 | Configurar g/kg para porções e mL/L para hidratação; ver e editar valores convertidos sem alterar os totais e os registros em unidades-base. | NUTR; DIAR; DASH; IPC; PWA | SQLite desktop; localStorage offline | V · `measurement-units.test.ts` verifica conversões e formatação; `measurement-unit-preferences-persistence.test.ts` verifica padrão, salvamento/reabertura SQLite e PWA; `validation.test.ts` rejeita unidades incompatíveis; `NutritionView`, `DailyIntakePanel`, `DashboardView` e `CalculatorView` aplicam as preferências aos valores visíveis e de entrada |
 | 3 | Registrar pesagens com data e consultar histórico. | PERF | — | V · `weight-analytics.test.ts` |
 | 4 | Salvar objetivo físico e manter após reiniciar. | PERF | — | V · persistência do perfil |
 | 5 | Definir peso-alvo e compará-lo ao peso atual. | PERF | — | V · cálculo/perfil |

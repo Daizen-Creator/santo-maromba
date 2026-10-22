@@ -75,6 +75,8 @@ export const IPC_CHANNELS = {
   // System
   GET_VISUAL_CUSTOMIZATION: 'visual:get-customization',
   SAVE_VISUAL_CUSTOMIZATION: 'visual:save-customization',
+  GET_MEASUREMENT_UNITS: 'settings:get-measurement-units',
+  SAVE_MEASUREMENT_UNITS: 'settings:save-measurement-units',
   GET_CUSTOMIZATION_MEDIA: 'visual:get-media',
   ADD_CUSTOMIZATION_MEDIA: 'visual:add-media',
   DELETE_CUSTOMIZATION_MEDIA: 'visual:delete-media',

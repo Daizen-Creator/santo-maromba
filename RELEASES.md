@@ -162,7 +162,13 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Registra altura corporal por data no calendário e histórico de medidas, com gráfico da série real e sem alterar a altura atual do Perfil & Metas.
 - A migração 18 adiciona o campo ao SQLite sem apagar medidas existentes; a PWA mantém os valores no armazenamento local e mescla medidas registradas na mesma data.
-- 140 testes, build React/Electron e empacotamento Windows aprovados; executável abriu em perfil isolado e criou SQLite com migração 18; publicação GitHub pendente.
+- 140 testes, build React/Electron e empacotamento Windows aprovados; executável abriu em perfil isolado e criou SQLite com migração 18; GitHub Actions 39744669419 publicou instalador, portátil, manifesto e blockmap.
+
+## v1.1.21
+
+- Permite escolher g ou kg para porções e estoque de alimentos, e mL ou L para registro e metas de hidratação.
+- Converte entradas para gramas/mililitros antes de calcular e persistir; preferências ficam em `app_settings` no desktop e no armazenamento local da PWA.
+- 145 testes, build React/Electron e instalador/portátil aprovados; executável abriu em perfil isolado e criou SQLite com `app_settings` e migração 18; publicação GitHub pendente.
 
 ## Publicar uma versão
 

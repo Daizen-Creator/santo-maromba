@@ -22,6 +22,8 @@ import {
   calculateNutritionPlan,
   calculateTDEE
 } from '../../domain/nutrition-calculator';
+import { millilitersToDisplayVolume } from '../../domain/measurement-units';
+import { useMeasurementUnits } from '../hooks/use-measurement-units';
 
 interface CalculatorViewProps {
   profile: UserProfile | null;
@@ -36,6 +38,7 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
   onNavigateToProfile,
   onOpenWeightModal
 }) => {
+  const { preferences: unitPreferences } = useMeasurementUnits();
   const [weightKg, setWeightKg] = useState<number | null>(currentWeightKg);
   const [heightCm, setHeightCm] = useState<number>(profile?.heightCm ?? 0);
   const [birthDate, setBirthDate] = useState<string>(profile?.birthDate ?? '');
@@ -365,9 +368,9 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
               </div>
               <div className="text-right">
                 <span className="font-display text-2xl font-bold text-blue-400">
-                  {(targets.waterMl / 1000).toFixed(1)} L
+                  {millilitersToDisplayVolume(targets.waterMl, unitPreferences.waterVolumeUnit).toLocaleString('pt-BR', { maximumFractionDigits: unitPreferences.waterVolumeUnit === 'l' ? 2 : 0 })} {unitPreferences.waterVolumeUnit === 'l' ? 'L' : 'mL'}
                 </span>
-                <span className="text-[10px] text-muted-foreground block">{targets.waterMl} ml</span>
+                <span className="text-[10px] text-muted-foreground block">{unitPreferences.waterVolumeUnit === 'l' ? `${targets.waterMl.toLocaleString('pt-BR')} mL` : `${(targets.waterMl / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} L`}</span>
               </div>
             </div>
 

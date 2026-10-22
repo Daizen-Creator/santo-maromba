@@ -26,6 +26,8 @@ import { StatCard } from '../components/StatCard';
 import { DailyIntakePanel } from '../components/DailyIntakePanel';
 import { DashboardSummary, Exercise, LoggedMealInput, NutritionAnalytics, NutritionAnalyticsQuery, WeightAnalyticsPoint, WorkoutSession } from '../../shared/types';
 import { ScheduledWorkout } from '../../domain/workout-engine';
+import { millilitersToDisplayVolume } from '../../domain/measurement-units';
+import { useMeasurementUnits } from '../hooks/use-measurement-units';
 
 interface DashboardViewProps {
   summary: DashboardSummary | null;
@@ -58,6 +60,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToShapeCompare,
   onGetNutritionAnalytics
 }) => {
+  const { preferences: unitPreferences } = useMeasurementUnits();
   const [chartRange, setChartRange] = useState<'30d' | '90d' | 'all'>('all');
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [nutritionAnalytics, setNutritionAnalytics] = useState<NutritionAnalytics | null>(null);
@@ -329,9 +332,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
               <div className="mt-2 flex items-baseline gap-1">
                 <span className="font-display text-2xl font-bold text-blue-400">
-                  {(targets.waterMl / 1000).toFixed(1)}
+                  {millilitersToDisplayVolume(targets.waterMl, unitPreferences.waterVolumeUnit).toLocaleString('pt-BR', { maximumFractionDigits: unitPreferences.waterVolumeUnit === 'l' ? 2 : 0 })}
                 </span>
-                <span className="text-xs text-muted-foreground">L/dia</span>
+                <span className="text-xs text-muted-foreground">{unitPreferences.waterVolumeUnit === 'l' ? 'L/dia' : 'mL/dia'}</span>
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 ~38 ml/kg • {(targets.waterMl / 250).toFixed(0)} copos de 250 ml

@@ -49,6 +49,7 @@ import {
   CustomizationMediaInput,
   CustomizationMediaRecord,
   VisualCustomization,
+  MeasurementUnitPreferences,
   CustomFoodInput
 } from '../shared/types';
 import { DailyWorkoutPlan } from '../domain/workout-engine';
@@ -130,6 +131,8 @@ export interface FitTrackAPI {
   // Personalização visual: configurações e arquivos locais validados no processo principal
   getVisualCustomization: () => Promise<{ success: boolean; data?: VisualCustomization; error?: string }>;
   saveVisualCustomization: (config: VisualCustomization) => Promise<{ success: boolean; data?: VisualCustomization; error?: string }>;
+  getMeasurementUnits: () => Promise<{ success: boolean; data?: MeasurementUnitPreferences; error?: string }>;
+  saveMeasurementUnits: (preferences: MeasurementUnitPreferences) => Promise<{ success: boolean; data?: MeasurementUnitPreferences; error?: string }>;
   getCustomizationMedia: () => Promise<{ success: boolean; data?: CustomizationMediaRecord[]; error?: string }>;
   addCustomizationMedia: (input: CustomizationMediaInput) => Promise<{ success: boolean; data?: CustomizationMediaRecord; error?: string }>;
   deleteCustomizationMedia: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -212,6 +215,8 @@ const api: FitTrackAPI = {
   },
   getVisualCustomization: () => ipcRenderer.invoke(IPC_CHANNELS.GET_VISUAL_CUSTOMIZATION),
   saveVisualCustomization: (config) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_VISUAL_CUSTOMIZATION, config),
+  getMeasurementUnits: () => ipcRenderer.invoke(IPC_CHANNELS.GET_MEASUREMENT_UNITS),
+  saveMeasurementUnits: (preferences) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_MEASUREMENT_UNITS, preferences),
   getCustomizationMedia: () => ipcRenderer.invoke(IPC_CHANNELS.GET_CUSTOMIZATION_MEDIA),
   addCustomizationMedia: (input) => ipcRenderer.invoke(IPC_CHANNELS.ADD_CUSTOMIZATION_MEDIA, input),
   deleteCustomizationMedia: (id) => ipcRenderer.invoke(IPC_CHANNELS.DELETE_CUSTOMIZATION_MEDIA, id),

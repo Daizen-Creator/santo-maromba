@@ -23,6 +23,8 @@ import { calculateConsumedFromLeftovers, calculateLeftoverAmount } from '../../d
 import { compareMealNutrition } from '../../domain/meal-nutrition-comparison';
 import { getMaxPlannedAmountG, scalePlannedMealItem } from '../../domain/planned-meal-portion';
 import { NutritionBalanceMetric, calculateNutritionBalance } from '../../domain/nutrition-balance';
+import { displayMassToGrams, formatFoodMass, gramsToDisplayMass } from '../../domain/measurement-units';
+import { useMeasurementUnits } from '../hooks/use-measurement-units';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -93,6 +95,11 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onSetFoodFavorite
 }) => {
   const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat' | 'foods' | 'history'>('meals');
+  const { preferences: unitPreferences, loading: unitsLoading, saving: unitsSaving, error: unitsError, updatePreferences } = useMeasurementUnits();
+  const foodMassInputStep = unitPreferences.foodMassUnit === 'kg' ? 0.005 : 5;
+  const displayFoodMass = (grams: number) => gramsToDisplayMass(grams, unitPreferences.foodMassUnit);
+  const formatMass = (grams: number) => formatFoodMass(grams, unitPreferences.foodMassUnit);
+  const saveUnitPreference = (change: Partial<typeof unitPreferences>) => { void updatePreferences(change).catch(() => undefined); };
 
   // Filtros do Catálogo de 200 Receitas
   const [selectedTurn, setSelectedTurn] = useState<MealTurn | 'all'>('all');
@@ -503,6 +510,31 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
         </div>
       </div>
 
+      <section aria-label="Preferências de unidades" className="flex flex-col gap-3 rounded-2xl border border-border bg-card/70 p-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h3 className="text-xs font-bold text-foreground">Unidades de porções e hidratação</h3>
+          <p className="mt-1 max-w-xl text-[10px] leading-relaxed text-muted-foreground">O app converte para gramas e mililitros antes de calcular ou salvar. Seus totais nutricionais permanecem iguais ao trocar a unidade.</p>
+          {unitsError && <p role="alert" className="mt-1 text-[10px] text-destructive">{unitsError}</p>}
+          {!unitsError && <p role="status" className="mt-1 text-[10px] text-muted-foreground">{unitsLoading ? 'Carregando preferências…' : unitsSaving ? 'Salvando unidades…' : 'Preferências salvas neste dispositivo.'}</p>}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">Porções de alimentos
+            <select aria-label="Unidade das porções de alimentos" value={unitPreferences.foodMassUnit} disabled={unitsLoading || unitsSaving}
+              onChange={event => saveUnitPreference({ foodMassUnit: event.target.value as 'g' | 'kg' })}
+              className="block w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground">
+              <option value="g">Gramas (g)</option><option value="kg">Quilogramas (kg)</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">Água
+            <select aria-label="Unidade de volume de água" value={unitPreferences.waterVolumeUnit} disabled={unitsLoading || unitsSaving}
+              onChange={event => saveUnitPreference({ waterVolumeUnit: event.target.value as 'ml' | 'l' })}
+              className="block w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground">
+              <option value="ml">Mililitros (mL)</option><option value="l">Litros (L)</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
       {/* 1. ABA PLANO DE REFEIÇÕES DO DIA */}
       {activeTab === 'meals' && (
         <div className="space-y-6">
@@ -673,7 +705,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                           })} className="text-[11px] text-muted-foreground hover:text-foreground">Desfazer</button>
                         </div>
                         <p className="text-xs text-muted-foreground">{substitution.description}</p>
-                        <p className="text-[11px] text-muted-foreground">{substitution.items.map(item => `${item.amountG}g ${item.foodName}`).join(' · ')}</p>
+                        <p className="text-[11px] text-muted-foreground">{substitution.items.map(item => `${formatMass(item.amountG)} ${item.foodName}`).join(' · ')}</p>
                         <p className="text-[11px] font-medium text-primary">{substitution.totalCalories} kcal · {substitution.totalProteinG}g proteína</p>
                       </div>
                     ) : recipe ? (
@@ -701,7 +733,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                           {recipe.ingredients.map(ingredient => {
                             const portion = getIngredientPerServing(ingredient, recipe.servings ?? 1);
                             return <button key={ingredient.foodId} type="button" onClick={() => handleTriggerSubstitution(portion.foodId, portion.foodName, portion.amountG, slot.id)} className="rounded-full border border-border/80 bg-secondary/50 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
-                              {portion.amountG}g {portion.foodName} · trocar
+                              {formatMass(portion.amountG)} {portion.foodName} · trocar
                             </button>
                           })}
                         </div>
@@ -775,21 +807,21 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                               onChange={event => void toggleMealIngredient(slot, recipe, substitution, item, event.target.checked, checklistItems)}
                               className="h-4 w-4 accent-primary"
                             />
-                            <span className="min-w-0 flex-1 text-xs text-foreground">{item.foodName} <span className="text-muted-foreground">({item.plannedAmountG}g no plano atual)</span></span>
+                            <span className="min-w-0 flex-1 text-xs text-foreground">{item.foodName} <span className="text-muted-foreground">({formatMass(item.plannedAmountG)} no plano atual)</span></span>
                             <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               Plano
                               <input
                                 type="number"
-                                min="1"
-                              max={maxPlannedAmountG}
+                                min={displayFoodMass(1)}
+                              max={displayFoodMass(maxPlannedAmountG)}
                               disabled={maxPlannedAmountG === 0}
-                                step="5"
-                                value={item.plannedAmountG}
-                                aria-label={`Quantidade planejada de ${item.foodName} em gramas`}
+                                step={foodMassInputStep}
+                                value={displayFoodMass(item.plannedAmountG)}
+                                aria-label={`Quantidade planejada de ${item.foodName} em ${unitPreferences.foodMassUnit}`}
                                 onChange={event => {
-                                  const rawAmount = Number(event.target.value);
-                                  const nextAmount = Number.isFinite(rawAmount)
-                                    ? Math.max(1, Math.min(maxPlannedAmountG, rawAmount))
+                                  const rawAmountG = displayMassToGrams(Number(event.target.value), unitPreferences.foodMassUnit);
+                                  const nextAmount = Number.isFinite(rawAmountG)
+                                    ? Math.max(1, Math.min(maxPlannedAmountG, rawAmountG))
                                     : item.plannedAmountG;
                                   const originalAmount = sourceItem.plannedAmountG;
                                   setDraftPlannedAmounts(current => {
@@ -801,35 +833,36 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                                   });
                                 }}
                                 className="w-16 rounded-md border border-border bg-card px-1.5 py-1 text-right text-xs text-foreground"
-                              />g
+                              />{unitPreferences.foodMassUnit}
                             </label>
                             <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               Consumidos
                               <input
                                 type="number"
                                 min="0"
-                                max="5000"
-                                step="5"
-                                value={draftAmounts[draftKey] ?? amount}
-                                onChange={event => setDraftAmounts(current => ({ ...current, [draftKey]: Math.max(0, Number(event.target.value) || 0) }))}
+                                max={displayFoodMass(5000)}
+                                step={foodMassInputStep}
+                                value={displayFoodMass(draftAmounts[draftKey] ?? amount)}
+                                aria-label={`Quantidade consumida de ${item.foodName} em ${unitPreferences.foodMassUnit}`}
+                                onChange={event => setDraftAmounts(current => ({ ...current, [draftKey]: Math.max(0, displayMassToGrams(Number(event.target.value) || 0, unitPreferences.foodMassUnit)) }))}
                                 className="w-16 rounded-md border border-border bg-card px-1.5 py-1 text-right text-xs text-foreground"
-                              />g
+                              />{unitPreferences.foodMassUnit}
                             </label>
                             <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               Sobras
                               <input
                                 type="number"
                                 min="0"
-                                max={item.plannedAmountG}
-                                step="5"
-                                value={calculateLeftoverAmount(item.plannedAmountG, amount)}
-                                aria-label={`Sobras de ${item.foodName} em gramas`}
+                                max={displayFoodMass(item.plannedAmountG)}
+                                step={foodMassInputStep}
+                                value={displayFoodMass(calculateLeftoverAmount(item.plannedAmountG, amount))}
+                                aria-label={`Sobras de ${item.foodName} em ${unitPreferences.foodMassUnit}`}
                                 onChange={event => {
-                                  const leftoverG = Math.min(item.plannedAmountG, Math.max(0, Number(event.target.value) || 0));
+                                  const leftoverG = Math.min(item.plannedAmountG, Math.max(0, displayMassToGrams(Number(event.target.value) || 0, unitPreferences.foodMassUnit)));
                                   setDraftAmounts(current => ({ ...current, [draftKey]: calculateConsumedFromLeftovers(item.plannedAmountG, leftoverG) }));
                                 }}
                                 className="w-16 rounded-md border border-border bg-card px-1.5 py-1 text-right text-xs text-foreground"
-                              />g
+                              />{unitPreferences.foodMassUnit}
                             </label>
                           </div>
                         );
@@ -1071,7 +1104,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <ul className="list-disc pl-4 space-y-0.5">
                       {recipe.ingredients.map((ing, iIdx) => (
                         <li key={iIdx}>
-                          {ing.amountG}g de {ing.foodName}
+                          {formatMass(ing.amountG)} de {ing.foodName}
                           <span className="ml-1 text-[10px] text-amber-200/70">
                             ({nutritionQualityLabel(ing.dataQuality)} · {ing.dataSource || 'origem não registrada'}{ing.sourceReference ? ` · ${ing.sourceReference}` : ''} · confiança {ing.confidenceLevel === 'unknown' || !ing.confidenceLevel ? 'desconhecida' : ing.confidenceLevel})
                           </span>
@@ -1140,7 +1173,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <li key={item.foodId} className="rounded-xl border border-border/70 bg-secondary/25 px-3.5 py-3">
                       <strong className="block text-xs font-medium text-foreground">{item.foodName}</strong>
                       <span className="mt-1 block text-[10px] text-muted-foreground">
-                        {item.lastAmountG} g em {new Date(`${item.lastUsedDate}T12:00:00`).toLocaleDateString('pt-BR')} · {item.useCount} registro(s)
+                        {formatMass(item.lastAmountG)} em {new Date(`${item.lastUsedDate}T12:00:00`).toLocaleDateString('pt-BR')} · {item.useCount} registro(s)
                       </span>
                       <span className="mt-1 block text-[10px] text-muted-foreground">
                         {nutritionQualityLabel(item.dataQuality)}{item.dataSource ? ` · ${item.dataSource}` : ''}
@@ -1253,7 +1286,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     {entry.items.map(item => (
                       <li key={item.itemId} className="rounded-xl bg-secondary/30 px-3 py-2 text-xs">
                         <span className="font-medium text-foreground">{item.foodName}</span>
-                        <span className="ml-2 text-muted-foreground">{item.consumedAmountG} / {item.plannedAmountG} g · sobrou {calculateLeftoverAmount(item.plannedAmountG, item.consumedAmountG)} g</span>
+                        <span className="ml-2 text-muted-foreground">{formatMass(item.consumedAmountG)} / {formatMass(item.plannedAmountG)} · sobrou {formatMass(calculateLeftoverAmount(item.plannedAmountG, item.consumedAmountG))}</span>
                       </li>
                     ))}
                   </ul>
@@ -1332,7 +1365,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <ul className="text-[11px] text-muted-foreground space-y-1">
                       {recipe.ingredients.map((ing, iIdx) => (
                         <li key={iIdx} className="flex items-center justify-between">
-                          <span>{ing.amountG}g {ing.foodName}</span>
+                          <span>{formatMass(ing.amountG)} {ing.foodName}</span>
                           <span className={pantry.some(p => p.foodId === ing.foodId) ? 'text-emerald-400 font-bold' : 'text-amber-400'}>
                             {pantry.some(p => p.foodId === ing.foodId) ? '✓ Tem' : 'Falta'}
                           </span>
@@ -1368,7 +1401,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {foods.map(f => {
               const inPantry = pantry.find(p => p.foodId === f.id);
-              const amount = inPantry ? inPantry.amountAvailableG : 0;
+              const amountG = inPantry ? inPantry.amountAvailableG : 0;
 
               return (
                 <div key={f.id} className="rounded-2xl border border-border bg-secondary/30 p-4 space-y-2">
@@ -1397,12 +1430,13 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       <input
                         type="number"
                         min="0"
-                        step="50"
-                        value={amount}
-                        onChange={e => onUpdatePantry(f.id, Number(e.target.value))}
+                        step={unitPreferences.foodMassUnit === 'kg' ? 0.05 : 50}
+                        value={displayFoodMass(amountG)}
+                        aria-label={`Quantidade de ${f.name} na despensa em ${unitPreferences.foodMassUnit}`}
+                        onChange={e => onUpdatePantry(f.id, displayMassToGrams(Number(e.target.value) || 0, unitPreferences.foodMassUnit))}
                         className="w-20 rounded-lg border border-border bg-background p-1 text-xs font-bold text-foreground text-center focus:border-primary focus:outline-none"
                       />
-                      <span className="text-xs text-muted-foreground">g</span>
+                      <span className="text-xs text-muted-foreground">{unitPreferences.foodMassUnit}</span>
                     </div>
                   </div>
                 </div>
@@ -1420,7 +1454,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               <div>
                 <h3 className="font-display text-base font-bold text-foreground flex items-center gap-2">
                   <RefreshCw className="h-4 w-4 text-primary" />
-                  Substituição Inteligente: {missingFoodName} ({missingAmountG}g)
+                  Substituição Inteligente: {missingFoodName} ({formatMass(missingAmountG)})
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   Alternativas calculadas para manter o aporte de proteínas e calorias sem gastar além da conta.
@@ -1463,7 +1497,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     {opt.items.length > 0 && <div className="space-y-1 text-[10px] text-muted-foreground">
                       {opt.items.map((item, index) => (
                         <p key={`${opt.id}-${item.foodId}-${index}`}>
-                          {item.amountG} g de {item.foodName} · {item.dataQuality === 'user_reported'
+                          {formatMass(item.amountG)} de {item.foodName} · {item.dataQuality === 'user_reported'
                             ? 'valores informados pelo usuário'
                             : item.dataQuality === 'verified' ? 'fonte verificada' : 'fonte não verificada'}
                           {item.dataSource ? ` · ${item.dataSource}` : ''}

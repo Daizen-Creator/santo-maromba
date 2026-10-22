@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Droplets, Plus, Utensils } from 'lucide-react';
 import { DashboardSummary, LoggedMealInput } from '../../shared/types';
+import { displayVolumeToMilliliters, formatWaterVolume, millilitersToDisplayVolume } from '../../domain/measurement-units';
+import { useMeasurementUnits } from '../hooks/use-measurement-units';
 
 interface DailyIntakePanelProps {
   summary: DashboardSummary | null;
@@ -14,6 +16,7 @@ const localDate = (): string => {
 };
 
 export const DailyIntakePanel: React.FC<DailyIntakePanelProps> = ({ summary, onAddMeal, onAddWater }) => {
+  const { preferences: units, loading: unitsLoading } = useMeasurementUnits();
   const [mealName, setMealName] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
@@ -22,6 +25,10 @@ export const DailyIntakePanel: React.FC<DailyIntakePanelProps> = ({ summary, onA
   const [water, setWater] = useState('250');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!unitsLoading) setWater(String(millilitersToDisplayVolume(250, units.waterVolumeUnit)));
+  }, [unitsLoading, units.waterVolumeUnit]);
 
   const values = [
     { label: 'Calorias', value: summary?.caloriesLogged, goal: summary?.nutritionTargets?.targetCalories, suffix: 'kcal', color: 'bg-primary' },
@@ -53,13 +60,14 @@ export const DailyIntakePanel: React.FC<DailyIntakePanelProps> = ({ summary, onA
 
   const addWater = async () => {
     const amount = Number(water);
-    if (!Number.isInteger(amount) || amount < 1 || amount > 5000) {
-      setError('Informe água entre 1 e 5000 ml.');
+    const amountMl = Math.round(displayVolumeToMilliliters(amount, units.waterVolumeUnit));
+    if (!Number.isFinite(amount) || amountMl < 1 || amountMl > 5000) {
+      setError(`Informe água entre ${units.waterVolumeUnit === 'l' ? '0,001 e 5 L' : '1 e 5000 mL'}.`);
       return;
     }
     setSaving(true);
     setError(null);
-    try { await onAddWater(amount); }
+    try { await onAddWater(amountMl); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível registrar a água.'); }
     finally { setSaving(false); }
   };
@@ -113,13 +121,13 @@ export const DailyIntakePanel: React.FC<DailyIntakePanelProps> = ({ summary, onA
         <div className="rounded-2xl border border-border bg-secondary/25 p-4">
           <h3 className="mb-3 flex items-center gap-2 text-xs font-bold text-foreground"><Droplets className="h-4 w-4 text-sky-400" /> Hidratação registrada</h3>
           <div className="flex items-baseline gap-2">
-            <strong className="text-2xl text-foreground">{summary?.waterLoggedMl === null || summary?.waterLoggedMl === undefined ? '—' : (summary.waterLoggedMl / 1000).toFixed(2)}</strong>
-            <span className="text-xs text-muted-foreground">L / {summary?.waterGoalMl ? `${(summary.waterGoalMl / 1000).toFixed(1)} L de meta` : 'meta indisponível'}</span>
+            <strong className="text-2xl text-foreground">{summary?.waterLoggedMl === null || summary?.waterLoggedMl === undefined ? '—' : millilitersToDisplayVolume(summary.waterLoggedMl, units.waterVolumeUnit).toLocaleString('pt-BR', { maximumFractionDigits: units.waterVolumeUnit === 'l' ? 2 : 0 })}</strong>
+            <span className="text-xs text-muted-foreground">{units.waterVolumeUnit === 'l' ? 'L' : 'mL'} / {summary?.waterGoalMl ? `${formatWaterVolume(summary.waterGoalMl, units.waterVolumeUnit)} de meta` : 'meta indisponível'}</span>
           </div>
           <div className="mt-3 flex items-center gap-2">
-            <input type="number" min="1" max="5000" step="50" value={water} onChange={event => setWater(event.target.value)} className="w-24 rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground" aria-label="Quantidade de água em ml" />
-            <span className="text-xs text-muted-foreground">ml</span>
-            <button type="button" disabled={saving} onClick={() => void addWater()} className="ml-auto rounded-lg border border-sky-400/30 bg-sky-400/10 px-3 py-2 text-[11px] font-bold text-sky-300 disabled:opacity-50">Adicionar água</button>
+            <input type="number" min={units.waterVolumeUnit === 'l' ? '0.001' : '1'} max={units.waterVolumeUnit === 'l' ? '5' : '5000'} step={units.waterVolumeUnit === 'l' ? '0.05' : '50'} value={water} onChange={event => setWater(event.target.value)} className="w-24 rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground" aria-label={`Quantidade de água em ${units.waterVolumeUnit === 'l' ? 'litros' : 'mililitros'}`} />
+            <span className="text-xs text-muted-foreground">{units.waterVolumeUnit === 'l' ? 'L' : 'mL'}</span>
+            <button type="button" disabled={saving || unitsLoading} onClick={() => void addWater()} className="ml-auto rounded-lg border border-sky-400/30 bg-sky-400/10 px-3 py-2 text-[11px] font-bold text-sky-300 disabled:opacity-50">Adicionar água</button>
           </div>
         </div>
       </div>

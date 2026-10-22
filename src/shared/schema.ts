@@ -98,6 +98,11 @@ export const ProfileGoalHistoryRecordSchema = z.object({
   changedAt: z.string().datetime()
 }).strict();
 
+export const MeasurementUnitPreferencesSchema = z.object({
+  foodMassUnit: z.enum(['g', 'kg']),
+  waterVolumeUnit: z.enum(['ml', 'l'])
+}).strict();
+
 export const SaveBodyMeasurementInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida para a medição.'),
   heightCm: z.number().finite().min(100).max(250).optional(),

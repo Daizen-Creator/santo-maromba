@@ -44,6 +44,7 @@ import {
   ApplyMealTemplateResult,
   RecentlyUsedFood,
   HydrationLogInput,
+  MeasurementUnitPreferences,
   CustomizationMediaInput,
   CustomizationMediaRecord,
   VisualCustomization
@@ -62,7 +63,8 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema } from '../../shared/schema';
+import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
@@ -87,6 +89,7 @@ const LOCAL_STORAGE_KEY_FAVORITE_FOODS = 'fittrack_favorite_foods';
 const LOCAL_STORAGE_KEY_FAVORITE_RECIPES = 'fittrack_favorite_recipes';
 const LOCAL_STORAGE_KEY_RECIPE_SERVINGS = 'fittrack_recipe_servings';
 const LOCAL_STORAGE_KEY_VISUAL_CUSTOMIZATION = 'fittrack_visual_customization';
+const LOCAL_STORAGE_KEY_MEASUREMENT_UNITS = 'fittrack_measurement_units';
 
 const workoutEngine = new WorkoutEngine(INITIAL_EXERCISES);
 
@@ -1160,5 +1163,32 @@ export const api = {
     if (!api.isElectron()) return;
     const res = await window.fitTrackAPI.deleteCustomizationMedia(id);
     if (!res.success) throw new Error(res.error || 'Erro ao excluir a mídia.');
+  },
+
+  getMeasurementUnits: async (): Promise<MeasurementUnitPreferences> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getMeasurementUnits();
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar as unidades.');
+      return res.data || { ...DEFAULT_MEASUREMENT_UNIT_PREFERENCES };
+    }
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY_MEASUREMENT_UNITS);
+    if (!raw) return { ...DEFAULT_MEASUREMENT_UNIT_PREFERENCES };
+    try {
+      const parsed = MeasurementUnitPreferencesSchema.safeParse(JSON.parse(raw));
+      return parsed.success ? parsed.data : { ...DEFAULT_MEASUREMENT_UNIT_PREFERENCES };
+    } catch {
+      return { ...DEFAULT_MEASUREMENT_UNIT_PREFERENCES };
+    }
+  },
+
+  saveMeasurementUnits: async (rawPreferences: MeasurementUnitPreferences): Promise<MeasurementUnitPreferences> => {
+    const preferences = MeasurementUnitPreferencesSchema.parse(rawPreferences);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveMeasurementUnits(preferences);
+      if (!res.success) throw new Error(res.error || 'Erro ao salvar as unidades.');
+      return res.data!;
+    }
+    localStorage.setItem(LOCAL_STORAGE_KEY_MEASUREMENT_UNITS, JSON.stringify(preferences));
+    return preferences;
   }
 };
