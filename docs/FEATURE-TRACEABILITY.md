@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.44. Estado após validação dos incrementos: **108 validadas, 36 parciais, 33 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.45. Estado após validação dos incrementos: **109 validadas, 35 parciais, 33 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -196,7 +196,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 135 | Oferecer substituição nutricional compatível. | DESP; NUTR | dados de equivalência | V · `substitution-engine.test.ts` |
 | 136 | Priorizar receitas para aproveitar sobras. | DESP | — | A · sem controle de sobras |
 | 137 | Marcar/desmarcar cada item como comprado e conservar a seleção ao recarregar; ao mudar a quantidade necessária, reabrir o item como não comprado. | `WeeklyMealPlanner.tsx`; `shopping-list-repository.ts`; `api.ts`; service/IPC/preload; schema/migration | SQLite desktop; localStorage PWA | V · persistência, reabertura e redefinição após alteração; `shopping-list-persistence.test.ts`, `shopping-list-api.test.ts` |
-| 138 | Classificar itens de compra/despensa por categoria. | DESP | — | P · categorias de alimento existem, fluxo de compras não |
+| 138 | Agrupar itens da lista semanal por categoria persistida do catálogo e exibir grupos ordenados, incluindo itens sem categoria em “Outros”. | `shopping-list-sections.ts`; `WeeklyMealPlanner.tsx`; `shopping-list.ts`; `shopping-list-repository.ts`; `api.ts` | Categoria do catálogo local; lista da semana | V · agrupamento determinístico testado em `shopping-list.test.ts`; SQLite/PWA preservam categoria nos testes da lista |
 | 139 | Consultar gastos por período. | DESP | preços e compras persistidos | A · sem histórico de gastos |
 | 140 | Programar preparo de refeições no calendário. | DESP | — | A · sem calendário de preparo |
 
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.44: 224/224 testes em 70 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; publicação pendente.
+- Incremento 1.1.45: 225/225 testes em 70 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; publicação pendente.
+- Incremento 1.1.44: 224/224 testes em 70 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; GitHub Actions 39777843147 publicou os artefatos.
 - Incremento 1.1.43: 222/222 testes em 69 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; GitHub Actions 39777137097 publicou os artefatos.
 - Incremento 1.1.42: 216/216 testes, build, instalador NSIS, portable e inicialização isolada por 12 segundos aprovados; workflow 39775584057 publicou instalador, portátil, blockmap e `latest.yml`.
 - Incremento 1.1.41: 211/211 testes, build, instalador NSIS, portable, inicialização isolada e publicação aprovados pelo workflow 39774510725.

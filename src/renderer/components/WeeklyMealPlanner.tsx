@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, LoaderCircle } from 'luc
 import { ApplyWeeklyMealTemplateResult, DailyMealEntry, DailyMealHistoryQuery, DailyMealStatus, MealTemplate, ReorderDailyMealsInput, ShoppingListItem, ShoppingListPurchaseInput } from '../../shared/types';
 import { moveDailyMealSlot, sortDailyMealEntries } from '../../domain/daily-meal-order';
 import { getWorkoutWeekDates, shiftWorkoutWeek } from '../../domain/workout-week-calendar';
+import { groupShoppingListItems } from '../../domain/shopping-list-sections';
 
 interface WeeklyMealPlannerProps {
   templates: MealTemplate[];
@@ -200,15 +201,22 @@ export const WeeklyMealPlanner: React.FC<WeeklyMealPlannerProps> = ({
         ) : (
           <>
             <p className="text-[11px] text-muted-foreground">{shoppingItems.length} itens · {shoppingItems.filter(item => item.purchased).length} comprados</p>
-            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {shoppingItems.map(item => (
-                <li key={item.foodId} className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/50 px-3 py-2.5">
-                  <input type="checkbox" aria-label={`Marcar ${item.foodName} como comprado`} checked={item.purchased} disabled={updatingPurchasedFoodId === item.foodId} onChange={event => void setPurchased(item, event.target.checked)} className="h-4 w-4 accent-primary" />
-                  <span className={`min-w-0 flex-1 truncate text-xs ${item.purchased ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{item.foodName}</span>
-                  <span className="shrink-0 text-[11px] font-medium text-muted-foreground">{item.amountG.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} g</span>
-                </li>
+            <div className="space-y-4">
+              {groupShoppingListItems(shoppingItems).map(section => (
+                <section key={section.category || 'other'} aria-label={`Compras: ${section.label}`} className="space-y-2">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{section.label} · {section.items.length}</h4>
+                  <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {section.items.map(item => (
+                      <li key={item.foodId} className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/50 px-3 py-2.5">
+                        <input type="checkbox" aria-label={`Marcar ${item.foodName} como comprado`} checked={item.purchased} disabled={updatingPurchasedFoodId === item.foodId} onChange={event => void setPurchased(item, event.target.checked)} className="h-4 w-4 accent-primary" />
+                        <span className={`min-w-0 flex-1 truncate text-xs ${item.purchased ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{item.foodName}</span>
+                        <span className="shrink-0 text-[11px] font-medium text-muted-foreground">{item.amountG.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} g</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ))}
-            </ul>
+            </div>
           </>
         )}
       </section>

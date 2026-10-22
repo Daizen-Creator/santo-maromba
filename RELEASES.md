@@ -2,11 +2,16 @@
 
 O repositório público `Daizen-Creator/santo-maromba` publica releases pelo GitHub Actions. O workflow gera o instalador NSIS e a versão portátil para Windows, além do manifesto `latest.yml` usado pelo `electron-updater`.
 
+## v1.1.45
+
+- A lista semanal de compras exibe os alimentos agrupados por categoria, usando a categoria salva no catálogo e mantendo itens sem categoria em “Outros”.
+- 225 testes em 70 arquivos, build, instalador NSIS, portable e inicialização isolada com criação do SQLite aprovados; publicação GitHub pendente.
+
 ## v1.1.44
 
 - A despensa aceita data de validade por alimento e informa produtos vencidos ou que vencem nos próximos sete dias.
 - O prazo é calculado localmente por data civil; nenhuma integração externa é necessária.
-- 224 testes em 70 arquivos aprovados. Build, instalador NSIS, portable e inicialização isolada com criação do SQLite aprovados; publicação GitHub pendente.
+- 224 testes em 70 arquivos aprovados. Build, instalador NSIS, portable e inicialização isolada com criação do SQLite aprovados; GitHub Actions `39777843147` publicou instalador, portátil, blockmap e `latest.yml`.
 
 ## v1.1.43
 

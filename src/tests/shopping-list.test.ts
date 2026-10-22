@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildShoppingList } from '../domain/shopping-list';
+import { groupShoppingListItems } from '../domain/shopping-list-sections';
 import { DailyMealEntry, FoodItem, ShoppingListItem } from '../shared/types';
 
 const meal = (date: string, slotId: string, status: DailyMealEntry['status'], items: DailyMealEntry['items']): DailyMealEntry => ({
@@ -40,5 +41,18 @@ describe('lista de compras gerada do plano alimentar', () => {
     const entries = [meal('2026-10-19', 'lunch', 'pending', [food('rice', 100)])];
     expect(buildShoppingList('2026-10-19', entries, foods, old)[0].purchased).toBe(true);
     expect(buildShoppingList('2026-10-19', [meal('2026-10-19', 'lunch', 'pending', [food('rice', 110)])], foods, old)[0].purchased).toBe(false);
+  });
+
+  it('agrupa a lista por categoria do catálogo e mantém itens sem categoria em Outros', () => {
+    const items: ShoppingListItem[] = [
+      { id: '1', weekStartDate: '2026-10-19', foodId: 'egg', foodName: 'Ovo', amountG: 100, category: 'protein', purchased: false, updatedAt: 'now' },
+      { id: '2', weekStartDate: '2026-10-19', foodId: 'rice', foodName: 'Arroz', amountG: 200, category: 'carb', purchased: true, updatedAt: 'now' },
+      { id: '3', weekStartDate: '2026-10-19', foodId: 'other', foodName: 'Item avulso', amountG: 20, purchased: false, updatedAt: 'now' }
+    ];
+    expect(groupShoppingListItems(items)).toEqual([
+      { category: 'protein', label: 'Proteínas', items: [items[0]] },
+      { category: 'carb', label: 'Carboidratos', items: [items[1]] },
+      { category: null, label: 'Outros', items: [items[2]] }
+    ]);
   });
 });
