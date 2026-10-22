@@ -54,6 +54,43 @@ describe('Modelos de treino reutilizáveis', () => {
     })).toThrow('não existe no catálogo local');
   });
 
+  it('edita a divisão existente sem duplicar o modelo e mantém a alteração após reabrir', async () => {
+    const repo = new WorkoutRepository(db!);
+    const plans = serializeWorkoutPlans(new WorkoutEngine(INITIAL_EXERCISES).generateSplit(3));
+    const original = repo.saveTemplate({ name: 'Divisão editável', plans });
+    const changedPlans = plans.map((plan, index) => index === 0
+      ? { ...plan, splitTitle: 'Peito e tríceps ajustado', exercises: plan.exercises.slice(0, 2) }
+      : plan);
+
+    const updated = repo.saveTemplate({ id: original.id, name: 'Minha divisão', plans: changedPlans });
+    expect(updated.id).toBe(original.id);
+    expect(updated.name).toBe('Minha divisão');
+    expect(updated.plans[0].splitTitle).toBe('Peito e tríceps ajustado');
+    expect(updated.plans[0].exercises).toHaveLength(2);
+    expect(repo.getTemplates()).toHaveLength(1);
+
+    db!.close();
+    db = await createDatabaseDriver(databasePath);
+    await runMigrations(db);
+    const reopened = new WorkoutRepository(db).getTemplates();
+    expect(reopened).toHaveLength(1);
+    expect(reopened[0]).toMatchObject({ id: original.id, name: 'Minha divisão' });
+    expect(reopened[0].plans[0]).toMatchObject({
+      splitTitle: 'Peito e tríceps ajustado'
+    });
+    const coreExerciseDetails = (items: typeof changedPlans[0]['exercises']) => items.map(({ exerciseId, sets, repRange, restSeconds }) => ({ exerciseId, sets, repRange, restSeconds }));
+    expect(coreExerciseDetails(reopened[0].plans[0].exercises)).toEqual(coreExerciseDetails(changedPlans[0].exercises));
+  });
+
+  it('rejeita edição de modelo removido e nomes usados por outra divisão', () => {
+    const repo = new WorkoutRepository(db!);
+    const plans = serializeWorkoutPlans(new WorkoutEngine(INITIAL_EXERCISES).generateSplit(3));
+    const first = repo.saveTemplate({ name: 'Divisão um', plans });
+    repo.saveTemplate({ name: 'Divisão dois', plans });
+    expect(() => repo.saveTemplate({ id: 'workout-template-missing', name: 'Outra', plans })).toThrow('não existe mais');
+    expect(() => repo.saveTemplate({ id: first.id, name: 'Divisão dois', plans })).toThrow('Já existe um modelo');
+  });
+
   it('não aceita salvar um modelo sem nenhum exercício', () => {
     const repo = new WorkoutRepository(db!);
     expect(() => repo.saveTemplate({

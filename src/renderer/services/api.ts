@@ -883,20 +883,24 @@ export const api = {
     const missingId = input.plans.flatMap(plan => plan.exercises).find(item => !exerciseIds.has(item.exerciseId));
     if (missingId) throw new Error(`O exercício ${missingId.exerciseId} não existe no catálogo local.`);
     const templates = await api.getWorkoutTemplates();
+    const existing = input.id ? templates.find(template => template.id === input.id) : undefined;
+    if (input.id && !existing) throw new Error('O modelo de treino selecionado não existe mais.');
     const normalizedName = input.name.normalize('NFC').toLocaleLowerCase('pt-BR');
-    if (templates.some(template => template.name.normalize('NFC').toLocaleLowerCase('pt-BR') === normalizedName)) {
+    if (templates.some(template => template.id !== input.id && template.name.normalize('NFC').toLocaleLowerCase('pt-BR') === normalizedName)) {
       throw new Error('Já existe um modelo de treino com esse nome.');
     }
     if (!input.plans.some(plan => plan.exercises.length > 0)) throw new Error('Adicione ao menos um exercício antes de salvar o modelo.');
     const now = new Date().toISOString();
     const template: WorkoutTemplate = {
-      id: `workout-template-${globalThis.crypto.randomUUID()}`,
+      id: existing?.id || `workout-template-${globalThis.crypto.randomUUID()}`,
       name: input.name,
       plans: input.plans,
-      createdAt: now,
+      createdAt: existing?.createdAt || now,
       updatedAt: now
     };
-    localStorage.setItem(LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES, JSON.stringify([template, ...templates]));
+    localStorage.setItem(LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES, JSON.stringify(
+      existing ? templates.map(item => item.id === existing.id ? template : item) : [template, ...templates]
+    ));
     return template;
   },
 

@@ -17,6 +17,12 @@ describe('Modelos de treino offline na PWA', () => {
 
     const saved = await api.saveWorkoutTemplate({ name: 'PWA Full Body', plans });
     expect((await api.getWorkoutTemplates()).map(template => template.id)).toEqual([saved.id]);
+    const updated = await api.saveWorkoutTemplate({ id: saved.id, name: 'PWA Full Body editado', plans: plans.map((plan, index) => index === 0 ? { ...plan, splitTitle: 'Treino adaptado' } : plan) });
+    expect(updated.id).toBe(saved.id);
+    const reopened = await api.getWorkoutTemplates();
+    expect(reopened).toHaveLength(1);
+    expect(reopened[0]).toMatchObject({ id: saved.id, name: 'PWA Full Body editado' });
+    expect(reopened[0].plans[0].splitTitle).toBe('Treino adaptado');
     expect(values.size).toBe(1);
   });
 

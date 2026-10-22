@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.38. Estado após validação dos incrementos: **97 validadas, 37 parciais, 43 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.39. Estado após validação dos incrementos: **98 validadas, 37 parciais, 42 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -130,7 +130,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | ID | Comportamento verificável (critério de aceitação) | Arquivos | Dependência | Estado / teste |
 |---:|---|---|---|---|
 | 81 | Ver treinos previstos num calendário semanal. | `WorkoutView.tsx`; `workout-week-calendar.ts`; agenda SQLite | — | V · semana segunda–domingo navegável mostra treinos, descanso, deload, sessões parciais/perdidas e permite planejar dia; `workout-week-calendar.test.ts`, `workout-schedule-persistence.test.ts` |
-| 82 | Criar e editar divisão de treino personalizada. | TREI | — | A · divisão é gerada automaticamente |
+| 82 | Criar e editar uma divisão própria: dias, exercícios, séries, repetições, descanso e carga recomendada; salvar sobre o modelo selecionado sem duplicar e reabrir a mesma versão. | TREI | — | V · edição validada no SQLite após reiniciar e no armazenamento offline; `workout-template-persistence.test.ts`, `workout-template-offline.test.ts` |
 | 83 | Pesquisar biblioteca de exercícios. | TREI | — | V · seed e biblioteca de 112 exercícios |
 | 84 | Filtrar por músculo e equipamento. | TREI | — | V · filtros presentes |
 | 85 | Abrir mídia demonstrativa licenciada por exercício. | TREI | mídia própria/licença de conteúdo | P · upload local; parte dos links abre busca genérica |
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.38: 201/201 testes, build, instalador NSIS, portable, manifesto local e abertura isolada com criação do SQLite aprovados; publicação GitHub pendente.
+- Incremento 1.1.39: 203/203 testes, build e empacotamento Windows aprovados; publicação GitHub pendente.
+- Incremento 1.1.38: 201/201 testes, build, instalador NSIS, portable, manifesto e abertura isolada com criação do SQLite publicados pelo workflow 39770953506.
 - Incremento 1.1.37: 199/199 testes, build, instalador NSIS, portable e manifesto publicados com sucesso pelo workflow 39769501594.
 - Incremento 1.1.36: 196/196 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso pelo workflow 39768989851.
 - Incremento 1.1.35: 194/194 testes, build, instalador NSIS, portable e manifesto de auto-update publicados pelo workflow 39768247649.

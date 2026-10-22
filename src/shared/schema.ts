@@ -327,6 +327,7 @@ export const WorkoutTemplatePlanSchema = z.object({
 }).strict();
 
 export const SaveWorkoutTemplateInputSchema = z.object({
+  id: z.string().min(1).max(160).regex(/^[a-zA-Z0-9_-]+$/).optional(),
   name: z.string().trim().min(1).max(80),
   plans: z.array(WorkoutTemplatePlanSchema).min(1).max(14)
 }).strict().refine(input => input.plans.reduce((total, plan) => total + plan.exercises.length, 0) <= 120, {

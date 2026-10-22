@@ -15,7 +15,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { Exercise, ExerciseMediaInput, MuscleGroup, SaveWorkoutScheduleInput, SaveWorkoutTemplateInput, WorkoutScheduleEntry, WorkoutSession, WorkoutSet, WorkoutTemplate } from '../../shared/types';
+import { Exercise, ExerciseMediaInput, MuscleGroup, SaveWorkoutScheduleInput, SaveWorkoutTemplateInput, WorkoutScheduleEntry, WorkoutSession, WorkoutSet, WorkoutTemplate, WorkoutTemplatePlan } from '../../shared/types';
 import { DailyWorkoutPlan, getNextScheduledWorkout, WorkoutEngine } from '../../domain/workout-engine';
 import { YouTubePlayer } from '../components/YouTubePlayer';
 import { formatRestTime, remainingRestSeconds } from '../../domain/rest-timer';
@@ -110,6 +110,9 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   const [sessionValidationError, setSessionValidationError] = useState<string | null>(null);
   const [workoutTemplates, setWorkoutTemplates] = useState<WorkoutTemplate[]>([]);
   const [workoutTemplateName, setWorkoutTemplateName] = useState('');
+  const [workoutTemplateDraft, setWorkoutTemplateDraft] = useState<WorkoutTemplatePlan[] | null>(null);
+  const [workoutTemplateDraftId, setWorkoutTemplateDraftId] = useState<string | null>(null);
+  const [workoutTemplateDraftName, setWorkoutTemplateDraftName] = useState('');
   const [selectedWorkoutTemplateId, setSelectedWorkoutTemplateId] = useState('');
   const [savingWorkoutTemplate, setSavingWorkoutTemplate] = useState(false);
   const [workoutTemplateMessage, setWorkoutTemplateMessage] = useState<string | null>(null);
@@ -280,6 +283,46 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
       setWorkoutTemplateMessage(`Modelo “${template.name}” salvo com ${template.plans.length} dias.`);
     } catch (error) {
       setWorkoutTemplateError(error instanceof Error ? error.message : 'Não foi possível salvar o modelo de treino.');
+    } finally {
+      setSavingWorkoutTemplate(false);
+    }
+  };
+
+  const startWorkoutTemplateDraft = (template?: WorkoutTemplate) => {
+    setWorkoutTemplateError(null);
+    setWorkoutTemplateMessage(null);
+    setWorkoutTemplateDraftId(template?.id || null);
+    setWorkoutTemplateDraftName(template?.name || '');
+    setWorkoutTemplateDraft(template
+      ? template.plans.map(plan => ({ ...plan, exercises: plan.exercises.map(item => ({ ...item })) }))
+      : serializeWorkoutPlans(activeWorkoutSplit));
+  };
+
+  const updateWorkoutTemplateDraftPlan = (planIndex: number, update: (plan: WorkoutTemplatePlan) => WorkoutTemplatePlan) => {
+    setWorkoutTemplateDraft(current => current?.map((plan, index) => index === planIndex ? update(plan) : plan) || null);
+  };
+
+  const handleSaveWorkoutTemplateDraft = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!workoutTemplateDraft) return;
+    setWorkoutTemplateError(null);
+    setWorkoutTemplateMessage(null);
+    setSavingWorkoutTemplate(true);
+    try {
+      const template = await onSaveWorkoutTemplate({
+        ...(workoutTemplateDraftId ? { id: workoutTemplateDraftId } : {}),
+        name: workoutTemplateDraftName,
+        plans: workoutTemplateDraft
+      });
+      setWorkoutTemplates(current => [template, ...current.filter(item => item.id !== template.id)]);
+      setSelectedWorkoutTemplateId(template.id);
+      setAppliedWorkoutTemplate(template);
+      setHomeTrainingMode(false);
+      setWorkoutTemplateDraft(null);
+      setWorkoutTemplateDraftId(null);
+      setWorkoutTemplateMessage(`Divisão “${template.name}” ${workoutTemplateDraftId ? 'atualizada' : 'criada'} e aplicada.`);
+    } catch (error) {
+      setWorkoutTemplateError(error instanceof Error ? error.message : 'Não foi possível salvar a divisão personalizada.');
     } finally {
       setSavingWorkoutTemplate(false);
     }
@@ -787,10 +830,82 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                   Aplicar modelo
                 </button>
               </div>
+              <div className="col-span-full flex flex-wrap gap-2">
+                <button type="button" onClick={() => startWorkoutTemplateDraft()} className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15">
+                  Criar divisão editável
+                </button>
+                <button type="button" onClick={() => startWorkoutTemplateDraft(workoutTemplates.find(template => template.id === selectedWorkoutTemplateId))} disabled={!selectedWorkoutTemplateId} className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 disabled:opacity-50">
+                  Editar modelo selecionado
+                </button>
+              </div>
             </div>
             {workoutTemplateMessage && <p role="status" className="text-xs text-emerald-300">{workoutTemplateMessage}</p>}
             {workoutTemplateError && <p role="alert" className="text-xs text-destructive">{workoutTemplateError}</p>}
           </div>
+
+          {workoutTemplateDraft && (
+            <form onSubmit={handleSaveWorkoutTemplateDraft} className="space-y-4 rounded-3xl border border-primary/25 bg-card p-5 shadow-sm sm:p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <label className="block min-w-0 flex-1 space-y-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground">Nome da divisão</span>
+                  <input required maxLength={80} value={workoutTemplateDraftName} onChange={event => setWorkoutTemplateDraftName(event.target.value)} placeholder="Ex.: ABC com foco em força" className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground" />
+                </label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => { setWorkoutTemplateDraft(null); setWorkoutTemplateDraftId(null); }} className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground">Cancelar</button>
+                  <button type="submit" disabled={savingWorkoutTemplate} className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50">{savingWorkoutTemplate ? 'Salvando…' : workoutTemplateDraftId ? 'Salvar alterações' : 'Salvar divisão'}</button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {workoutTemplateDraft.map((plan, planIndex) => (
+                  <section key={`${plan.dayName}-${planIndex}`} className="space-y-3 rounded-2xl border border-border/70 bg-background/50 p-4">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="space-y-1 text-[11px] text-muted-foreground">Dia
+                        <input required maxLength={40} value={plan.dayName} onChange={event => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, dayName: event.target.value }))} className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground" />
+                      </label>
+                      <label className="space-y-1 text-[11px] text-muted-foreground">Nome do treino
+                        <input required maxLength={120} value={plan.splitTitle} onChange={event => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, splitTitle: event.target.value }))} className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground" />
+                      </label>
+                      <label className="space-y-1 text-[11px] text-muted-foreground">Foco muscular
+                        <input maxLength={200} value={plan.focusMuscles} onChange={event => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, focusMuscles: event.target.value }))} className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground" />
+                      </label>
+                      <label className="space-y-1 text-[11px] text-muted-foreground">Recuperação
+                        <input maxLength={500} value={plan.recoveryNotes} onChange={event => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, recoveryNotes: event.target.value }))} className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground" />
+                      </label>
+                    </div>
+                    <div className="space-y-2">
+                      {plan.exercises.map((item, exerciseIndex) => (
+                        <div key={`${item.exerciseId}-${exerciseIndex}`} className="grid items-end gap-2 rounded-xl border border-border/60 bg-card/50 p-3 sm:grid-cols-[minmax(0,2fr)_75px_minmax(0,1fr)_90px_90px_auto]">
+                          <label className="space-y-1 text-[10px] text-muted-foreground">Exercício
+                            <select required value={item.exerciseId} onChange={event => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, exercises: current.exercises.map((exercise, index) => index === exerciseIndex ? { ...exercise, exerciseId: event.target.value } : exercise) }))} className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground">
+                              {exercises.map(exercise => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}
+                            </select>
+                          </label>
+                          <label className="space-y-1 text-[10px] text-muted-foreground">Séries
+                            <input type="number" min="1" max="30" required value={item.sets} onChange={event => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, exercises: current.exercises.map((exercise, index) => index === exerciseIndex ? { ...exercise, sets: Number(event.target.value) } : exercise) }))} className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground" />
+                          </label>
+                          <label className="space-y-1 text-[10px] text-muted-foreground">Repetições
+                            <input required maxLength={50} value={item.repRange} onChange={event => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, exercises: current.exercises.map((exercise, index) => index === exerciseIndex ? { ...exercise, repRange: event.target.value } : exercise) }))} className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground" />
+                          </label>
+                          <label className="space-y-1 text-[10px] text-muted-foreground">Descanso (s)
+                            <input type="number" min="0" max="3600" required value={item.restSeconds} onChange={event => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, exercises: current.exercises.map((exercise, index) => index === exerciseIndex ? { ...exercise, restSeconds: Number(event.target.value) } : exercise) }))} className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground" />
+                          </label>
+                          <label className="space-y-1 text-[10px] text-muted-foreground">Carga (kg)
+                            <input type="number" min="0.1" max="1000" step="0.5" placeholder="Opcional" value={item.recommendedWeightKg ?? ''} onChange={event => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, exercises: current.exercises.map((exercise, index) => index === exerciseIndex ? { ...exercise, recommendedWeightKg: event.target.value === '' ? undefined : Number(event.target.value) } : exercise) }))} className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground" />
+                          </label>
+                          <button type="button" aria-label={`Remover ${exercises.find(exercise => exercise.id === item.exerciseId)?.name || 'exercício'}`} onClick={() => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, exercises: current.exercises.filter((_, index) => index !== exerciseIndex) }))} className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap justify-between gap-2">
+                      <button type="button" disabled={!exercises.length || workoutTemplateDraft.reduce((total, draftPlan) => total + draftPlan.exercises.length, 0) >= 120 || plan.exercises.length >= 50} onClick={() => updateWorkoutTemplateDraftPlan(planIndex, current => ({ ...current, exercises: [...current.exercises, { exerciseId: exercises[0].id, sets: 3, repRange: '8–12', restSeconds: 90 }] }))} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[11px] font-semibold text-foreground hover:border-primary/40 disabled:opacity-50"><Plus className="h-3.5 w-3.5" />Adicionar exercício</button>
+                      <button type="button" onClick={() => setWorkoutTemplateDraft(current => current?.filter((_, index) => index !== planIndex) || null)} className="rounded-lg px-3 py-2 text-[11px] font-semibold text-destructive hover:bg-destructive/10">Remover dia</button>
+                    </div>
+                  </section>
+                ))}
+              </div>
+              <button type="button" disabled={workoutTemplateDraft.length >= 14} onClick={() => setWorkoutTemplateDraft(current => current ? [...current, { dayName: `Dia ${current.length + 1}`, splitTitle: 'Novo treino', focusMuscles: '', recoveryNotes: '', exercises: [] }] : null)} className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground hover:border-primary/40 disabled:opacity-50"><Plus className="h-3.5 w-3.5" />Adicionar dia</button>
+            </form>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {activeWorkoutSplit.map((plan, pIdx) => (

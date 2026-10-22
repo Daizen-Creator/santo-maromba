@@ -291,7 +291,10 @@ export class WorkoutRepository {
   saveTemplate(rawInput: SaveWorkoutTemplateInput): WorkoutTemplate {
     const input = SaveWorkoutTemplateInputSchema.parse(rawInput);
     const normalizedName = input.name.normalize('NFC').toLocaleLowerCase('pt-BR');
-    if (this.getTemplates().some(template => template.name.normalize('NFC').toLocaleLowerCase('pt-BR') === normalizedName)) {
+    const templates = this.getTemplates();
+    const existing = input.id ? templates.find(template => template.id === input.id) : undefined;
+    if (input.id && !existing) throw new Error('O modelo de treino selecionado não existe mais.');
+    if (templates.some(template => template.id !== input.id && template.name.normalize('NFC').toLocaleLowerCase('pt-BR') === normalizedName)) {
       throw new Error('Já existe um modelo de treino com esse nome.');
     }
     const plannedExerciseIds = [...new Set(input.plans.flatMap(plan => plan.exercises.map(item => item.exerciseId)))];
@@ -303,11 +306,18 @@ export class WorkoutRepository {
     }
 
     const now = new Date().toISOString();
-    const id = `workout-template-${randomUUID()}`;
-    this.db.execute(
-      'INSERT INTO workout_templates (id, name, plans_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-      [id, input.name, JSON.stringify(input.plans), now, now]
-    );
+    const id = existing?.id || `workout-template-${randomUUID()}`;
+    if (existing) {
+      this.db.execute(
+        'UPDATE workout_templates SET name = ?, plans_json = ?, updated_at = ? WHERE id = ?',
+        [input.name, JSON.stringify(input.plans), now, id]
+      );
+    } else {
+      this.db.execute(
+        'INSERT INTO workout_templates (id, name, plans_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+        [id, input.name, JSON.stringify(input.plans), now, now]
+      );
+    }
     const saved = this.getTemplates().find(template => template.id === id);
     if (!saved) throw new Error('Não foi possível reabrir o modelo de treino salvo.');
     return saved;

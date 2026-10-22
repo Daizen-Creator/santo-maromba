@@ -856,6 +856,7 @@ export interface WorkoutTemplate {
 }
 
 export interface SaveWorkoutTemplateInput {
+  id?: string;
   name: string;
   plans: WorkoutTemplatePlan[];
 }
