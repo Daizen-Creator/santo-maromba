@@ -19,6 +19,7 @@ import {
   MealPrepEvent,
   MealPrepEventInput,
   PhotoCreateInput,
+  PhotoExportResult,
   PhotoRecord,
   Recipe,
   RecipeFeedbackInput,
@@ -97,6 +98,7 @@ export interface FitTrackAPI {
   addPhoto: (data: PhotoCreateInput) => Promise<{ success: boolean; data?: PhotoRecord; error?: string }>;
   updatePhotoNotes: (id: string, notes: string) => Promise<{ success: boolean; data?: PhotoRecord; error?: string }>;
   deletePhoto: (id: string) => Promise<{ success: boolean; error?: string }>;
+  exportPhoto: (id: string) => Promise<{ success: boolean; data?: PhotoExportResult; error?: string }>;
 
   // Medidas
   getMeasurements: () => Promise<{ success: boolean; data?: BodyMeasurementRecord[]; error?: string }>;
@@ -209,6 +211,7 @@ const api: FitTrackAPI = {
   addPhoto: (data) => ipcRenderer.invoke(IPC_CHANNELS.ADD_PHOTO, data),
   updatePhotoNotes: (id, notes) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_PHOTO_NOTES, { id, notes }),
   deletePhoto: (id) => ipcRenderer.invoke(IPC_CHANNELS.DELETE_PHOTO, id),
+  exportPhoto: (id) => ipcRenderer.invoke(IPC_CHANNELS.EXPORT_PHOTO, id),
 
   getMeasurements: () => ipcRenderer.invoke(IPC_CHANNELS.GET_MEASUREMENTS),
   saveMeasurement: (data) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_MEASUREMENT, data),

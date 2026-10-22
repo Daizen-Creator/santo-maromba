@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.53. Estado após validação dos incrementos: **119 validadas, 32 parciais, 26 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.54. Estado após validação dos incrementos: **120 validadas, 31 parciais, 26 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -169,7 +169,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 113 | Selecionar duas datas e comparar as fotos correspondentes. | SHAP | — | V · seletor A/B por foto com data/pose |
 | 114 | Exportar relatório visual de evolução. | SHAP | — | P · comparação visual existe; exportação não comprovada |
 | 115 | Restringir acesso às fotos por usuário autenticado. | SHAP; IPC | autenticação/ACL (Firebase) | B · sem conta/configuração de autenticação |
-| 116 | Baixar original e excluir foto com confirmação. | SHAP; IPC | — | P · exclusão confirmada existe; download original não exposto |
+| 116 | Baixar original e excluir foto com confirmação. | `ShapeCalendarView.tsx`; API; `browser-photo-download.ts`; preload/IPC; serviço de fotos SQLite/IndexedDB | armazenamento local | V · exporta bytes originais pelo diálogo seguro no desktop e download Blob offline na PWA; exclui com confirmação; testes de imagem reaberta e download, além de `photo-persistence.test.ts` e `browser-photo-store.test.ts` |
 | 117 | Programar lembrete de fotos. | SHAP | notificações do sistema | A · sem lembrete |
 | 118 | Definir e acompanhar marcos de evolução por peso, gordura corporal e circunferências, com valor-alvo, direção, prazo e observações; comparar somente com a última medição real salva. | `ShapeMilestonesPanel.tsx`; `shape-milestones.ts`; `shape-milestone-repository.ts`; SQLite/migração 38; API/IPC/PWA | Medições corporais locais | V · SQLite e PWA persistem criar/editar/excluir/reabrir; meta atingida/distância usa somente a medição mais recente e ausência continua sem valor; `shape-milestone-persistence.test.ts`, `shape-milestone-api.test.ts`, `shape-milestones.test.ts`, `validation.test.ts` |
 | 119 | Organizar fotos por pose e período. | SHAP | — | V · pose/data e calendário |

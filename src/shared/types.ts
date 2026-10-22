@@ -398,6 +398,10 @@ export interface PhotoRecord {
   createdAt: string;
 }
 
+export interface PhotoExportResult {
+  cancelled: boolean;
+}
+
 export interface PhotoCreateInput {
   date: string;
   pose: PhotoPose;

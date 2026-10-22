@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import fs from 'fs';
 import { IPC_CHANNELS } from '../shared/ipc-channels';
 import {
   InitialHistoryConfirmationSchema,
@@ -203,6 +204,27 @@ export function registerIpcHandlers(
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.EXPORT_PHOTO, async (event, rawId) => {
+    try {
+      const owner = getCallingWindow(event);
+      const id = PhotoIdSchema.parse(rawId);
+      const photo = service.getPhotos().find(item => item.id === id);
+      if (!photo) throw new Error('Foto não encontrada.');
+      const image = service.getPhotoImage(id);
+      const extension = image.mimeType === 'image/jpeg' ? 'jpg' : image.mimeType === 'image/png' ? 'png' : 'webp';
+      const result = await dialog.showSaveDialog(owner, {
+        title: 'Salvar foto original',
+        defaultPath: `santo-maromba-${photo.date}.${extension}`,
+        filters: [{ name: 'Foto original', extensions: [extension] }]
+      });
+      if (result.canceled || !result.filePath) return { success: true, data: { cancelled: true } };
+      await fs.promises.writeFile(result.filePath, Buffer.from(image.bytes));
+      return { success: true, data: { cancelled: false } };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível exportar a foto original.' };
     }
   });
 

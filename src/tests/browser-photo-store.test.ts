@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { BrowserPhotoStore } from '../renderer/services/browser-photo-store';
+import { downloadOriginalPhoto } from '../renderer/services/browser-photo-download';
 
 const photoInput = {
   date: '2026-10-22',
@@ -39,6 +40,9 @@ describe('BrowserPhotoStore — persistência local do PWA', () => {
     });
     const image = await fetch(reopened[0].filePath).then(response => response.arrayBuffer());
     expect(Array.from(new Uint8Array(image))).toEqual(Array.from(photoInput.imageBytes));
+    const original = await reopenedStore.getOriginalBlob(saved.id);
+    expect(original.type).toBe(photoInput.mimeType);
+    expect(Array.from(new Uint8Array(await original.arrayBuffer()))).toEqual(Array.from(photoInput.imageBytes));
   });
 
   it('edita notas e exclui a foto persistida', async () => {
@@ -59,5 +63,37 @@ describe('BrowserPhotoStore — persistência local do PWA', () => {
 
     await expect(store.add({ ...photoInput, date: '2026-02-30' })).rejects.toThrow();
     await expect(store.add({ ...photoInput, imageBytes: new Uint8Array(15 * 1024 * 1024 + 1) })).rejects.toThrow();
+  });
+});
+
+describe('exportação da foto original no PWA', () => {
+  it('baixa o blob original com nome por data e revoga o URL temporário', () => {
+    const anchor = {
+      href: '',
+      download: '',
+      style: { display: '' },
+      click: vi.fn(),
+      remove: vi.fn()
+    } as unknown as HTMLAnchorElement;
+    const document = {
+      createElement: vi.fn(() => anchor),
+      body: { appendChild: vi.fn() }
+    } as unknown as Document;
+    const urlApi = {
+      createObjectURL: vi.fn(() => 'blob:original-photo'),
+      revokeObjectURL: vi.fn()
+    };
+    const schedule = vi.fn((callback: () => void) => callback());
+    const blob = new Blob([photoInput.imageBytes], { type: photoInput.mimeType });
+
+    downloadOriginalPhoto(blob, photoInput.date, { document, urlApi, schedule });
+
+    expect(urlApi.createObjectURL).toHaveBeenCalledWith(blob);
+    expect(anchor.href).toBe('blob:original-photo');
+    expect(anchor.download).toBe('santo-maromba-2026-10-22.png');
+    expect(anchor.click).toHaveBeenCalledOnce();
+    expect(anchor.remove).toHaveBeenCalledOnce();
+    expect(schedule).toHaveBeenCalledWith(expect.any(Function), 1000);
+    expect(urlApi.revokeObjectURL).toHaveBeenCalledWith('blob:original-photo');
   });
 });

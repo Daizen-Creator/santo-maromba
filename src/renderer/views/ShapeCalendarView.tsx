@@ -11,7 +11,7 @@ import {
   Clock,
   Columns
 } from 'lucide-react';
-import { BodyMeasurementRecord, SaveBodyMeasurementInput, CustomBodyMeasurements, CustomMeasurementDefinition, CustomMeasurementRecord, PhotoCreateInput, PhotoPose, PhotoRecord, SaveCustomMeasurementDefinitionInput, SaveCustomMeasurementInput, ShapeMilestone, ShapeMilestoneInput, WeightRecord, WorkoutSession } from '../../shared/types';
+import { BodyMeasurementRecord, SaveBodyMeasurementInput, CustomBodyMeasurements, CustomMeasurementDefinition, CustomMeasurementRecord, PhotoCreateInput, PhotoExportResult, PhotoPose, PhotoRecord, SaveCustomMeasurementDefinitionInput, SaveCustomMeasurementInput, ShapeMilestone, ShapeMilestoneInput, WeightRecord, WorkoutSession } from '../../shared/types';
 import { buildMeasurementTrend, MEASUREMENT_METRICS, MeasurementMetric } from '../../domain/measurement-trend';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ShapeMilestonesPanel } from '../components/ShapeMilestonesPanel';
@@ -41,6 +41,7 @@ interface ShapeCalendarViewProps {
   onAddPhoto: (data: PhotoCreateInput) => Promise<void>;
   onUpdatePhotoNotes: (id: string, notes: string) => Promise<void>;
   onDeletePhoto: (id: string) => Promise<void>;
+  onExportPhoto: (id: string) => Promise<PhotoExportResult>;
   onSaveMeasurement: (data: SaveBodyMeasurementInput) => Promise<void>;
   onGetCustomMeasurements: () => Promise<CustomBodyMeasurements>;
   onSaveCustomMeasurementDefinition: (input: SaveCustomMeasurementDefinitionInput) => Promise<CustomMeasurementDefinition>;
@@ -59,6 +60,7 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
   onAddPhoto,
   onUpdatePhotoNotes,
   onDeletePhoto,
+  onExportPhoto,
   onSaveMeasurement,
   onGetCustomMeasurements,
   onSaveCustomMeasurementDefinition,
@@ -156,6 +158,8 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
   const [viewedPhotoId, setViewedPhotoId] = useState<string | null>(null);
   const [editedNotes, setEditedNotes] = useState<string>('');
   const [savingNotes, setSavingNotes] = useState<boolean>(false);
+  const [exportingPhoto, setExportingPhoto] = useState<boolean>(false);
+  const [photoExportMessage, setPhotoExportMessage] = useState<string | null>(null);
 
   // Formulário de medidas
   const [measHeight, setMeasHeight] = useState<string>('');
@@ -304,6 +308,21 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
       setActionError(error.message || 'Não foi possível salvar as observações.');
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  const handleExportPhoto = async () => {
+    if (!viewedPhoto || exportingPhoto) return;
+    setExportingPhoto(true);
+    setActionError(null);
+    setPhotoExportMessage(null);
+    try {
+      const result = await onExportPhoto(viewedPhoto.id);
+      if (!result.cancelled) setPhotoExportMessage('Foto original exportada.');
+    } catch (error: any) {
+      setActionError(error.message || 'Não foi possível exportar a foto original.');
+    } finally {
+      setExportingPhoto(false);
     }
   };
 
@@ -1163,13 +1182,19 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
                 className="w-full rounded-xl border border-border bg-secondary/50 p-3 text-sm text-foreground focus:border-primary focus:outline-none"
                 placeholder="Adicione uma observação sobre esta foto"
               />
+              {photoExportMessage && <p className="text-xs text-emerald-500" role="status">{photoExportMessage}</p>}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                 <button type="button" onClick={() => void handleDeletePhoto(viewedPhoto)} className="rounded-xl border border-destructive/40 px-4 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10">
                   Excluir foto
                 </button>
-                <button type="button" onClick={() => void handleSavePhotoNotes()} disabled={savingNotes || editedNotes.length > 300} className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50">
-                  {savingNotes ? 'Salvando...' : 'Salvar observações'}
-                </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button type="button" onClick={() => void handleExportPhoto()} disabled={exportingPhoto} className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-secondary disabled:opacity-50">
+                    {exportingPhoto ? 'Preparando...' : 'Baixar original'}
+                  </button>
+                  <button type="button" onClick={() => void handleSavePhotoNotes()} disabled={savingNotes || editedNotes.length > 300} className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50">
+                    {savingNotes ? 'Salvando...' : 'Salvar observações'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

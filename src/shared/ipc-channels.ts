@@ -40,6 +40,7 @@ export const IPC_CHANNELS = {
   ADD_PHOTO: 'photos:add',
   UPDATE_PHOTO_NOTES: 'photos:update-notes',
   DELETE_PHOTO: 'photos:delete',
+  EXPORT_PHOTO: 'photos:export-original',
 
   // Measurements
   GET_MEASUREMENTS: 'measurements:get',

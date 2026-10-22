@@ -25,6 +25,7 @@ import {
   MealPrepEvent,
   MealPrepEventInput,
   PhotoCreateInput,
+  PhotoExportResult,
   PhotoRecord,
   Recipe,
   RecipeFeedbackInput,
@@ -88,9 +89,10 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
+import { downloadOriginalPhoto } from './browser-photo-download';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
 import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, MealPrepEventInputSchema, MealPrepEventIdSchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryItemUpdateInputSchema, PantryPriceUpdateInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
-import { ShapeMilestoneIdSchema, ShapeMilestoneInputSchema } from '../../shared/schema';
+import { PhotoIdSchema, ShapeMilestoneIdSchema, ShapeMilestoneInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -342,6 +344,24 @@ export const api = {
       return;
     }
     await browserPhotoStore.delete(id);
+  },
+
+  exportPhoto: async (rawId: string): Promise<PhotoExportResult> => {
+    const id = PhotoIdSchema.parse(rawId);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.exportPhoto(id);
+      if (!res.success) throw new Error(res.error || 'Não foi possível exportar a foto original.');
+      if (!res.data) throw new Error('O aplicativo não confirmou a exportação da foto.');
+      return res.data;
+    }
+
+    const [photo, blob] = await Promise.all([
+      api.getPhotos().then(list => list.find(item => item.id === id)),
+      browserPhotoStore.getOriginalBlob(id)
+    ]);
+    if (!photo) throw new Error('Foto não encontrada neste aparelho.');
+    downloadOriginalPhoto(blob, photo.date);
+    return { cancelled: false };
   },
 
   // --- MEDIDAS ---

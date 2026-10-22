@@ -537,6 +537,7 @@ export const App: React.FC = () => {
               onAddPhoto={handleAddPhoto}
               onUpdatePhotoNotes={handleUpdatePhotoNotes}
               onDeletePhoto={handleDeletePhoto}
+              onExportPhoto={api.exportPhoto}
               onSaveMeasurement={handleSaveMeasurement}
               onGetCustomMeasurements={api.getCustomMeasurements}
               onSaveCustomMeasurementDefinition={api.saveCustomMeasurementDefinition}

@@ -113,6 +113,14 @@ export class BrowserPhotoStore {
     return { ...updated.record, filePath: this.photoUrl(id, updated.blob) };
   }
 
+  async getOriginalBlob(id: string): Promise<Blob> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const stored = await requestResult(tx.objectStore(STORE_NAME).get(id)) as StoredPhoto | undefined;
+    if (!stored) throw new Error('Foto não encontrada neste aparelho.');
+    return stored.blob;
+  }
+
   async delete(id: string): Promise<void> {
     if (!id) throw new Error('Identificador da foto inválido.');
     const db = await this.open();
