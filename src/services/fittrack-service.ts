@@ -431,6 +431,9 @@ export class FitTrackService {
     completed: boolean;
     durationMinutes?: number;
     perceivedExertion?: number;
+    discomfortLevel?: number;
+    discomfortArea?: string;
+    recoveryRating?: number;
     notes?: string;
     sets: any[];
   }): WorkoutSession {

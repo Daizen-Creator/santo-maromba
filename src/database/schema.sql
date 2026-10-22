@@ -272,6 +272,9 @@ CREATE TABLE IF NOT EXISTS workout_sessions (
   completed INTEGER NOT NULL DEFAULT 1,
   duration_minutes INTEGER,
   perceived_exertion INTEGER CHECK(perceived_exertion BETWEEN 1 AND 10),
+  discomfort_level INTEGER CHECK(discomfort_level BETWEEN 0 AND 10),
+  discomfort_area TEXT,
+  recovery_rating INTEGER CHECK(recovery_rating BETWEEN 1 AND 5),
   notes TEXT,
   created_at TEXT NOT NULL
 );

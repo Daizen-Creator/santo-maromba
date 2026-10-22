@@ -140,6 +140,16 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!exerciseColumns.some(column => column.name === 'youtube_url')) {
     db.exec('ALTER TABLE exercises ADD COLUMN youtube_url TEXT');
   }
+  const workoutSessionColumns = db.query<{ name: string }>('PRAGMA table_info(workout_sessions)');
+  if (!workoutSessionColumns.some(column => column.name === 'discomfort_level')) {
+    db.exec('ALTER TABLE workout_sessions ADD COLUMN discomfort_level INTEGER CHECK(discomfort_level BETWEEN 0 AND 10)');
+  }
+  if (!workoutSessionColumns.some(column => column.name === 'discomfort_area')) {
+    db.exec('ALTER TABLE workout_sessions ADD COLUMN discomfort_area TEXT');
+  }
+  if (!workoutSessionColumns.some(column => column.name === 'recovery_rating')) {
+    db.exec('ALTER TABLE workout_sessions ADD COLUMN recovery_rating INTEGER CHECK(recovery_rating BETWEEN 1 AND 5)');
+  }
   db.exec(`CREATE TABLE IF NOT EXISTS app_metadata (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -395,6 +405,13 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [28, 'Avaliações e observações pessoais de receitas', new Date().toISOString()]
+    );
+  }
+  const version29 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 29');
+  if (!version29) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [29, 'Indicadores estruturados de desconforto e recuperação por treino', new Date().toISOString()]
     );
   }
 }

@@ -39,12 +39,22 @@ describe('Migração de conclusão de séries', () => {
   it('adiciona o estado da série sem apagar registros anteriores e os marca como concluídos', async () => {
     await runMigrations(db!);
     const columns = db!.query<{ name: string }>('PRAGMA table_info(workout_sets)').map(column => column.name);
+    const sessionColumns = db!.query<{ name: string }>('PRAGMA table_info(workout_sessions)').map(column => column.name);
     expect(columns).toContain('completed');
     expect(columns).toContain('rir');
+    expect(sessionColumns).toContain('discomfort_level');
+    expect(sessionColumns).toContain('discomfort_area');
+    expect(sessionColumns).toContain('recovery_rating');
     expect(db!.queryOne<{ completed: number }>('SELECT completed FROM workout_sets WHERE id = ?', ['legacy-set'])?.completed).toBe(1);
     expect(db!.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 9')?.version).toBe(9);
     expect(db!.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 12')?.version).toBe(12);
     expect(db!.queryOne<{ rir: number | null }>('SELECT rir FROM workout_sets WHERE id = ?', ['legacy-set'])?.rir).toBeNull();
+    expect(db!.queryOne<{ discomfort_level: number | null; discomfort_area: string | null; recovery_rating: number | null }>(
+      'SELECT discomfort_level, discomfort_area, recovery_rating FROM workout_sessions WHERE id = ?', ['legacy-session']
+    )).toEqual({ discomfort_level: null, discomfort_area: null, recovery_rating: null });
+    expect(db!.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 29')?.version).toBe(29);
     expect(() => db!.execute('UPDATE workout_sets SET rir = 11 WHERE id = ?', ['legacy-set'])).toThrow();
+    expect(() => db!.execute('UPDATE workout_sessions SET discomfort_level = 11 WHERE id = ?', ['legacy-session'])).toThrow();
+    expect(() => db!.execute('UPDATE workout_sessions SET recovery_rating = 6 WHERE id = ?', ['legacy-session'])).toThrow();
   });
 });

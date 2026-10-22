@@ -102,6 +102,9 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   const [sessionDuration, setSessionDuration] = useState<number>(0);
   const [sessionRpe, setSessionRpe] = useState<number>(0);
   const [sessionNotes, setSessionNotes] = useState('');
+  const [sessionDiscomfortLevel, setSessionDiscomfortLevel] = useState('');
+  const [sessionDiscomfortArea, setSessionDiscomfortArea] = useState('');
+  const [sessionRecoveryRating, setSessionRecoveryRating] = useState('');
   const [savingSession, setSavingSession] = useState<boolean>(false);
   const [sessionSuccessMsg, setSessionSuccessMsg] = useState<string | null>(null);
   const [sessionValidationError, setSessionValidationError] = useState<string | null>(null);
@@ -326,6 +329,9 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
         completed,
         durationMinutes: sessionDuration,
         perceivedExertion: sessionRpe,
+        discomfortLevel: sessionDiscomfortLevel === '' ? undefined : Number(sessionDiscomfortLevel),
+        discomfortArea: Number(sessionDiscomfortLevel) > 0 ? sessionDiscomfortArea.trim() || undefined : undefined,
+        recoveryRating: sessionRecoveryRating === '' ? undefined : Number(sessionRecoveryRating),
         notes: sessionNotes.trim() || undefined,
         sets: activeSets.map(({ exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir, notes }) => ({
           exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir, notes: notes?.trim() || undefined
@@ -338,6 +344,9 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
       setSessionDuration(0);
       setSessionRpe(0);
       setSessionNotes('');
+      setSessionDiscomfortLevel('');
+      setSessionDiscomfortArea('');
+      setSessionRecoveryRating('');
       setTimeout(() => setSessionSuccessMsg(null), 4000);
     } catch (error: any) {
       setSessionValidationError(error.message || 'Não foi possível salvar o treino.');
@@ -443,6 +452,52 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                   className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70"
                 />
               </label>
+
+              <div className="grid gap-3 rounded-2xl border border-border/70 bg-background/50 p-4 sm:grid-cols-3">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground">Desconforto (opcional)</span>
+                  <select
+                    value={sessionDiscomfortLevel}
+                    aria-label="Intensidade do desconforto"
+                    onChange={event => {
+                      const value = event.target.value;
+                      setSessionDiscomfortLevel(value);
+                      if (value === '' || value === '0') setSessionDiscomfortArea('');
+                    }}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground"
+                  >
+                    <option value="">Não registrado</option>
+                    {Array.from({ length: 11 }, (_, level) => (
+                      <option key={level} value={level}>{level === 0 ? '0 — Sem desconforto' : `${level} / 10`}</option>
+                    ))}
+                  </select>
+                </label>
+                {Number(sessionDiscomfortLevel) > 0 ? (
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-muted-foreground">Região afetada</span>
+                    <input
+                      value={sessionDiscomfortArea}
+                      maxLength={120}
+                      aria-label="Região do desconforto"
+                      placeholder="Ex.: ombro esquerdo"
+                      onChange={event => setSessionDiscomfortArea(event.target.value)}
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70"
+                    />
+                  </label>
+                ) : <div className="hidden sm:block" />}
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground">Recuperação percebida (opcional)</span>
+                  <select
+                    value={sessionRecoveryRating}
+                    aria-label="Recuperação percebida"
+                    onChange={event => setSessionRecoveryRating(event.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground"
+                  >
+                    <option value="">Não registrada</option>
+                    {[1, 2, 3, 4, 5].map(rating => <option key={rating} value={rating}>{rating} / 5</option>)}
+                  </select>
+                </label>
+              </div>
 
               {/* Registro de Séries */}
               <div className="space-y-4">
@@ -1107,6 +1162,12 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                     {s.sets.filter(set => set.completed).length}/{s.sets.length} séries concluídas • RPE: {s.perceivedExertion}/10
                   </div>
                   {s.notes && <p className="rounded-lg border border-border/70 bg-background/60 px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">Treino: {s.notes}</p>}
+                  {(s.discomfortLevel !== undefined || s.recoveryRating !== undefined) && (
+                    <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                      {s.discomfortLevel !== undefined && <span className="rounded-lg border border-border bg-card/60 px-2 py-1">Desconforto: {s.discomfortLevel}/10{s.discomfortArea ? ` · ${s.discomfortArea}` : ''}</span>}
+                      {s.recoveryRating !== undefined && <span className="rounded-lg border border-border bg-card/60 px-2 py-1">Recuperação: {s.recoveryRating}/5</span>}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2 pt-1">
                     {s.sets.map(set => (
                       <div key={set.id} className={`max-w-full rounded-lg border px-2 py-1 text-[10px] ${set.isPr ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-border bg-card/60 text-muted-foreground'}`}>

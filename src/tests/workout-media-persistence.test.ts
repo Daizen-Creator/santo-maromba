@@ -99,6 +99,27 @@ describe('Mídia local e progressão de cargas', () => {
     expect(reopenedSessions.find(session => session.date === '2026-10-20')?.sets[0].notes).toBe('Última série até a falha.');
   });
 
+  it('persiste desconforto e recuperação por sessão após reabrir o banco', async () => {
+    const exerciseId = INITIAL_EXERCISES[0].id;
+    const saved = service.logWorkoutSession({
+      date: '2026-10-22', splitName: 'Treino B', completed: true,
+      discomfortLevel: 6, discomfortArea: 'Ombro esquerdo', recoveryRating: 2,
+      sets: [{ exerciseId, setNumber: 1, weightKg: 20, reps: 8 }]
+    });
+    expect(saved).toMatchObject({ discomfortLevel: 6, discomfortArea: 'Ombro esquerdo', recoveryRating: 2 });
+
+    db!.close();
+    db = await createDatabaseDriver(databasePath);
+    await runMigrations(db);
+    service = new FitTrackService(db, path.join(tempDirectory, 'photos'), mediaDirectory);
+
+    expect(service.getWorkoutSessions().find(session => session.id === saved.id)).toMatchObject({
+      discomfortLevel: 6,
+      discomfortArea: 'Ombro esquerdo',
+      recoveryRating: 2
+    });
+  });
+
   it('persiste sessões parciais e conclusão de cada série sem contar uma sessão parcial como PR', async () => {
     const exerciseId = INITIAL_EXERCISES[0].id;
     const partial = service.logWorkoutSession({

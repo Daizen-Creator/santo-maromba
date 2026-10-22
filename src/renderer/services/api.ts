@@ -75,7 +75,7 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -808,21 +808,31 @@ export const api = {
   },
 
   logWorkoutSession: async (sessionData: any): Promise<WorkoutSession> => {
+    const validatedSession = WorkoutSessionInputSchema.parse(sessionData);
     if (api.isElectron()) {
-      const res = await window.fitTrackAPI.logWorkoutSession(sessionData);
+      const res = await window.fitTrackAPI.logWorkoutSession(validatedSession);
       if (!res.success) throw new Error(res.error || 'Erro ao salvar treino.');
       return res.data!;
     }
     const sessions = await api.getWorkoutSessions();
+    const exercises = await api.getExercises();
+    const exerciseNames = new Map(exercises.map(exercise => [exercise.id, exercise.name]));
     const newS: WorkoutSession = {
       id: `ws-${Date.now()}`,
-      date: sessionData.date,
-      splitName: sessionData.splitName,
-      completed: sessionData.completed,
-      durationMinutes: sessionData.durationMinutes,
-      perceivedExertion: sessionData.perceivedExertion,
-      notes: sessionData.notes,
-      sets: sessionData.sets,
+      date: validatedSession.date,
+      splitName: validatedSession.splitName,
+      completed: validatedSession.completed,
+      durationMinutes: validatedSession.durationMinutes,
+      perceivedExertion: validatedSession.perceivedExertion,
+      discomfortLevel: validatedSession.discomfortLevel,
+      discomfortArea: validatedSession.discomfortArea,
+      recoveryRating: validatedSession.recoveryRating,
+      notes: validatedSession.notes,
+      sets: validatedSession.sets.map((set, index) => ({
+        ...set,
+        id: `set-${Date.now()}-${index}`,
+        exerciseName: exerciseNames.get(set.exerciseId) || set.exerciseId
+      })),
       createdAt: new Date().toISOString()
     };
     sessions.unshift(newS);

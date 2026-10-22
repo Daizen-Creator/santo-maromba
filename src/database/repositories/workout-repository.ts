@@ -116,6 +116,9 @@ export class WorkoutRepository {
         completed: Boolean(s.completed),
         durationMinutes: s.duration_minutes ? Number(s.duration_minutes) : undefined,
         perceivedExertion: s.perceived_exertion ? Number(s.perceived_exertion) : undefined,
+        discomfortLevel: s.discomfort_level == null ? undefined : Number(s.discomfort_level),
+        discomfortArea: s.discomfort_area || undefined,
+        recoveryRating: s.recovery_rating == null ? undefined : Number(s.recovery_rating),
         notes: s.notes || undefined,
         sets,
         createdAt: s.created_at
@@ -129,6 +132,9 @@ export class WorkoutRepository {
     completed: boolean;
     durationMinutes?: number;
     perceivedExertion?: number;
+    discomfortLevel?: number;
+    discomfortArea?: string;
+    recoveryRating?: number;
     notes?: string;
     sets: Array<{
       exerciseId: string;
@@ -184,8 +190,9 @@ export class WorkoutRepository {
     this.db.transaction(() => {
       this.db.execute(
         `INSERT INTO workout_sessions (
-          id, date, split_name, completed, duration_minutes, perceived_exertion, notes, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, date, split_name, completed, duration_minutes, perceived_exertion,
+          discomfort_level, discomfort_area, recovery_rating, notes, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           sessionId,
           session.date,
@@ -193,6 +200,9 @@ export class WorkoutRepository {
           session.completed ? 1 : 0,
           session.durationMinutes || null,
           session.perceivedExertion || null,
+          session.discomfortLevel ?? null,
+          session.discomfortArea?.trim() || null,
+          session.recoveryRating ?? null,
           session.notes || null,
           now
         ]

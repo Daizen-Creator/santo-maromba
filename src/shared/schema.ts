@@ -293,6 +293,9 @@ export const WorkoutSessionInputSchema = z.object({
   completed: z.boolean(),
   durationMinutes: z.number().int().min(1).max(1440).optional(),
   perceivedExertion: z.number().int().min(1).max(10).optional(),
+  discomfortLevel: z.number().int().min(0).max(10).optional(),
+  discomfortArea: z.string().trim().max(120).optional(),
+  recoveryRating: z.number().int().min(1).max(5).optional(),
   notes: z.string().trim().max(500).optional(),
   sets: z.array(z.object({
     exerciseId: z.string().min(1).max(160).regex(/^[a-zA-Z0-9_-]+$/),
@@ -304,7 +307,10 @@ export const WorkoutSessionInputSchema = z.object({
     rir: z.number().min(0).max(10).optional(),
     notes: z.string().trim().max(200).optional()
   }).strict()).min(1).max(100)
-}).strict();
+}).strict().refine(input => !input.discomfortArea || (input.discomfortLevel !== undefined && input.discomfortLevel > 0), {
+  message: 'Informe uma intensidade maior que zero ao indicar a região do desconforto.',
+  path: ['discomfortArea']
+});
 
 export const WorkoutTemplatePlanSchema = z.object({
   dayName: z.string().trim().min(1).max(40),

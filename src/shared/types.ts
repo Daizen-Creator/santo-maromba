@@ -823,6 +823,9 @@ export interface WorkoutSession {
   completed: boolean;
   durationMinutes?: number;
   perceivedExertion?: number;
+  discomfortLevel?: number;
+  discomfortArea?: string;
+  recoveryRating?: number;
   sets: WorkoutSet[];
   notes?: string;
   createdAt: string;
