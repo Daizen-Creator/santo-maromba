@@ -22,6 +22,7 @@ import { DAILY_MEAL_STATUSES, summarizeDailyMealStatuses } from '../../domain/me
 import { calculateConsumedFromLeftovers, calculateLeftoverAmount } from '../../domain/meal-leftovers';
 import { compareMealNutrition } from '../../domain/meal-nutrition-comparison';
 import { getMaxPlannedAmountG, scalePlannedMealItem } from '../../domain/planned-meal-portion';
+import { NutritionBalanceMetric, calculateNutritionBalance } from '../../domain/nutrition-balance';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -34,6 +35,13 @@ const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string
 
 const formatDateInput = (date: Date) =>
   [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+
+const formatNutritionBalance = (balance: NutritionBalanceMetric | null, unit: string): string => {
+  if (!balance) return 'Sem registro';
+  if (balance.remaining === 0) return 'Meta atingida';
+  const amount = unit === 'kcal' ? Math.round(Math.abs(balance.remaining)).toString() : Math.abs(balance.remaining).toFixed(1);
+  return balance.remaining > 0 ? `Faltam ${amount} ${unit}` : `Acima da meta em ${amount} ${unit}`;
+};
 
 interface NutritionViewProps {
   targets: NutritionTargets | null;
@@ -143,6 +151,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
   const today = new Date();
   const todayString = formatDateInput(today);
+  const nutritionBalance = calculateNutritionBalance(targets, summary);
 
   const refreshRecentFoods = async () => {
     try {
@@ -490,6 +499,21 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               </div>
               <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-primary to-emerald-400 transition-[width] duration-300" style={{ width: `${Math.min(100, Math.max(0, ((summary?.caloriesLogged || 0) / targets.targetCalories) * 100))}%` }} />
+              </div>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4" aria-label="Saldo de calorias e macronutrientes">
+                {([
+                  { label: 'Saldo calórico', value: nutritionBalance.calories, unit: 'kcal' },
+                  { label: 'Saldo de proteína', value: nutritionBalance.proteinG, unit: 'g' },
+                  { label: 'Saldo de carboidratos', value: nutritionBalance.carbsG, unit: 'g' },
+                  { label: 'Saldo de gorduras', value: nutritionBalance.fatsG, unit: 'g' }
+                ]).map(item => (
+                  <div key={item.label} className="rounded-xl border border-border/60 bg-background/35 px-3 py-2">
+                    <span className="block text-[10px] text-muted-foreground">{item.label}</span>
+                    <strong className={`mt-1 block text-xs ${!item.value ? 'text-muted-foreground' : item.value.remaining < 0 ? 'text-amber-300' : 'text-emerald-300'}`}>
+                      {formatNutritionBalance(item.value, item.unit)}
+                    </strong>
+                  </div>
+                ))}
               </div>
             </div>
           )}

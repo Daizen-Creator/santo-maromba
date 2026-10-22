@@ -87,6 +87,11 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Calorias e macros planejados são recalculados em tempo real com limites compatíveis com o SQLite.
 - Plano e consumo real ficam salvos separadamente; editar o plano mantém o horário original da refeição consumida.
 
+## v1.1.8
+
+- Exibe o saldo diário de calorias, proteínas, carboidratos e gorduras em relação às metas.
+- Distingue quantidade restante, meta atingida, excesso e ausência de consumo registrado.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.
