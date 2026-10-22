@@ -11,7 +11,9 @@ import {
   Award,
   ImagePlus,
   TrendingUp,
-  Timer
+  Timer,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Exercise, ExerciseMediaInput, MuscleGroup, SaveWorkoutScheduleInput, SaveWorkoutTemplateInput, WorkoutScheduleEntry, WorkoutSession, WorkoutSet, WorkoutTemplate } from '../../shared/types';
 import { DailyWorkoutPlan, getNextScheduledWorkout, WorkoutEngine } from '../../domain/workout-engine';
@@ -20,6 +22,7 @@ import { formatRestTime, remainingRestSeconds } from '../../domain/rest-timer';
 import { compareWorkoutSetWithHistory } from '../../domain/workout-comparison';
 import { hydrateWorkoutTemplate, serializeWorkoutPlans } from '../../domain/workout-templates';
 import { getWorkoutScheduleStatus } from '../../domain/workout-schedule';
+import { getWorkoutWeekDates, shiftWorkoutWeek } from '../../domain/workout-week-calendar';
 
 const OFFLINE_EXERCISE_IMAGE: Record<MuscleGroup, string> = {
   peitoral: './catalog-assets/exercise-peitoral.png',
@@ -109,6 +112,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   const [workoutTemplateMessage, setWorkoutTemplateMessage] = useState<string | null>(null);
   const [workoutTemplateError, setWorkoutTemplateError] = useState<string | null>(null);
   const [workoutSchedule, setWorkoutSchedule] = useState<WorkoutScheduleEntry[]>([]);
+  const [calendarWeekAnchor, setCalendarWeekAnchor] = useState(getLocalIsoDate);
+  const calendarWeekDates = useMemo(() => getWorkoutWeekDates(calendarWeekAnchor), [calendarWeekAnchor]);
   const [scheduleDate, setScheduleDate] = useState(getLocalIsoDate);
   const [scheduleKind, setScheduleKind] = useState<SaveWorkoutScheduleInput['kind']>('training');
   const [scheduleTitle, setScheduleTitle] = useState('');
@@ -775,6 +780,63 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
               Treinos planejados sem sessão registrada aparecem como perdidos depois da data. Descanso e deload ficam identificados separadamente.
             </p>
           </header>
+
+          <section aria-label="Calendário semanal de treinos" className="space-y-3 rounded-2xl border border-border/70 bg-background/40 p-3 sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Semana de treinos</h4>
+                <p className="mt-1 text-[11px] text-foreground">
+                  {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(`${calendarWeekDates[0]}T12:00:00`))}
+                  {' — '}
+                  {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${calendarWeekDates[6]}T12:00:00`))}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button type="button" aria-label="Semana anterior" onClick={() => setCalendarWeekAnchor(date => shiftWorkoutWeek(date, -1))}
+                  className="rounded-lg border border-border p-2 text-muted-foreground transition hover:text-foreground"><ChevronLeft className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setCalendarWeekAnchor(getLocalIsoDate())}
+                  className="rounded-lg border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:text-foreground">Hoje</button>
+                <button type="button" aria-label="Próxima semana" onClick={() => setCalendarWeekAnchor(date => shiftWorkoutWeek(date, 1))}
+                  className="rounded-lg border border-border p-2 text-muted-foreground transition hover:text-foreground"><ChevronRight className="h-4 w-4" /></button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              {calendarWeekDates.map(date => {
+                const entry = workoutSchedule.find(item => item.date === date);
+                const daySessions = sessions.filter(session => session.date === date);
+                const scheduleStatus = entry ? getWorkoutScheduleStatus(entry, sessions, getLocalIsoDate()) : null;
+                const statusLabel = scheduleStatus === 'training' || scheduleStatus === 'scheduled' ? 'Treino planejado'
+                  : scheduleStatus === 'completed' ? 'Treino realizado'
+                    : scheduleStatus === 'partial' ? 'Sessão parcial'
+                      : scheduleStatus === 'missed' ? 'Treino perdido'
+                        : scheduleStatus === 'rest' ? 'Descanso'
+                          : scheduleStatus === 'deload' ? 'Deload'
+                            : daySessions.length > 0 ? (daySessions.some(session => session.completed) ? 'Treino realizado' : 'Sessão parcial')
+                              : 'Sem treino previsto';
+                const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(new Date(`${date}T12:00:00`));
+                const dayNumber = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(`${date}T12:00:00`));
+                return (
+                  <article key={date} aria-label={`${weekday} ${dayNumber}: ${statusLabel}`}
+                    aria-current={date === getLocalIsoDate() ? 'date' : undefined}
+                    className={`min-h-28 rounded-xl border p-3 ${date === getLocalIsoDate() ? 'border-primary/40 bg-primary/[0.05]' : 'border-border/60 bg-secondary/20'}`}>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-semibold uppercase text-muted-foreground">{weekday}</span>
+                      <span className="text-[10px] tabular-nums text-foreground">{dayNumber}</span>
+                    </div>
+                    <p className="mt-2 text-[11px] font-semibold leading-snug text-foreground">{entry?.title || (entry ? statusLabel : daySessions[0]?.splitName || statusLabel)}</p>
+                    <span className="mt-1 inline-flex rounded-full border border-border/70 px-2 py-0.5 text-[9px] font-medium text-muted-foreground">{statusLabel}</span>
+                    {entry?.notes && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{entry.notes}</p>}
+                    {!entry && daySessions.length === 0 && (
+                      <button type="button" onClick={() => { setScheduleDate(date); setScheduleKind('training'); }}
+                        className="mt-2 rounded-md px-1.5 py-1 text-[10px] font-semibold text-primary transition hover:bg-primary/10">
+                        Planejar dia
+                      </button>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
 
           <form onSubmit={handleSaveSchedule} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="space-y-1.5 text-xs font-semibold text-muted-foreground">
