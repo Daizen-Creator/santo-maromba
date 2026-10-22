@@ -58,7 +58,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 22 | Classificar registro por café, almoço, lanche, jantar ou ceia. | DIAR | — | P · slots existem; classificação manual limitada |
 | 23 | Distinguir itens planejados dos realmente consumidos. | DIAR | — | V · `daily-meal-api.test.ts` |
 | 24 | Registrar gramas parciais e recalcular totais consumidos. | DIAR; NUTR | — | V · `daily-log-persistence.test.ts` |
-| 25 | Favoritar alimento e consultá-lo em lista própria. | NUTR | — | A · sem favoritos funcionais de alimentos |
+| 25 | Favoritar alimento e consultá-lo em lista própria. | NUTR | — | V · catálogo mantém favoritos no SQLite/PWA e filtra a lista; testes `catalog-persistence.test.ts` e `daily-meal-api.test.ts` |
 | 26 | Copiar refeições de uma data para outra. | DIAR | — | A · sem fluxo de cópia |
 | 27 | Editar ingredientes/quantidades e atualizar macros. | DIAR; NUTR | — | P · macros parciais recalculam; edição do plano incompleta |
 | 28 | Excluir um lançamento e desfazer a exclusão. | DIAR | — | P · checklist pode voltar a pendente; exclusão/undo de histórico ausente |
@@ -304,7 +304,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - Release 1.0.4: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.4.
 - GitHub Actions e release 1.0.5: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39723144455).
 - Release 1.0.5: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.5.
-- Incremento 1.0.6: 70 testes, build e smoke test local aprovados; publicação ainda pendente.
+- GitHub Actions e release 1.0.6: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39723951888).
+- Release 1.0.6: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.6.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
