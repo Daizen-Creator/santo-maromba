@@ -328,7 +328,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - GitHub Actions e release 1.1.4: 93 testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39729199060).
 - Release 1.1.4: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.1.4.
 - Incremento 1.1.5: 98 testes, build, pacote instalável/portátil e smoke local aprovados; GitHub Actions publicou instalador NSIS, portátil e manifesto de atualização com sucesso (workflow 39729750843).
-- Incremento 1.1.6: 100 testes, build, instalador NSIS, executável portátil e smoke de abertura/SQLite local aprovados; publicação GitHub pendente.
+- Incremento 1.1.6: 100 testes, build, instalador NSIS, executável portátil e smoke de abertura/SQLite local aprovados; GitHub Actions publicou instalador, portátil e manifesto do auto-update com sucesso (workflow 39730329076).
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
