@@ -217,6 +217,21 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
 );
 CREATE INDEX IF NOT EXISTS idx_shopping_list_week ON shopping_list_items(week_start_date, purchased, food_name);
 
+CREATE TABLE IF NOT EXISTS shopping_expenses (
+  id TEXT PRIMARY KEY,
+  week_start_date TEXT NOT NULL,
+  food_id TEXT NOT NULL,
+  food_name TEXT NOT NULL,
+  amount_g REAL NOT NULL CHECK(amount_g > 0),
+  purchased_at TEXT NOT NULL,
+  unit_price_per_kg REAL CHECK(unit_price_per_kg IS NULL OR unit_price_per_kg >= 0),
+  total_cost REAL CHECK(total_cost IS NULL OR total_cost >= 0),
+  price_source TEXT,
+  CHECK((unit_price_per_kg IS NULL AND total_cost IS NULL AND price_source IS NULL)
+    OR (unit_price_per_kg IS NOT NULL AND total_cost IS NOT NULL AND price_source IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_shopping_expenses_period ON shopping_expenses(purchased_at, food_name);
+
 -- Quantidades habituais escolhidas pelo usuário; os valores nutricionais dos alimentos seguem por 100 g.
 CREATE TABLE IF NOT EXISTS food_portion_preferences (
   food_id TEXT PRIMARY KEY,

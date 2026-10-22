@@ -41,6 +41,7 @@ import {
   PantryRecipeSearchInput,
   ShoppingListItem,
   ShoppingListPurchaseInput,
+  ShoppingExpenseSummary,
   PhotoRecord,
   PhotoCreateInput,
   Recipe,
@@ -396,6 +397,10 @@ export class FitTrackService {
 
   setShoppingItemPurchased(input: ShoppingListPurchaseInput): ShoppingListItem[] {
     return this.shoppingListRepo.setPurchased(input);
+  }
+
+  getShoppingExpenses(range: NutritionAnalyticsQuery): ShoppingExpenseSummary {
+    return this.shoppingListRepo.getExpenses(range);
   }
 
   // --- TREINOS E EXERCÍCIOS ---

@@ -16,7 +16,7 @@ import {
   ImagePlus,
   X
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryPriceUpdateInput, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, ShoppingListItem, ShoppingListPurchaseInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionAnalyticsQuery, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryPriceUpdateInput, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, ShoppingExpenseSummary, ShoppingListItem, ShoppingListPurchaseInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -94,6 +94,7 @@ interface NutritionViewProps {
   onApplyWeeklyMealTemplate: (input: { templateId: string; weekStartDate: string }) => Promise<ApplyWeeklyMealTemplateResult>;
   onReorderDailyMeals: (input: ReorderDailyMealsInput) => Promise<DailyMealEntry[]>;
   onGetShoppingList: (weekStartDate: string) => Promise<ShoppingListItem[]>;
+  onGetShoppingExpenses: (range: NutritionAnalyticsQuery) => Promise<ShoppingExpenseSummary>;
   onGenerateShoppingList: (weekStartDate: string) => Promise<ShoppingListItem[]>;
   onSetShoppingItemPurchased: (input: ShoppingListPurchaseInput) => Promise<ShoppingListItem[]>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
@@ -140,6 +141,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onApplyWeeklyMealTemplate,
   onReorderDailyMeals,
   onGetShoppingList,
+  onGetShoppingExpenses,
   onGenerateShoppingList,
   onSetShoppingItemPurchased,
   onSetRecipeFavorite,
@@ -266,10 +268,30 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [templateMessage, setTemplateMessage] = useState<string | null>(null);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [templateSaving, setTemplateSaving] = useState(false);
+  const [expenseFromDate, setExpenseFromDate] = useState(() => {
+    const now = new Date();
+    return formatDateInput(new Date(now.getFullYear(), now.getMonth(), 1));
+  });
+  const [expenseToDate, setExpenseToDate] = useState(() => formatDateInput(new Date()));
+  const [shoppingExpenseSummary, setShoppingExpenseSummary] = useState<ShoppingExpenseSummary | null>(null);
+  const [shoppingExpenseLoading, setShoppingExpenseLoading] = useState(false);
+  const [shoppingExpenseError, setShoppingExpenseError] = useState<string | null>(null);
 
   const today = new Date();
   const todayString = formatDateInput(today);
   const averageMealBudget = getAverageMealBudget(foodBudgetMonthly, mealsPerDay, todayString);
+
+  useEffect(() => {
+    if (activeTab !== 'pantry') return;
+    let cancelled = false;
+    setShoppingExpenseLoading(true);
+    setShoppingExpenseError(null);
+    onGetShoppingExpenses({ fromDate: expenseFromDate, toDate: expenseToDate })
+      .then(summary => { if (!cancelled) setShoppingExpenseSummary(summary); })
+      .catch(error => { if (!cancelled) setShoppingExpenseError(error instanceof Error ? error.message : 'Não foi possível consultar os gastos.'); })
+      .finally(() => { if (!cancelled) setShoppingExpenseLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, expenseFromDate, expenseToDate, onGetShoppingExpenses]);
   const nutritionBalance = calculateNutritionBalance(targets, summary);
   const mealPhotoKey = (mealEntryId: string) => mealEntryId;
 
@@ -2156,6 +2178,44 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               </p>
             </div>
           </div>
+
+          <section className="rounded-2xl border border-border bg-background/35 p-4 space-y-3" aria-label="Gastos das compras por período">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">Gastos das compras</h4>
+                <p className="mt-1 text-[10px] text-muted-foreground">Calculados pela quantidade marcada como comprada e pelo preço por kg salvo naquele momento. Compras sem preço ficam fora do total.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <label className="grid gap-1 text-[10px] text-muted-foreground">De
+                  <input type="date" value={expenseFromDate} max={expenseToDate} onChange={event => setExpenseFromDate(event.target.value)} className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground" />
+                </label>
+                <label className="grid gap-1 text-[10px] text-muted-foreground">Até
+                  <input type="date" value={expenseToDate} min={expenseFromDate} max={todayString} onChange={event => setExpenseToDate(event.target.value)} className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground" />
+                </label>
+              </div>
+            </div>
+            {shoppingExpenseLoading ? <p className="text-xs text-muted-foreground">Consultando compras registradas…</p>
+              : shoppingExpenseError ? <p role="alert" className="text-xs text-red-300">{shoppingExpenseError}</p>
+                : shoppingExpenseSummary && (
+                  <>
+                    <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 border-t border-border/60 pt-3 text-xs">
+                      <strong className="text-emerald-200">Total com preço: R$ {shoppingExpenseSummary.totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                      <span className="text-muted-foreground">{shoppingExpenseSummary.pricedPurchaseCount} compra(s) com preço</span>
+                      <span className={shoppingExpenseSummary.unpricedPurchaseCount ? 'text-amber-200' : 'text-muted-foreground'}>{shoppingExpenseSummary.unpricedPurchaseCount} sem preço registrado</span>
+                    </div>
+                    {shoppingExpenseSummary.expenses.length > 0 ? (
+                      <ul className="max-h-48 divide-y divide-border/60 overflow-y-auto" aria-label="Compras no período">
+                        {shoppingExpenseSummary.expenses.map(expense => (
+                          <li key={expense.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-[11px]">
+                            <span className="text-foreground">{expense.purchasedAt.slice(0, 10)} · {expense.foodName} · {formatMass(expense.amountG)}</span>
+                            <span className="text-muted-foreground">{expense.totalCost === undefined ? 'sem preço registrado' : `R$ ${expense.totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · ${expense.priceSource}`}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : <p className="text-[11px] text-muted-foreground">Nenhuma compra registrada neste período.</p>}
+                  </>
+                )}
+          </section>
 
           {pantryExpiryAlerts.length > 0 && (
             <div role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">

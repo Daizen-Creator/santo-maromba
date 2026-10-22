@@ -72,6 +72,7 @@ export const IPC_CHANNELS = {
   GET_SHOPPING_LIST: 'nutrition:get-shopping-list',
   GENERATE_SHOPPING_LIST: 'nutrition:generate-shopping-list',
   SET_SHOPPING_ITEM_PURCHASED: 'nutrition:set-shopping-item-purchased',
+  GET_SHOPPING_EXPENSES: 'nutrition:get-shopping-expenses',
 
   // Workout
   GET_EXERCISES: 'workout:get-exercises',

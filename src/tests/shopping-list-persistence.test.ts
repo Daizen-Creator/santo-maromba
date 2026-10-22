@@ -23,7 +23,7 @@ describe('lista de compras SQLite', () => {
   const createRepositories = () => {
     nutrition = new NutritionRepository(db!);
     dailyLogs = new DailyLogRepository(db!);
-    shopping = new ShoppingListRepository(db!, dailyLogs, () => nutrition.getFoods());
+    shopping = new ShoppingListRepository(db!, dailyLogs, () => nutrition.getFoods(), () => new Date('2026-10-22T12:00:00.000Z'));
   };
 
   beforeEach(async () => {
@@ -56,8 +56,16 @@ describe('lista de compras SQLite', () => {
       expect.objectContaining({ weekStartDate: '2026-10-19', foodId: 'food-ovo', amountG: 30, category: 'protein', purchased: false }),
       expect.objectContaining({ weekStartDate: '2026-10-19', foodId: 'food-arroz', amountG: 160, category: 'carb', purchased: false })
     ]));
+    nutrition.updatePantryPrice('food-arroz', 5, 'Mercado informado');
     items = shopping.setPurchased({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: true });
     expect(items.find(item => item.foodId === 'food-arroz')?.purchased).toBe(true);
+    shopping.setPurchased({ weekStartDate: '2026-10-19', foodId: 'food-ovo', purchased: true });
+    expect(shopping.getExpenses({ fromDate: '2026-10-19', toDate: '2026-10-25' })).toMatchObject({
+      totalCost: 0.8, pricedPurchaseCount: 1, unpricedPurchaseCount: 1
+    });
+    nutrition.updatePantryPrice('food-arroz', 9, 'Outro preço informado');
+    expect(shopping.getExpenses({ fromDate: '2026-10-19', toDate: '2026-10-25' }).expenses[0])
+      .toMatchObject({ unitPricePerKg: 5, totalCost: 0.8, priceSource: 'Mercado informado' });
     expect(shopping.generate('2026-10-19').find(item => item.foodId === 'food-arroz')?.purchased).toBe(true);
 
     dailyLogs.saveMeal({
@@ -71,6 +79,44 @@ describe('lista de compras SQLite', () => {
     await runMigrations(db!);
     createRepositories();
     expect(shopping.getByWeek('2026-10-22').find(item => item.foodId === 'food-arroz')).toMatchObject({ amountG: 180, purchased: false });
-    expect(db!.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 31')?.version).toBe(31);
+    expect(shopping.getExpenses({ fromDate: '2026-10-19', toDate: '2026-10-25' })).toMatchObject({
+      totalCost: 0.8, pricedPurchaseCount: 1, unpricedPurchaseCount: 1
+    });
+    expect(db!.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 35')?.version).toBe(35);
+  });
+
+  it('migra o histórico de gastos sem alterar listas semanais já salvas', async () => {
+    db!.execute(
+      `INSERT INTO shopping_list_items (id, week_start_date, food_id, food_name, category, amount_g, purchased, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['old-shopping-item', '2026-10-19', 'food-arroz', 'Arroz', 'carb', 200, 1, '2026-10-22T12:00:00.000Z']
+    );
+    db!.exec('DROP TABLE shopping_expenses');
+    db!.execute('DELETE FROM schema_version WHERE version = 35');
+
+    await runMigrations(db!);
+
+    expect(db!.queryOne<any>('SELECT * FROM shopping_list_items WHERE id = ?', ['old-shopping-item']))
+      .toMatchObject({ food_id: 'food-arroz', amount_g: 200, purchased: 1 });
+    expect(db!.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 35')?.version).toBe(35);
+    expect(shopping.getExpenses({ fromDate: '2026-10-19', toDate: '2026-10-25' })).toMatchObject({
+      totalCost: 0, pricedPurchaseCount: 0, unpricedPurchaseCount: 0
+    });
+  });
+
+  it('desfaz somente a última marcação correspondente sem deixar valor no relatório', async () => {
+    nutrition.updatePantryPrice('food-arroz', 10, 'Mercado informado');
+    db!.execute(
+      `INSERT INTO shopping_list_items (id, week_start_date, food_id, food_name, category, amount_g, purchased, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['undo-shopping-item', '2026-10-19', 'food-arroz', 'Arroz', 'carb', 100, 0, '2026-10-22T12:00:00.000Z']
+    );
+    shopping.setPurchased({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: true });
+    expect(shopping.getExpenses({ fromDate: '2026-10-19', toDate: '2026-10-25' }).totalCost).toBe(1);
+
+    shopping.setPurchased({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: false });
+    expect(shopping.getExpenses({ fromDate: '2026-10-19', toDate: '2026-10-25' })).toMatchObject({
+      totalCost: 0, pricedPurchaseCount: 0, unpricedPurchaseCount: 0, expenses: []
+    });
   });
 });

@@ -803,6 +803,27 @@ export interface ShoppingListPurchaseInput {
   purchased: boolean;
 }
 
+export interface ShoppingExpenseRecord {
+  id: string;
+  weekStartDate: string;
+  foodId: string;
+  foodName: string;
+  amountG: number;
+  purchasedAt: string;
+  unitPricePerKg?: number;
+  totalCost?: number;
+  priceSource?: string;
+}
+
+export interface ShoppingExpenseSummary {
+  fromDate: string;
+  toDate: string;
+  totalCost: number;
+  pricedPurchaseCount: number;
+  unpricedPurchaseCount: number;
+  expenses: ShoppingExpenseRecord[];
+}
+
 // ============================================================================
 // MÓDULO — TREINOS, EXERCÍCIOS E PROGRESSÃO DE CARGAS
 // ============================================================================

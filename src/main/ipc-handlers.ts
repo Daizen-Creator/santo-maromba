@@ -477,6 +477,16 @@ export function registerIpcHandlers(
     }
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_SHOPPING_EXPENSES, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      const range = NutritionAnalyticsQuerySchema.parse(rawInput);
+      return { success: true, data: service.getShoppingExpenses(range) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível consultar os gastos.' };
+    }
+  });
+
   // --- TREINOS ---
   ipcMain.handle(IPC_CHANNELS.GET_EXERCISES, async event => {
     try {

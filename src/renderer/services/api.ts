@@ -17,6 +17,8 @@ import {
   PantryRecipeSearchInput,
   ShoppingListItem,
   ShoppingListPurchaseInput,
+  ShoppingExpenseRecord,
+  ShoppingExpenseSummary,
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
@@ -93,6 +95,7 @@ import { getWorkoutWeekDates } from '../../domain/workout-week-calendar';
 import { inferMealTurn } from '../../domain/meal-turn';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
 import { buildShoppingList } from '../../domain/shopping-list';
+import { summarizeShoppingExpenses } from '../../domain/shopping-expenses';
 import { resolveRecipeCost } from '../../domain/recipe-cost';
 import { PantryConsumptionRecord, reconcilePantryConsumption } from '../../domain/pantry-consumption';
 
@@ -105,6 +108,7 @@ const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENTS = 'fittrack_custom_measurements';
 const LOCAL_STORAGE_KEY_PANTRY = 'fittrack_pantry';
 const LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION = 'fittrack_pantry_consumption';
 const LOCAL_STORAGE_KEY_SHOPPING_LISTS = 'fittrack_shopping_lists';
+const LOCAL_STORAGE_KEY_SHOPPING_EXPENSES = 'fittrack_shopping_expenses';
 const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
 const LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES = 'fittrack_workout_templates';
 const LOCAL_STORAGE_KEY_WORKOUT_SCHEDULE = 'fittrack_workout_schedule';
@@ -869,12 +873,46 @@ export const api = {
     }
     const lists: Record<string, ShoppingListItem[]> = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_SHOPPING_LISTS) || '{}');
     const current = lists[weekStartDate] || [];
-    if (!current.some(item => item.foodId === input.foodId)) throw new Error('O item não pertence à lista de compras desta semana.');
+    const selected = current.find(item => item.foodId === input.foodId);
+    if (!selected) throw new Error('O item não pertence à lista de compras desta semana.');
+    if (selected.purchased === input.purchased) return current;
+    const now = new Date().toISOString();
     const updated = current.map(item => item.foodId === input.foodId
-      ? { ...item, purchased: input.purchased, updatedAt: new Date().toISOString() }
+      ? { ...item, purchased: input.purchased, updatedAt: now }
       : item);
     localStorage.setItem(LOCAL_STORAGE_KEY_SHOPPING_LISTS, JSON.stringify({ ...lists, [weekStartDate]: updated }));
+    const expenses = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_SHOPPING_EXPENSES) || '[]') as ShoppingExpenseRecord[];
+    if (input.purchased) {
+      const pantryItem = (await api.getPantry()).find(item => item.foodId === selected.foodId);
+      const hasUserPrice = pantryItem?.unitPrice !== undefined && Boolean(pantryItem.priceSource && pantryItem.priceUpdatedAt);
+      const unitPricePerKg = hasUserPrice ? pantryItem!.unitPrice : undefined;
+      const totalCost = unitPricePerKg === undefined
+        ? undefined
+        : Math.round((unitPricePerKg * selected.amountG / 1000 + Number.EPSILON) * 100) / 100;
+      expenses.push({
+        id: `shopping-expense-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
+        weekStartDate, foodId: selected.foodId, foodName: selected.foodName, amountG: selected.amountG,
+        purchasedAt: now, unitPricePerKg, totalCost, priceSource: hasUserPrice ? pantryItem!.priceSource : undefined
+      });
+    } else {
+      const latestIndex = expenses.reduce((latest, expense, index) =>
+        expense.weekStartDate === weekStartDate && expense.foodId === selected.foodId
+          && (latest < 0 || expense.purchasedAt > expenses[latest].purchasedAt) ? index : latest, -1);
+      if (latestIndex >= 0) expenses.splice(latestIndex, 1);
+    }
+    localStorage.setItem(LOCAL_STORAGE_KEY_SHOPPING_EXPENSES, JSON.stringify(expenses));
     return updated;
+  },
+
+  getShoppingExpenses: async (rawRange: NutritionAnalyticsQuery): Promise<ShoppingExpenseSummary> => {
+    const range = NutritionAnalyticsQuerySchema.parse(rawRange);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getShoppingExpenses(range);
+      if (!res.success) throw new Error(res.error || 'Não foi possível consultar os gastos.');
+      return res.data!;
+    }
+    const expenses = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_SHOPPING_EXPENSES) || '[]') as ShoppingExpenseRecord[];
+    return summarizeShoppingExpenses(range, expenses);
   },
 
   // --- TREINOS ---

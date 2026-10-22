@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.48. Estado após validação dos incrementos: **114 validadas, 33 parciais, 30 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.49. Estado após validação dos incrementos: **115 validadas, 33 parciais, 29 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -197,7 +197,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 136 | Priorizar receitas para aproveitar sobras. | DESP | — | A · sem controle de sobras |
 | 137 | Marcar/desmarcar cada item como comprado e conservar a seleção ao recarregar; ao mudar a quantidade necessária, reabrir o item como não comprado. | `WeeklyMealPlanner.tsx`; `shopping-list-repository.ts`; `api.ts`; service/IPC/preload; schema/migration | SQLite desktop; localStorage PWA | V · persistência, reabertura e redefinição após alteração; `shopping-list-persistence.test.ts`, `shopping-list-api.test.ts` |
 | 138 | Agrupar itens da lista semanal por categoria persistida do catálogo e exibir grupos ordenados, incluindo itens sem categoria em “Outros”. | `shopping-list-sections.ts`; `WeeklyMealPlanner.tsx`; `shopping-list.ts`; `shopping-list-repository.ts`; `api.ts` | Categoria do catálogo local; lista da semana | V · agrupamento determinístico testado em `shopping-list.test.ts`; SQLite/PWA preservam categoria nos testes da lista |
-| 139 | Consultar gastos por período. | DESP | preços e compras persistidos | A · sem histórico de gastos |
+| 139 | Consultar compras marcadas como realizadas em um intervalo de datas; calcular apenas itens com preço por kg salvo no momento da compra, destacar compras sem preço e preservar o histórico mesmo se a lista semanal mudar. | `WeeklyMealPlanner.tsx`; `NutritionView.tsx`; `shopping-list-repository.ts`; `shopping-expenses.ts`; `api.ts`; service/IPC/preload; schema/migration 35 | Lista semanal marcada como comprada; preço informado opcional por alimento | V · `shopping-list-persistence.test.ts`, `shopping-list-api.test.ts` e `shopping-expenses.test.ts` cobrem SQLite reaberto, PWA offline, snapshot de preço, desfazer, mudança da lista e intervalos |
 | 140 | Programar preparo de refeições no calendário. | DESP | — | A · sem calendário de preparo |
 
 ## Funcionalidades 141–160 — assistente
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.48 (IDs 131 e 134; inclui atualização imediata do ID 130): 237/237 testes em 74 arquivos aprovados; build, instalador NSIS, portable, smoke de abertura e publicação pendentes.
+- Incremento 1.1.49 (ID 139): 241/241 testes em 75 arquivos aprovados; build, instalador NSIS, portable, smoke de abertura e publicação pendentes.
+- Incremento 1.1.48 (IDs 131 e 134; inclui atualização imediata do ID 130): 237/237 testes em 74 arquivos, build, instalador NSIS, portable e smoke de abertura aprovados; GitHub Actions 39781175595 publicou os artefatos.
 - Incremento 1.1.47 (ID 130): 233/233 testes em 73 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos com criação do SQLite aprovados; GitHub Actions 39780137364 publicou instalador, portable, blockmap e `latest.yml`.
 - Incremento 1.1.46 (IDs 132 e 133): 229/229 testes em 71 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; GitHub Actions 39779345989 publicou os artefatos.
 - Incremento 1.1.45: 225/225 testes em 70 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; GitHub Actions 39778413859 publicou os artefatos.

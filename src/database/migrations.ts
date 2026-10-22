@@ -490,4 +490,25 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [34, 'Preços informados e custo por grama de proteína', new Date().toISOString()]
     );
   }
+  const version35 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 35');
+  if (!version35) {
+    db.exec(`CREATE TABLE IF NOT EXISTS shopping_expenses (
+      id TEXT PRIMARY KEY,
+      week_start_date TEXT NOT NULL,
+      food_id TEXT NOT NULL,
+      food_name TEXT NOT NULL,
+      amount_g REAL NOT NULL CHECK(amount_g > 0),
+      purchased_at TEXT NOT NULL,
+      unit_price_per_kg REAL CHECK(unit_price_per_kg IS NULL OR unit_price_per_kg >= 0),
+      total_cost REAL CHECK(total_cost IS NULL OR total_cost >= 0),
+      price_source TEXT,
+      CHECK((unit_price_per_kg IS NULL AND total_cost IS NULL AND price_source IS NULL)
+        OR (unit_price_per_kg IS NOT NULL AND total_cost IS NOT NULL AND price_source IS NOT NULL))
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_shopping_expenses_period ON shopping_expenses(purchased_at, food_name)');
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [35, 'Histórico de compras com preço registrado na data da compra', new Date().toISOString()]
+    );
+  }
 }

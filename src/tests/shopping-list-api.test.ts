@@ -31,8 +31,25 @@ describe('lista de compras offline da PWA', () => {
     let list = await api.generateShoppingList('2026-10-22');
     expect(list.find(item => item.foodId === 'food-arroz')).toMatchObject({ weekStartDate: '2026-10-19', amountG: 160, purchased: false });
     expect(list.find(item => item.foodId === 'food-ovo')).toMatchObject({ amountG: 30, purchased: false });
+    await api.updatePantryPrice({ foodId: 'food-arroz', unitPrice: 5, priceSource: 'Mercado informado' });
     list = await api.setShoppingItemPurchased({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: true });
     expect(list.find(item => item.foodId === 'food-arroz')?.purchased).toBe(true);
+    await api.setShoppingItemPurchased({ weekStartDate: '2026-10-19', foodId: 'food-ovo', purchased: true });
+    const currentDate = new Date();
+    const fromDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const toDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+    expect(await api.getShoppingExpenses({ fromDate, toDate })).toMatchObject({
+      totalCost: 0.8, pricedPurchaseCount: 1, unpricedPurchaseCount: 1
+    });
+    await api.setShoppingItemPurchased({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: false });
+    expect(await api.getShoppingExpenses({ fromDate, toDate })).toMatchObject({
+      totalCost: 0, pricedPurchaseCount: 0, unpricedPurchaseCount: 1
+    });
+    await api.setShoppingItemPurchased({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: true });
+    await api.setShoppingItemPurchased({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: true });
+    await api.updatePantryPrice({ foodId: 'food-arroz', unitPrice: 9, priceSource: 'Novo preço' });
+    expect((await api.getShoppingExpenses({ fromDate, toDate })).expenses.find(item => item.foodId === 'food-arroz'))
+      .toMatchObject({ unitPricePerKg: 5, totalCost: 0.8, priceSource: 'Mercado informado' });
     expect((await api.getShoppingList('2026-10-20')).find(item => item.foodId === 'food-arroz')?.purchased).toBe(true);
     expect((await api.generateShoppingList('2026-10-19')).find(item => item.foodId === 'food-arroz')?.purchased).toBe(true);
 
