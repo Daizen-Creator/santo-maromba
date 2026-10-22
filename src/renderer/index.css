@@ -188,3 +188,49 @@ textarea:focus-visible {
     overflow-wrap: anywhere;
   }
 }
+
+#shape-evolution-report {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  body.shape-report-printing * {
+    visibility: hidden !important;
+  }
+
+  body.shape-report-printing #shape-evolution-report,
+  body.shape-report-printing #shape-evolution-report * {
+    visibility: visible !important;
+  }
+
+  body.shape-report-printing #shape-evolution-report {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 10mm;
+    box-sizing: border-box;
+    color: #18181b;
+    background: #fff;
+    font-family: Arial, sans-serif;
+  }
+
+  body.shape-report-printing #shape-evolution-report .shape-report-photos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5mm;
+  }
+
+  body.shape-report-printing #shape-evolution-report img {
+    display: block;
+    width: 100%;
+    max-height: 180mm;
+    object-fit: contain;
+    background: #111;
+    break-inside: avoid;
+  }
+}

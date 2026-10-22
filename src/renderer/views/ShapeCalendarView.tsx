@@ -9,12 +9,14 @@ import {
   Trash2,
   Plus,
   Clock,
-  Columns
+  Columns,
+  Printer
 } from 'lucide-react';
 import { BodyMeasurementRecord, SaveBodyMeasurementInput, CustomBodyMeasurements, CustomMeasurementDefinition, CustomMeasurementRecord, PhotoCreateInput, PhotoExportResult, PhotoPose, PhotoRecord, SaveCustomMeasurementDefinitionInput, SaveCustomMeasurementInput, ShapeMilestone, ShapeMilestoneInput, WeightRecord, WorkoutSession } from '../../shared/types';
 import { buildMeasurementTrend, MEASUREMENT_METRICS, MeasurementMetric } from '../../domain/measurement-trend';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ShapeMilestonesPanel } from '../components/ShapeMilestonesPanel';
+import { formatShapeChange, printShapeComparisonReport } from '../../domain/shape-comparison-report';
 
 const localDateString = (date = new Date()): string => {
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -231,6 +233,12 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
   const weightB = useMemo(() => weights.find(w => w.date === photoB?.date), [weights, photoB]);
   const photoWeightA = photoA?.weightKgAtPhoto ?? weightA?.weightKg;
   const photoWeightB = photoB?.weightKgAtPhoto ?? weightB?.weightKg;
+  const comparisonMetrics = [
+    { label: 'Variação de Peso', value: formatShapeChange(photoWeightA, photoWeightB, 'kg') },
+    { label: 'Variação de Cintura', value: formatShapeChange(measA?.waistCircCm, measB?.waistCircCm, 'cm') },
+    { label: 'Variação de Braço', value: formatShapeChange(measA?.armFlexedCm, measB?.armFlexedCm, 'cm') },
+    { label: 'Variação de Peitoral', value: formatShapeChange(measA?.chestCm, measB?.chestCm, 'cm') }
+  ];
   const photoDateWeight = useMemo(() => weights.filter(weight => weight.date === photoDate).slice(-1)[0], [photoDate, weights]);
   const viewedPhoto = photos.find(photo => photo.id === viewedPhotoId);
 
@@ -323,6 +331,19 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
       setActionError(error.message || 'Não foi possível exportar a foto original.');
     } finally {
       setExportingPhoto(false);
+    }
+  };
+
+  const handleExportComparisonReport = () => {
+    if (!photoA || !photoB || photoA.date === photoB.date) {
+      setActionError('Selecione fotos de duas datas diferentes para exportar o relatório.');
+      return;
+    }
+    setActionError(null);
+    try {
+      printShapeComparisonReport();
+    } catch (error: any) {
+      setActionError(error.message || 'Não foi possível abrir a impressão do relatório.');
     }
   };
 
@@ -630,7 +651,16 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleExportComparisonReport}
+                disabled={!photoA || !photoB || photoA.date === photoB.date}
+                className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Exportar / Salvar PDF
+              </button>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCompareMode('side_by_side')}
@@ -773,43 +803,42 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
             </h4>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-              <div className="rounded-xl border border-border bg-card p-3">
-                <span className="text-muted-foreground block text-[11px]">Variação de Peso</span>
-                <span className="font-display text-lg font-bold text-foreground">
-                  {photoWeightA !== undefined && photoWeightB !== undefined
-                    ? `${(photoWeightB - photoWeightA > 0 ? '+' : '')}${(photoWeightB - photoWeightA).toFixed(1)} kg`
-                    : 'N/A'}
-                </span>
-              </div>
-
-              <div className="rounded-xl border border-border bg-card p-3">
-                <span className="text-muted-foreground block text-[11px]">Variação de Cintura</span>
-                <span className="font-display text-lg font-bold text-foreground">
-                  {measA?.waistCircCm && measB?.waistCircCm
-                    ? `${(measB.waistCircCm - measA.waistCircCm > 0 ? '+' : '')}${(measB.waistCircCm - measA.waistCircCm).toFixed(1)} cm`
-                    : '—'}
-                </span>
-              </div>
-
-              <div className="rounded-xl border border-border bg-card p-3">
-                <span className="text-muted-foreground block text-[11px]">Variação de Braço</span>
-                <span className="font-display text-lg font-bold text-foreground">
-                  {measA?.armFlexedCm && measB?.armFlexedCm
-                    ? `${(measB.armFlexedCm - measA.armFlexedCm > 0 ? '+' : '')}${(measB.armFlexedCm - measA.armFlexedCm).toFixed(1)} cm`
-                    : '—'}
-                </span>
-              </div>
-
-              <div className="rounded-xl border border-border bg-card p-3">
-                <span className="text-muted-foreground block text-[11px]">Variação de Peitoral</span>
-                <span className="font-display text-lg font-bold text-foreground">
-                  {measA?.chestCm && measB?.chestCm
-                    ? `${(measB.chestCm - measA.chestCm > 0 ? '+' : '')}${(measB.chestCm - measA.chestCm).toFixed(1)} cm`
-                    : '—'}
-                </span>
-              </div>
+              {comparisonMetrics.map(metric => (
+                <div key={metric.label} className="rounded-xl border border-border bg-card p-3">
+                  <span className="text-muted-foreground block text-[11px]">{metric.label}</span>
+                  <span className="font-display text-lg font-bold text-foreground">{metric.value}</span>
+                </div>
+              ))}
             </div>
           </div>
+
+          <section id="shape-evolution-report" aria-hidden="true">
+            <header className="mb-6 border-b border-zinc-300 pb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Santo Maromba · evolução</p>
+              <h1 className="mt-2 text-3xl font-bold text-zinc-900">Comparação física</h1>
+              <p className="mt-1 text-sm text-zinc-600">Registros selecionados: {photoA?.date || '—'} e {photoB?.date || '—'}</p>
+            </header>
+            <div className="shape-report-photos grid grid-cols-2 gap-5">
+              {[{ photo: photoA, label: 'Antes' }, { photo: photoB, label: 'Depois' }].map(({ photo, label }) => (
+                <article key={label} className="min-w-0">
+                  <h2 className="mb-2 text-lg font-bold text-zinc-900">{label} · {photo ? poseLabel(photo) : 'Sem foto'}</h2>
+                  {photo ? <img src={photo.filePath} alt={`${label}: ${poseLabel(photo)}`} /> : <p className="text-sm text-zinc-500">Foto indisponível</p>}
+                </article>
+              ))}
+            </div>
+            <section className="mt-6">
+              <h2 className="mb-3 text-lg font-bold text-zinc-900">Mudanças registradas</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {comparisonMetrics.map(metric => (
+                  <div key={metric.label} className="rounded-xl border border-zinc-300 p-3">
+                    <p className="text-xs text-zinc-500">{metric.label}</p>
+                    <p className="mt-1 text-xl font-bold text-zinc-900">{metric.value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <p className="mt-6 text-xs text-zinc-500">Dados calculados somente a partir dos registros salvos. Medidas ausentes são exibidas como não disponíveis.</p>
+          </section>
         </div>
       )}
 
