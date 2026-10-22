@@ -11,6 +11,7 @@ import { NutritionView } from './views/NutritionView';
 import { WorkoutView } from './views/WorkoutView';
 import { ProjectionView } from './views/ProjectionView';
 import { VisualCustomizationView } from './views/VisualCustomizationView';
+import { PersonalDiaryView } from './views/PersonalDiaryView';
 import { WeightModal } from './components/WeightModal';
 import { InitialHistoryModal } from './components/InitialHistoryModal';
 import { api } from './services/api';
@@ -378,6 +379,11 @@ export const App: React.FC = () => {
           title: 'Perfil & Metas Corporais',
           subtitle: 'Biometria, restrições e configuração de treino'
         };
+      case 'diary':
+        return {
+          title: 'Diário Pessoal',
+          subtitle: 'Anote sua rotina e seus treinos em cada data'
+        };
       case 'calculator':
         return {
           title: 'Calculadora Metabólica',
@@ -553,6 +559,14 @@ export const App: React.FC = () => {
               onSaveProfile={handleSaveProfile}
               onGetGoalHistory={api.getProfileGoalHistory}
               onOpenHistoryModal={() => setIsHistoryModalOpen(true)}
+            />
+          )}
+
+          {currentTab === 'diary' && (
+            <PersonalDiaryView
+              onGetEntries={api.getPersonalDiaryEntries}
+              onSaveEntry={api.savePersonalDiaryEntry}
+              onDeleteEntry={api.deletePersonalDiaryEntry}
             />
           )}
 

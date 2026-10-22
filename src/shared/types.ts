@@ -295,6 +295,24 @@ export interface SaveFoodPortionPreferenceInput {
   amountG: number | null;
 }
 
+export interface PersonalDiaryEntry {
+  id: string;
+  date: string;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PersonalDiaryDateRange {
+  fromDate: string;
+  toDate: string;
+}
+
+export interface SavePersonalDiaryEntryInput {
+  date: string;
+  note: string;
+}
+
 export interface DailyIntakeProgress {
   date: string;
   calories: number | null;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Home, MoreHorizontal, Utensils, Dumbbell, Scale, Calculator, TrendingUp, SlidersHorizontal, UserRound } from 'lucide-react';
+import { Camera, Home, MoreHorizontal, Utensils, Dumbbell, Scale, Calculator, TrendingUp, SlidersHorizontal, UserRound, BookOpen } from 'lucide-react';
 
 interface MobileNavigationProps {
   currentTab: string;
@@ -16,6 +16,7 @@ const items = [
 
 const extraItems = [
   { id: 'profile', label: 'Perfil & Metas', icon: UserRound },
+  { id: 'diary', label: 'Diário Pessoal', icon: BookOpen },
   { id: 'weight', label: 'Histórico de peso', icon: Scale },
   { id: 'calculator', label: 'Calculadora metabólica', icon: Calculator },
   { id: 'projection', label: 'Projeção física', icon: TrendingUp },

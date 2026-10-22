@@ -243,6 +243,15 @@ export const SaveFoodPortionPreferenceInputSchema = z.object({
   foodId: CustomFoodIdSchema,
   amountG: z.number().min(1).max(5000).nullable()
 }).strict();
+export const PersonalDiaryDateSchema = z.string().refine(isRealCalendarDate, 'Informe uma data válida para o diário.');
+export const PersonalDiaryDateRangeSchema = z.object({
+  fromDate: PersonalDiaryDateSchema,
+  toDate: PersonalDiaryDateSchema
+}).strict().refine(range => range.fromDate <= range.toDate, 'A data inicial deve ser anterior à data final.');
+export const SavePersonalDiaryEntryInputSchema = z.object({
+  date: PersonalDiaryDateSchema,
+  note: z.string().trim().min(1, 'Escreva uma observação antes de salvar.').max(3000)
+}).strict();
 
 export const WorkoutSessionInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data de treino válida.'),

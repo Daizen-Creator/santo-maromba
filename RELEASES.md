@@ -206,7 +206,14 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Permite salvar, atualizar e remover a porção habitual de alimentos consumidos recentemente; essas preferências ficam no SQLite do desktop e no armazenamento local offline da PWA.
 - Aplica a quantidade escolhida a cada ingrediente do checklist quando solicitado e recalcula os macros por grama, mantendo inalterados os nutrientes de referência por 100 g.
 - Migração 22 cria a tabela de porções sem substituir alimentos, receitas ou refeições existentes.
-- 165 testes em 49 arquivos passaram; build, instalador NSIS e versão portátil foram aprovados. O executável abriu em perfil isolado e criou um SQLite com a migração 22 e a tabela de porções. Publicação GitHub pendente.
+- 165 testes em 49 arquivos passaram; build, instalador NSIS e versão portátil foram aprovados. O executável abriu em perfil isolado e criou um SQLite com a migração 22 e a tabela de porções. GitHub Actions 39750681230 publicou os quatro artefatos.
+
+## v1.1.28
+
+- Adiciona diário pessoal para registrar, revisar e excluir observações da rotina e dos treinos por data, com consulta mensal e edição sem criar duplicatas.
+- As anotações ficam no SQLite do desktop e no armazenamento local offline da PWA; o limite é de 3.000 caracteres por dia.
+- Migração 23 cria a tabela do diário sem alterar os demais registros.
+- 168 testes em 50 arquivos passaram; build, instalador NSIS e versão portátil foram aprovados. O executável abriu em perfil isolado e criou um SQLite com a migração 23 e a tabela do diário. Publicação GitHub pendente.
 
 ## Publicar uma versão
 

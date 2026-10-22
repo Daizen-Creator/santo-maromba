@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Database,
   TrendingUp,
-  SlidersHorizontal
+  SlidersHorizontal,
+  BookOpen
 } from 'lucide-react';
 import appIcon from '../../../assets/santo-maromba-icon.svg';
 
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'workouts', label: 'Treinos & Exercícios', icon: Dumbbell },
     { id: 'weight', label: 'Histórico de Peso', icon: Scale },
     { id: 'profile', label: 'Perfil & Metas', icon: User },
+    { id: 'diary', label: 'Diário Pessoal', icon: BookOpen },
     { id: 'calculator', label: 'Calculadora Metabólica', icon: Calculator },
     { id: 'projection', label: 'Projeção Física', icon: TrendingUp },
     { id: 'customization', label: 'Personalização visual', icon: SlidersHorizontal }

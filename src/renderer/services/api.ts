@@ -45,6 +45,9 @@ import {
   RecentlyUsedFood,
   FoodPortionPreference,
   SaveFoodPortionPreferenceInput,
+  PersonalDiaryDateRange,
+  PersonalDiaryEntry,
+  SavePersonalDiaryEntryInput,
   HydrationLogInput,
   MeasurementUnitPreferences,
   CustomizationMediaInput,
@@ -65,7 +68,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -89,6 +92,7 @@ const LOCAL_STORAGE_KEY_MEAL_TEMPLATES = 'fittrack_meal_templates';
 const LOCAL_STORAGE_KEY_CUSTOM_FOODS = 'fittrack_custom_foods';
 const LOCAL_STORAGE_KEY_FAVORITE_FOODS = 'fittrack_favorite_foods';
 const LOCAL_STORAGE_KEY_FOOD_PORTION_PREFERENCES = 'fittrack_food_portion_preferences';
+const LOCAL_STORAGE_KEY_PERSONAL_DIARY = 'fittrack_personal_diary';
 const LOCAL_STORAGE_KEY_FAVORITE_RECIPES = 'fittrack_favorite_recipes';
 const LOCAL_STORAGE_KEY_RECIPE_SERVINGS = 'fittrack_recipe_servings';
 const LOCAL_STORAGE_KEY_VISUAL_CUSTOMIZATION = 'fittrack_visual_customization';
@@ -492,6 +496,55 @@ export const api = {
         ];
     localStorage.setItem(LOCAL_STORAGE_KEY_FOOD_PORTION_PREFERENCES, JSON.stringify(updated));
     return updated.find(item => item.foodId === input.foodId) ?? null;
+  },
+
+  getPersonalDiaryEntries: async (rawRange: PersonalDiaryDateRange): Promise<PersonalDiaryEntry[]> => {
+    const range = PersonalDiaryDateRangeSchema.parse(rawRange);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getPersonalDiaryEntries(range);
+      if (!res.success) throw new Error(res.error || 'Erro ao consultar o diário pessoal.');
+      return res.data || [];
+    }
+    const entries: PersonalDiaryEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PERSONAL_DIARY) || '[]');
+    return entries.filter(entry => entry.date >= range.fromDate && entry.date <= range.toDate)
+      .sort((left, right) => right.date.localeCompare(left.date));
+  },
+
+  savePersonalDiaryEntry: async (rawInput: SavePersonalDiaryEntryInput): Promise<PersonalDiaryEntry> => {
+    const input = SavePersonalDiaryEntryInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.savePersonalDiaryEntry(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao salvar a anotação do diário.');
+      return res.data;
+    }
+    const entries: PersonalDiaryEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PERSONAL_DIARY) || '[]');
+    const existing = entries.find(entry => entry.date === input.date);
+    const now = new Date().toISOString();
+    const saved: PersonalDiaryEntry = {
+      id: existing?.id || `diary-${globalThis.crypto.randomUUID()}`,
+      date: input.date,
+      note: input.note,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY_PERSONAL_DIARY, JSON.stringify([
+      ...entries.filter(entry => entry.date !== input.date), saved
+    ]));
+    return saved;
+  },
+
+  deletePersonalDiaryEntry: async (rawDate: string): Promise<boolean> => {
+    const date = PersonalDiaryDateSchema.parse(rawDate);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.deletePersonalDiaryEntry(date);
+      if (!res.success) throw new Error(res.error || 'Erro ao excluir a anotação do diário.');
+      return Boolean(res.data);
+    }
+    const entries: PersonalDiaryEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PERSONAL_DIARY) || '[]');
+    const updated = entries.filter(entry => entry.date !== date);
+    const removed = updated.length !== entries.length;
+    localStorage.setItem(LOCAL_STORAGE_KEY_PERSONAL_DIARY, JSON.stringify(updated));
+    return removed;
   },
 
   setFoodFavorite: async (id: string, isFavorite: boolean): Promise<FoodItem> => {

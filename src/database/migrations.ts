@@ -296,4 +296,19 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [22, 'Porções habituais configuradas por alimento', new Date().toISOString()]
     );
   }
+  db.exec(`CREATE TABLE IF NOT EXISTS personal_diary_entries (
+    id TEXT PRIMARY KEY,
+    date TEXT NOT NULL UNIQUE,
+    note TEXT NOT NULL CHECK(length(trim(note)) BETWEEN 1 AND 3000),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_personal_diary_date ON personal_diary_entries(date DESC)');
+  const version23 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 23');
+  if (!version23) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [23, 'Diário pessoal de rotina e treino', new Date().toISOString()]
+    );
+  }
 }

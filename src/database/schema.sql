@@ -345,6 +345,16 @@ CREATE TABLE IF NOT EXISTS app_settings (
   updated_at TEXT NOT NULL
 );
 
+-- Diário pessoal local por data; conteúdo privado, sem envio para serviços externos.
+CREATE TABLE IF NOT EXISTS personal_diary_entries (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL UNIQUE,
+  note TEXT NOT NULL CHECK(length(trim(note)) BETWEEN 1 AND 3000),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_personal_diary_date ON personal_diary_entries(date DESC);
+
 -- Arquivos importados pelo editor visual ficam no userData; o banco guarda somente metadados.
 CREATE TABLE IF NOT EXISTS customization_media (
   id TEXT PRIMARY KEY,

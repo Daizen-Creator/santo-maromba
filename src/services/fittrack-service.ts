@@ -12,6 +12,7 @@ import { ExerciseMediaRepository } from '../database/repositories/exercise-media
 import { PhysiqueProjectionRepository } from '../database/repositories/physique-projection-repository';
 import { DailyLogRepository } from '../database/repositories/daily-log-repository';
 import { CustomizationRepository } from '../database/repositories/customization-repository';
+import { PersonalDiaryRepository } from '../database/repositories/personal-diary-repository';
 import { seedDatabase } from '../database/seeds/seedDatabase';
 import { calculateNutritionPlan } from '../domain/nutrition-calculator';
 import { SubstitutionEngine } from '../domain/substitution-engine';
@@ -30,6 +31,9 @@ import {
   Exercise,
   FoodItem,
   FoodPortionPreference,
+  PersonalDiaryDateRange,
+  PersonalDiaryEntry,
+  SavePersonalDiaryEntryInput,
   NutritionTargets,
   PantryItem,
   PhotoRecord,
@@ -91,6 +95,7 @@ export class FitTrackService {
   private exerciseMediaRepo: ExerciseMediaRepository;
   private dailyLogRepo: DailyLogRepository;
   private customizationRepo: CustomizationRepository;
+  private personalDiaryRepo: PersonalDiaryRepository;
   private workoutEngine: WorkoutEngine;
   private photoStorage: PhotoStorage;
   private exerciseMediaStorage: ExerciseMediaStorage;
@@ -117,6 +122,7 @@ export class FitTrackService {
     this.exerciseMediaRepo = new ExerciseMediaRepository(db);
     this.dailyLogRepo = new DailyLogRepository(db);
     this.customizationRepo = new CustomizationRepository(db);
+    this.personalDiaryRepo = new PersonalDiaryRepository(db);
     this.workoutEngine = new WorkoutEngine(this.workoutRepo.getExercises());
   }
 
@@ -269,6 +275,18 @@ export class FitTrackService {
 
   saveFoodPortionPreference(foodId: string, amountG: number | null): FoodPortionPreference | null {
     return this.nutritionRepo.saveFoodPortionPreference(foodId, amountG);
+  }
+
+  getPersonalDiaryEntries(range: PersonalDiaryDateRange): PersonalDiaryEntry[] {
+    return this.personalDiaryRepo.getEntries(range);
+  }
+
+  savePersonalDiaryEntry(input: SavePersonalDiaryEntryInput): PersonalDiaryEntry {
+    return this.personalDiaryRepo.save(input);
+  }
+
+  deletePersonalDiaryEntry(date: string): boolean {
+    return this.personalDiaryRepo.delete(date);
   }
 
   createCustomFood(input: CustomFoodInput): FoodItem {

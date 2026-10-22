@@ -46,6 +46,9 @@ import {
   RecentlyUsedFood,
   FoodPortionPreference,
   SaveFoodPortionPreferenceInput,
+  PersonalDiaryDateRange,
+  PersonalDiaryEntry,
+  SavePersonalDiaryEntryInput,
   HydrationLogInput,
   AppUpdateStatus,
   CustomizationMediaInput,
@@ -91,6 +94,9 @@ export interface FitTrackAPI {
   getFoods: () => Promise<{ success: boolean; data?: FoodItem[]; error?: string }>;
   getFoodPortionPreferences: () => Promise<{ success: boolean; data?: FoodPortionPreference[]; error?: string }>;
   saveFoodPortionPreference: (input: SaveFoodPortionPreferenceInput) => Promise<{ success: boolean; data?: FoodPortionPreference | null; error?: string }>;
+  getPersonalDiaryEntries: (range: PersonalDiaryDateRange) => Promise<{ success: boolean; data?: PersonalDiaryEntry[]; error?: string }>;
+  savePersonalDiaryEntry: (input: SavePersonalDiaryEntryInput) => Promise<{ success: boolean; data?: PersonalDiaryEntry; error?: string }>;
+  deletePersonalDiaryEntry: (date: string) => Promise<{ success: boolean; data?: boolean; error?: string }>;
   setFoodFavorite: (id: string, isFavorite: boolean) => Promise<{ success: boolean; data?: FoodItem; error?: string }>;
   createCustomFood: (food: CustomFoodInput) => Promise<{ success: boolean; data?: FoodItem; error?: string }>;
   updateCustomFood: (id: string, food: CustomFoodInput) => Promise<{ success: boolean; data?: FoodItem; error?: string }>;
@@ -177,6 +183,9 @@ const api: FitTrackAPI = {
   getFoods: () => ipcRenderer.invoke(IPC_CHANNELS.GET_FOODS),
   getFoodPortionPreferences: () => ipcRenderer.invoke(IPC_CHANNELS.GET_FOOD_PORTION_PREFERENCES),
   saveFoodPortionPreference: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_FOOD_PORTION_PREFERENCE, input),
+  getPersonalDiaryEntries: range => ipcRenderer.invoke(IPC_CHANNELS.GET_PERSONAL_DIARY_ENTRIES, range),
+  savePersonalDiaryEntry: input => ipcRenderer.invoke(IPC_CHANNELS.SAVE_PERSONAL_DIARY_ENTRY, input),
+  deletePersonalDiaryEntry: date => ipcRenderer.invoke(IPC_CHANNELS.DELETE_PERSONAL_DIARY_ENTRY, date),
   setFoodFavorite: (id, isFavorite) => ipcRenderer.invoke(IPC_CHANNELS.SET_FOOD_FAVORITE, { id, isFavorite }),
   createCustomFood: food => ipcRenderer.invoke(IPC_CHANNELS.ADD_CUSTOM_FOOD, food),
   updateCustomFood: (id, food) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CUSTOM_FOOD, { id, food }),

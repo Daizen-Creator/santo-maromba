@@ -33,7 +33,10 @@ import {
   CustomFoodUpdateInputSchema,
   RecipeFavoriteInputSchema,
   RecipeServingsInputSchema,
-  SaveFoodPortionPreferenceInputSchema
+  SaveFoodPortionPreferenceInputSchema,
+  PersonalDiaryDateSchema,
+  PersonalDiaryDateRangeSchema,
+  SavePersonalDiaryEntryInputSchema
 } from '../shared/schema';
 import { FitTrackService } from '../services/fittrack-service';
 import { IDatabase } from '../database/driver';
@@ -277,6 +280,36 @@ export function registerIpcHandlers(
       return { success: true, data: service.saveFoodPortionPreference(input.foodId, input.amountG) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível salvar a porção habitual.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_PERSONAL_DIARY_ENTRIES, async (event, rawRange) => {
+    try {
+      getCallingWindow(event);
+      const range = PersonalDiaryDateRangeSchema.parse(rawRange);
+      return { success: true, data: service.getPersonalDiaryEntries(range) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível carregar o diário pessoal.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_PERSONAL_DIARY_ENTRY, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      const input = SavePersonalDiaryEntryInputSchema.parse(rawInput);
+      return { success: true, data: service.savePersonalDiaryEntry(input) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar a anotação.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DELETE_PERSONAL_DIARY_ENTRY, async (event, rawDate) => {
+    try {
+      getCallingWindow(event);
+      const date = PersonalDiaryDateSchema.parse(rawDate);
+      return { success: true, data: service.deletePersonalDiaryEntry(date) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível excluir a anotação.' };
     }
   });
 
