@@ -1,5 +1,6 @@
 import {
   BodyMeasurementRecord,
+  SaveBodyMeasurementInput,
   ProfileGoalHistoryRecord,
   CustomBodyMeasurements,
   CustomMeasurementDefinition,
@@ -61,7 +62,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
@@ -306,7 +307,8 @@ export const api = {
     return json ? JSON.parse(json) : [];
   },
 
-  saveMeasurement: async (data: any): Promise<BodyMeasurementRecord> => {
+  saveMeasurement: async (rawData: SaveBodyMeasurementInput): Promise<BodyMeasurementRecord> => {
+    const data = SaveBodyMeasurementInputSchema.parse(rawData);
     if (api.isElectron()) {
       const res = await window.fitTrackAPI.saveMeasurement(data);
       if (!res.success) throw new Error(res.error || 'Erro ao salvar medidas.');
@@ -314,22 +316,25 @@ export const api = {
     }
     const list = await api.getMeasurements();
     const existingIdx = list.findIndex(m => m.date === data.date);
+    const existing = existingIdx !== -1 ? list[existingIdx] : undefined;
     const updatedRec: BodyMeasurementRecord = {
-      id: existingIdx !== -1 ? list[existingIdx].id : `m-${Date.now()}`,
+      ...existing,
+      id: existing?.id || `m-${Date.now()}`,
       date: data.date,
-      weightKg: data.weightKg,
-      waistCircCm: data.waistCircCm,
-      armRelaxedCm: data.armRelaxedCm,
-      armFlexedCm: data.armFlexedCm,
-      chestCm: data.chestCm,
-      thighCm: data.thighCm,
-      hipCm: data.hipCm,
-      shoulderCircCm: data.shoulderCircCm,
-      calfCm: data.calfCm,
-      bodyFatPct: data.bodyFatPct,
-      source: data.source || 'Fita Métrica',
-      notes: data.notes,
-      createdAt: new Date().toISOString()
+      heightCm: data.heightCm ?? existing?.heightCm,
+      weightKg: data.weightKg ?? existing?.weightKg,
+      waistCircCm: data.waistCircCm ?? existing?.waistCircCm,
+      armRelaxedCm: data.armRelaxedCm ?? existing?.armRelaxedCm,
+      armFlexedCm: data.armFlexedCm ?? existing?.armFlexedCm,
+      chestCm: data.chestCm ?? existing?.chestCm,
+      thighCm: data.thighCm ?? existing?.thighCm,
+      hipCm: data.hipCm ?? existing?.hipCm,
+      shoulderCircCm: data.shoulderCircCm ?? existing?.shoulderCircCm,
+      calfCm: data.calfCm ?? existing?.calfCm,
+      bodyFatPct: data.bodyFatPct ?? existing?.bodyFatPct,
+      source: data.source || existing?.source || 'Fita Métrica',
+      notes: data.notes ?? existing?.notes,
+      createdAt: existing?.createdAt || new Date().toISOString()
     };
     if (existingIdx !== -1) {
       list[existingIdx] = updatedRec;

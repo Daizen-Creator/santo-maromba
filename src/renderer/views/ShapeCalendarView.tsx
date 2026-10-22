@@ -11,7 +11,7 @@ import {
   Clock,
   Columns
 } from 'lucide-react';
-import { BodyMeasurementRecord, CustomBodyMeasurements, CustomMeasurementDefinition, CustomMeasurementRecord, PhotoCreateInput, PhotoPose, PhotoRecord, SaveCustomMeasurementDefinitionInput, SaveCustomMeasurementInput, WeightRecord, WorkoutSession } from '../../shared/types';
+import { BodyMeasurementRecord, SaveBodyMeasurementInput, CustomBodyMeasurements, CustomMeasurementDefinition, CustomMeasurementRecord, PhotoCreateInput, PhotoPose, PhotoRecord, SaveCustomMeasurementDefinitionInput, SaveCustomMeasurementInput, WeightRecord, WorkoutSession } from '../../shared/types';
 import { buildMeasurementTrend, MEASUREMENT_METRICS, MeasurementMetric } from '../../domain/measurement-trend';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -40,7 +40,7 @@ interface ShapeCalendarViewProps {
   onAddPhoto: (data: PhotoCreateInput) => Promise<void>;
   onUpdatePhotoNotes: (id: string, notes: string) => Promise<void>;
   onDeletePhoto: (id: string) => Promise<void>;
-  onSaveMeasurement: (data: any) => Promise<void>;
+  onSaveMeasurement: (data: SaveBodyMeasurementInput) => Promise<void>;
   onGetCustomMeasurements: () => Promise<CustomBodyMeasurements>;
   onSaveCustomMeasurementDefinition: (input: SaveCustomMeasurementDefinitionInput) => Promise<CustomMeasurementDefinition>;
   onSaveCustomMeasurement: (input: SaveCustomMeasurementInput) => Promise<CustomMeasurementRecord>;
@@ -151,6 +151,7 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
   const [savingNotes, setSavingNotes] = useState<boolean>(false);
 
   // Formulário de medidas
+  const [measHeight, setMeasHeight] = useState<string>('');
   const [measWaist, setMeasWaist] = useState<string>('');
   const [measArmRelaxed, setMeasArmRelaxed] = useState<string>('');
   const [measArmFlexed, setMeasArmFlexed] = useState<string>('');
@@ -307,10 +308,24 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
     setIsPhotoModalOpen(true);
   };
 
+  const openMeasurementModal = () => {
+    const existing = measurements.find(measurement => measurement.date === selectedDayStr);
+    setMeasHeight(existing?.heightCm == null ? '' : String(existing.heightCm));
+    setMeasWaist(existing?.waistCircCm == null ? '' : String(existing.waistCircCm));
+    setMeasArmRelaxed(existing?.armRelaxedCm == null ? '' : String(existing.armRelaxedCm));
+    setMeasArmFlexed(existing?.armFlexedCm == null ? '' : String(existing.armFlexedCm));
+    setMeasChest(existing?.chestCm == null ? '' : String(existing.chestCm));
+    setMeasShoulders(existing?.shoulderCircCm == null ? '' : String(existing.shoulderCircCm));
+    setMeasThigh(existing?.thighCm == null ? '' : String(existing.thighCm));
+    setMeasBodyFat(existing?.bodyFatPct == null ? '' : String(existing.bodyFatPct));
+    setIsMeasurementModalOpen(true);
+  };
+
   const handleSaveMeasurementSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onSaveMeasurement({
       date: selectedDayStr,
+      heightCm: measHeight ? Number(measHeight) : undefined,
       waistCircCm: measWaist ? Number(measWaist) : undefined,
       armRelaxedCm: measArmRelaxed ? Number(measArmRelaxed) : undefined,
       armFlexedCm: measArmFlexed ? Number(measArmFlexed) : undefined,
@@ -491,7 +506,7 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
                   <Camera className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => setIsMeasurementModalOpen(true)}
+                  onClick={openMeasurementModal}
                   className="rounded-xl bg-secondary p-2 text-foreground hover:bg-secondary/80 transition-colors"
                   title="Salvar Medidas deste dia"
                 >
@@ -556,6 +571,9 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
               <div className="grid grid-cols-2 gap-2 text-muted-foreground">
                 <div>
                   Peso: <strong className="text-foreground">{selectedDayData?.weight ? `${selectedDayData.weight.weightKg} kg` : 'Sem registro'}</strong>
+                </div>
+                <div>
+                  Altura: <strong className="text-foreground">{selectedDayData?.measurement?.heightCm ? `${selectedDayData.measurement.heightCm} cm` : '—'}</strong>
                 </div>
                 <div>
                   Cintura: <strong className="text-foreground">{selectedDayData?.measurement?.waistCircCm ? `${selectedDayData.measurement.waistCircCm} cm` : '—'}</strong>
@@ -825,10 +843,10 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
               <h3 className="font-display text-base font-bold text-foreground">
                 Histórico de Medidas Antropométricas
               </h3>
-              <p className="text-xs text-muted-foreground">Circunferências registradas com fita métrica</p>
+              <p className="text-xs text-muted-foreground">Altura e circunferências registradas por data; a altura atual do perfil é editada em Perfil &amp; Metas.</p>
             </div>
             <button
-              onClick={() => setIsMeasurementModalOpen(true)}
+              onClick={openMeasurementModal}
               className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
             >
               <Plus className="h-4 w-4" />
@@ -881,6 +899,7 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
               <thead className="bg-secondary/40 text-[11px] font-bold text-muted-foreground uppercase border-b border-border">
                 <tr>
                   <th className="p-3">Data</th>
+                  <th className="p-3">Altura</th>
                   <th className="p-3">Cintura</th>
                   <th className="p-3">Braço Rel.</th>
                   <th className="p-3">Braço Flex.</th>
@@ -894,6 +913,7 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
                 {measurements.map(m => (
                   <tr key={m.id} className="hover:bg-secondary/20">
                     <td className="p-3 font-semibold text-foreground">{m.date}</td>
+                    <td className="p-3">{m.heightCm ? `${m.heightCm} cm` : '—'}</td>
                     <td className="p-3">{m.waistCircCm ? `${m.waistCircCm} cm` : '—'}</td>
                     <td className="p-3">{m.armRelaxedCm ? `${m.armRelaxedCm} cm` : '—'}</td>
                     <td className="p-3 font-bold text-primary">{m.armFlexedCm ? `${m.armFlexedCm} cm` : '—'}</td>
@@ -1153,7 +1173,14 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
             </div>
 
             <form onSubmit={handleSaveMeasurementSubmit} className="space-y-3 text-xs">
+              <p className="text-[11px] text-muted-foreground">A altura fica registrada nesta data. Para alterar o valor atual usado no perfil, edite o campo em Perfil &amp; Metas.</p>
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-muted-foreground">Altura (cm):</label>
+                  <input type="number" min="100" max="250" step="0.1" placeholder="Ex.: 175"
+                    value={measHeight} onChange={event => setMeasHeight(event.target.value)}
+                    className="w-full rounded-xl border border-border bg-secondary/50 p-2 text-foreground focus:border-primary focus:outline-none" />
+                </div>
                 <div>
                   <label className="font-semibold text-muted-foreground">Cintura (cm):</label>
                   <input

@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.19. Estado após validação do incremento: **76 validadas, 48 parciais, 53 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.20. Estado após validação do incremento: **77 validadas, 49 parciais, 51 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -37,7 +37,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 6 | Alterar objetivo/peso-alvo e consultar snapshots datados sem duplicar entradas quando nada mudou. | `src/renderer/views/ProfileView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/profile-repository.ts`; `src/services/fittrack-service.ts`; `src/main/ipc-handlers.ts`; `src/preload/index.ts`; `src/shared/schema.ts`; `src/database/schema.sql` | SQLite desktop; localStorage offline na PWA | V · `profile-goal-history.test.ts` valida baseline, mudanças, remoção de peso-alvo, ausência de duplicatas e reabertura; `validation.test.ts` valida snapshots |
 | 7 | Escolher atividade e recalcular GET. | PERF | — | V · `nutrition-calculator.test.ts` |
 | 8 | Calcular idade válida pela data de nascimento. | PERF | — | V · `nutrition-calculator.test.ts` |
-| 9 | Registrar e consultar mudanças de altura por data. | PERF | — | A · só altura atual no perfil |
+| 9 | Registrar e consultar mudanças de altura por data. | PERF; SHAP; IPC; PWA | SQLite desktop; armazenamento local da PWA | V · `height-history-persistence.test.ts` valida inclusão, edição, reabertura, migração preservando medições antigas e armazenamento offline; `measurement-trend.test.ts` valida a série cronológica; `validation.test.ts` valida data e faixa de altura |
 | 10 | Registrar rotina diária e usá-la no planejamento. | PERF | — | P · perfil guarda campos, regra incompleta |
 | 11 | Definir dias disponíveis e adaptar a divisão de treino. | PERF; TREI | — | P · gerador existe, sem editor persistente completo |
 | 12 | Salvar alergias/restrições e excluir receitas incompatíveis. | PERF; NUTR | — | P · dados de perfil não filtram o catálogo |
@@ -68,7 +68,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 32 | Pesquisar lançamentos antigos por texto e período. | DIAR; IPC | — | V · busca por refeição/alimento/anotação e intervalo, com validação de datas; `daily-meal-history.test.ts` |
 | 33 | Percorrer linha do tempo alimentar por dia. | DIAR; PWA | — | V · histórico ordenado por dia e horário com itens, quantidades e macros; SQLite e PWA local |
 | 34 | Salvar refeições de uma data como modelo nomeado e aplicá-lo a outra data sem sobrescrever horários preenchidos. | DIAR; IPC; PWA | — | V · SQLite e localStorage; refeições voltam como planejadas; persistência após reabertura e preservação de destinos ocupados testadas em `meal-template-persistence.test.ts` e `daily-meal-api.test.ts` |
-| 35 | Cadastrar alimento caseiro com ingredientes e macros. | NUTR | — | A · sem cadastro de alimento pela interface |
+| 35 | Cadastrar alimento caseiro com ingredientes e macros. | NUTR | — | P · `CustomFoodLibrary.tsx` permite cadastrar alimento com macros por 100 g e persiste no catálogo (`catalog-persistence.test.ts`); composição a partir de ingredientes e seus cálculos ainda falta |
 | 36 | Ler código de barras e localizar produto. | NUTR | API/base de produtos (ex.: Open Food Facts) | B · serviço de barcode não configurado |
 | 37 | Converter unidade doméstica para massa com hipótese explícita. | NUTR | densidade/tabela de medidas verificadas | A · sem conversor geral |
 | 38 | Registrar sobras e ajustar o consumido real. | DIAR; PWA | — | V · campo de sobras recalcula o consumo; quantidades planejadas e consumidas permanecem salvas e permitem reconstruir as sobras após reabrir; `meal-leftovers.test.ts` e `daily-log-persistence.test.ts` |

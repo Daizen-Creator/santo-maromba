@@ -1,5 +1,5 @@
 import { IDatabase } from '../driver';
-import { BodyMeasurementRecord } from '../../shared/types';
+import { BodyMeasurementRecord, SaveBodyMeasurementInput } from '../../shared/types';
 
 export class MeasurementRepository {
   constructor(private db: IDatabase) {}
@@ -14,6 +14,7 @@ export class MeasurementRepository {
       id: r.id,
       profileId: r.profile_id,
       date: r.date,
+      heightCm: r.height_cm == null ? undefined : Number(r.height_cm),
       weightKg: r.weight_kg ? Number(r.weight_kg) : undefined,
       waistCircCm: r.waist_circ_cm ? Number(r.waist_circ_cm) : undefined,
       armRelaxedCm: r.arm_relaxed_cm ? Number(r.arm_relaxed_cm) : undefined,
@@ -23,7 +24,7 @@ export class MeasurementRepository {
       hipCm: r.hip_cm ? Number(r.hip_cm) : undefined,
       shoulderCircCm: r.shoulder_circ_cm ? Number(r.shoulder_circ_cm) : undefined,
       calfCm: r.calf_cm ? Number(r.calf_cm) : undefined,
-      bodyFatPct: r.body_fat_pct ? Number(r.body_fat_pct) : undefined,
+      bodyFatPct: r.body_fat_pct == null ? undefined : Number(r.body_fat_pct),
       source: r.source,
       notes: r.notes || undefined,
       createdAt: r.created_at
@@ -42,6 +43,7 @@ export class MeasurementRepository {
       id: row.id,
       profileId: row.profile_id,
       date: row.date,
+      heightCm: row.height_cm == null ? undefined : Number(row.height_cm),
       weightKg: row.weight_kg ? Number(row.weight_kg) : undefined,
       waistCircCm: row.waist_circ_cm ? Number(row.waist_circ_cm) : undefined,
       armRelaxedCm: row.arm_relaxed_cm ? Number(row.arm_relaxed_cm) : undefined,
@@ -51,7 +53,7 @@ export class MeasurementRepository {
       hipCm: row.hip_cm ? Number(row.hip_cm) : undefined,
       shoulderCircCm: row.shoulder_circ_cm ? Number(row.shoulder_circ_cm) : undefined,
       calfCm: row.calf_cm ? Number(row.calf_cm) : undefined,
-      bodyFatPct: row.body_fat_pct ? Number(row.body_fat_pct) : undefined,
+      bodyFatPct: row.body_fat_pct == null ? undefined : Number(row.body_fat_pct),
       source: row.source,
       notes: row.notes || undefined,
       createdAt: row.created_at
@@ -59,35 +61,22 @@ export class MeasurementRepository {
   }
 
   saveMeasurement(
-    data: {
-      date: string;
-      weightKg?: number;
-      waistCircCm?: number;
-      armRelaxedCm?: number;
-      armFlexedCm?: number;
-      chestCm?: number;
-      thighCm?: number;
-      hipCm?: number;
-      shoulderCircCm?: number;
-      calfCm?: number;
-      bodyFatPct?: number;
-      source?: string;
-      notes?: string;
-    },
+    data: SaveBodyMeasurementInput,
     profileId: string = 'default-user'
   ): BodyMeasurementRecord {
     const existing = this.getByDate(data.date, profileId);
     const now = new Date().toISOString();
-    const source = data.source || 'Fita Métrica Manual';
+    const source = data.source ?? existing?.source ?? 'Fita Métrica Manual';
 
     if (existing) {
       this.db.execute(
         `UPDATE body_measurements SET
-          weight_kg = ?, waist_circ_cm = ?, arm_relaxed_cm = ?, arm_flexed_cm = ?,
+          height_cm = ?, weight_kg = ?, waist_circ_cm = ?, arm_relaxed_cm = ?, arm_flexed_cm = ?,
           chest_cm = ?, thigh_cm = ?, hip_cm = ?, shoulder_circ_cm = ?, calf_cm = ?, body_fat_pct = ?,
           source = ?, notes = ?
         WHERE id = ?`,
         [
+          data.heightCm ?? existing.heightCm ?? null,
           data.weightKg ?? existing.weightKg ?? null,
           data.waistCircCm ?? existing.waistCircCm ?? null,
           data.armRelaxedCm ?? existing.armRelaxedCm ?? null,
@@ -108,13 +97,14 @@ export class MeasurementRepository {
       const id = `meas-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
       this.db.execute(
         `INSERT INTO body_measurements (
-          id, profile_id, date, weight_kg, waist_circ_cm, arm_relaxed_cm, arm_flexed_cm,
+          id, profile_id, date, height_cm, weight_kg, waist_circ_cm, arm_relaxed_cm, arm_flexed_cm,
           chest_cm, thigh_cm, hip_cm, shoulder_circ_cm, calf_cm, body_fat_pct, source, notes, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           profileId,
           data.date,
+          data.heightCm ?? null,
           data.weightKg ?? null,
           data.waistCircCm ?? null,
           data.armRelaxedCm ?? null,

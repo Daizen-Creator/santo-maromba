@@ -156,7 +156,13 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Registra o objetivo inicial e cada alteração de objetivo ou peso-alvo com data, exibindo o histórico no Perfil & Metas.
 - Alterações de perfil sem mudança de meta não criam entradas; limpar o peso-alvo salva a remoção e registra essa mudança.
-- Persistência SQLite/PWA, reabertura, validações e build aprovados com 135 testes; instalador, portátil e abertura isolada com a migração 17 aprovados; GitHub Actions pendente.
+- Persistência SQLite/PWA, reabertura, validações e build aprovados com 135 testes; instalador, portátil e abertura isolada com a migração 17 aprovados; GitHub Actions 39743275812 publicou instalador, portátil, manifesto e blockmap.
+
+## v1.1.20
+
+- Registra altura corporal por data no calendário e histórico de medidas, com gráfico da série real e sem alterar a altura atual do Perfil & Metas.
+- A migração 18 adiciona o campo ao SQLite sem apagar medidas existentes; a PWA mantém os valores no armazenamento local e mescla medidas registradas na mesma data.
+- 140 testes, build React/Electron e empacotamento Windows aprovados; executável abriu em perfil isolado e criou SQLite com migração 18; publicação GitHub pendente.
 
 ## Publicar uma versão
 

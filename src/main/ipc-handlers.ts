@@ -17,6 +17,7 @@ import {
   SaveWorkoutScheduleInputSchema,
   SaveCustomMeasurementDefinitionInputSchema,
   SaveCustomMeasurementInputSchema,
+  SaveBodyMeasurementInputSchema,
   VisualCustomizationSchema,
   CustomizationMediaInputSchema,
   CustomizationMediaIdSchema,
@@ -184,17 +185,19 @@ export function registerIpcHandlers(
   });
 
   // --- MEDIDAS CORPORAIS ---
-  ipcMain.handle(IPC_CHANNELS.GET_MEASUREMENTS, async () => {
+  ipcMain.handle(IPC_CHANNELS.GET_MEASUREMENTS, async event => {
     try {
+      getCallingWindow(event);
       return { success: true, data: service.getMeasurements() };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
   });
 
-  ipcMain.handle(IPC_CHANNELS.SAVE_MEASUREMENT, async (_, data) => {
+  ipcMain.handle(IPC_CHANNELS.SAVE_MEASUREMENT, async (event, rawData) => {
     try {
-      const meas = service.saveMeasurement(data);
+      getCallingWindow(event);
+      const meas = service.saveMeasurement(SaveBodyMeasurementInputSchema.parse(rawData));
       return { success: true, data: meas };
     } catch (err: any) {
       return { success: false, error: err.message };

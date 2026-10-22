@@ -29,6 +29,9 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.exec("ALTER TABLE recipes ADD COLUMN budget_swaps TEXT NOT NULL DEFAULT '[]'");
   }
   const measurementColumns = db.query<{ name: string }>('PRAGMA table_info(body_measurements)');
+  if (!measurementColumns.some(column => column.name === 'height_cm')) {
+    db.exec('ALTER TABLE body_measurements ADD COLUMN height_cm REAL CHECK(height_cm IS NULL OR height_cm BETWEEN 100 AND 250)');
+  }
   if (!measurementColumns.some(column => column.name === 'shoulder_circ_cm')) {
     db.exec('ALTER TABLE body_measurements ADD COLUMN shoulder_circ_cm REAL');
   }
@@ -235,6 +238,14 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [17, 'Histórico datado de objetivos e pesos-alvo do perfil', new Date().toISOString()]
+    );
+  }
+
+  const version18 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 18');
+  if (!version18) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [18, 'Histórico de altura corporal por data', new Date().toISOString()]
     );
   }
 }

@@ -24,6 +24,7 @@ import {
 } from '../domain/weight-analytics';
 import {
   BodyMeasurementRecord,
+  SaveBodyMeasurementInput,
   CustomFoodInput,
   DashboardSummary,
   Exercise,
@@ -227,21 +228,7 @@ export class FitTrackService {
     return this.measurementRepo.getAll();
   }
 
-  saveMeasurement(data: {
-    date: string;
-    weightKg?: number;
-    waistCircCm?: number;
-    armRelaxedCm?: number;
-    armFlexedCm?: number;
-    chestCm?: number;
-    thighCm?: number;
-    hipCm?: number;
-    shoulderCircCm?: number;
-    calfCm?: number;
-    bodyFatPct?: number;
-    source?: string;
-    notes?: string;
-  }): BodyMeasurementRecord {
+  saveMeasurement(data: SaveBodyMeasurementInput): BodyMeasurementRecord {
     return this.measurementRepo.saveMeasurement(data);
   }
 

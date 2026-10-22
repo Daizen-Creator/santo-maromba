@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNELS } from '../shared/ipc-channels';
 import {
   BodyMeasurementRecord,
+  SaveBodyMeasurementInput,
   DashboardSummary,
   Exercise,
   FoodItem,
@@ -74,7 +75,7 @@ export interface FitTrackAPI {
 
   // Medidas
   getMeasurements: () => Promise<{ success: boolean; data?: BodyMeasurementRecord[]; error?: string }>;
-  saveMeasurement: (data: any) => Promise<{ success: boolean; data?: BodyMeasurementRecord; error?: string }>;
+  saveMeasurement: (data: SaveBodyMeasurementInput) => Promise<{ success: boolean; data?: BodyMeasurementRecord; error?: string }>;
   getCustomMeasurements: () => Promise<{ success: boolean; data?: CustomBodyMeasurements; error?: string }>;
   saveCustomMeasurementDefinition: (input: SaveCustomMeasurementDefinitionInput) => Promise<{ success: boolean; data?: CustomMeasurementDefinition; error?: string }>;
   saveCustomMeasurement: (input: SaveCustomMeasurementInput) => Promise<{ success: boolean; data?: CustomMeasurementRecord; error?: string }>;

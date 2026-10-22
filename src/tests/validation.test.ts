@@ -17,7 +17,8 @@ import {
   SaveWorkoutScheduleInputSchema,
   SaveCustomMeasurementDefinitionInputSchema,
   SaveCustomMeasurementInputSchema,
-  ProfileGoalHistoryRecordSchema
+  ProfileGoalHistoryRecordSchema,
+  SaveBodyMeasurementInputSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
@@ -167,6 +168,14 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
       id: 'goal-2', profileId: 'default-user', fitnessGoal: 'unknown', targetWeightKg: 74,
       changeKind: 'updated', changedFields: [], changedAt: 'invalid'
     })).toThrow();
+  });
+
+  it('valida medições corporais datadas e a faixa de altura', () => {
+    expect(SaveBodyMeasurementInputSchema.parse({ date: '2026-10-22', heightCm: 175.2 }))
+      .toMatchObject({ date: '2026-10-22', heightCm: 175.2 });
+    expect(() => SaveBodyMeasurementInputSchema.parse({ date: '2026-02-30', heightCm: 175 })).toThrow();
+    expect(() => SaveBodyMeasurementInputSchema.parse({ date: '2026-10-22', heightCm: 99 })).toThrow();
+    expect(() => SaveBodyMeasurementInputSchema.parse({ date: '2026-10-22' })).toThrow();
   });
 
   it('deve validar registros de peso com formato correto', () => {

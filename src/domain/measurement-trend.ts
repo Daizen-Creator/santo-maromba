@@ -1,6 +1,7 @@
 import { BodyMeasurementRecord } from '../shared/types';
 
 export const MEASUREMENT_METRICS = {
+  heightCm: { label: 'Altura', unit: 'cm' },
   waistCircCm: { label: 'Cintura', unit: 'cm' },
   armRelaxedCm: { label: 'Braço relaxado', unit: 'cm' },
   armFlexedCm: { label: 'Braço contraído', unit: 'cm' },

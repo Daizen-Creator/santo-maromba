@@ -325,6 +325,7 @@ export interface BodyMeasurementRecord {
   id: string;
   profileId?: string;
   date: string; // YYYY-MM-DD
+  heightCm?: number;
   weightKg?: number;
   waistCircCm?: number;
   armRelaxedCm?: number;
@@ -338,6 +339,23 @@ export interface BodyMeasurementRecord {
   source: string;
   notes?: string;
   createdAt: string;
+}
+
+export interface SaveBodyMeasurementInput {
+  date: string;
+  heightCm?: number;
+  weightKg?: number;
+  waistCircCm?: number;
+  armRelaxedCm?: number;
+  armFlexedCm?: number;
+  chestCm?: number;
+  thighCm?: number;
+  hipCm?: number;
+  shoulderCircCm?: number;
+  calfCm?: number;
+  bodyFatPct?: number;
+  source?: string;
+  notes?: string;
 }
 
 export interface CustomMeasurementDefinition {

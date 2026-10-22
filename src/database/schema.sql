@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS body_measurements (
   id TEXT PRIMARY KEY,
   profile_id TEXT NOT NULL,
   date TEXT NOT NULL,
+  height_cm REAL CHECK(height_cm IS NULL OR height_cm BETWEEN 100 AND 250),
   weight_kg REAL,
   waist_circ_cm REAL,
   arm_relaxed_cm REAL,

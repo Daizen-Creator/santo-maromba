@@ -16,6 +16,7 @@ import { InitialHistoryModal } from './components/InitialHistoryModal';
 import { api } from './services/api';
 import {
   BodyMeasurementRecord,
+  SaveBodyMeasurementInput,
   CustomFoodInput,
   DashboardSummary,
   Exercise,
@@ -208,7 +209,7 @@ export const App: React.FC = () => {
     setPhotos(updated);
   };
 
-  const handleSaveMeasurement = async (data: any) => {
+  const handleSaveMeasurement = async (data: SaveBodyMeasurementInput) => {
     await api.saveMeasurement(data);
     const updated = await api.getMeasurements();
     setMeasurements(updated);

@@ -24,4 +24,14 @@ describe('Série temporal de medidas corporais', () => {
       .toEqual([{ date: '2026-10-01', value: 24 }]);
     expect(buildMeasurementTrend([record('empty', '2026-10-01')], 'bodyFatPct')).toEqual([]);
   });
+
+  it('exibe a série de altura real por data', () => {
+    expect(buildMeasurementTrend([
+      { ...record('later-height', '2026-10-20'), heightCm: 175.2 },
+      { ...record('earlier-height', '2025-10-20'), heightCm: 174.5 }
+    ], 'heightCm')).toEqual([
+      { date: '2025-10-20', value: 174.5 },
+      { date: '2026-10-20', value: 175.2 }
+    ]);
+  });
 });

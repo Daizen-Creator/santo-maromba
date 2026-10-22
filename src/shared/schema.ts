@@ -98,6 +98,28 @@ export const ProfileGoalHistoryRecordSchema = z.object({
   changedAt: z.string().datetime()
 }).strict();
 
+export const SaveBodyMeasurementInputSchema = z.object({
+  date: z.string().refine(isRealCalendarDate, 'Informe uma data válida para a medição.'),
+  heightCm: z.number().finite().min(100).max(250).optional(),
+  weightKg: z.number().finite().min(30).max(350).optional(),
+  waistCircCm: z.number().finite().min(0.1).max(300).optional(),
+  armRelaxedCm: z.number().finite().min(0.1).max(300).optional(),
+  armFlexedCm: z.number().finite().min(0.1).max(300).optional(),
+  chestCm: z.number().finite().min(0.1).max(300).optional(),
+  thighCm: z.number().finite().min(0.1).max(300).optional(),
+  hipCm: z.number().finite().min(0.1).max(300).optional(),
+  shoulderCircCm: z.number().finite().min(0.1).max(300).optional(),
+  calfCm: z.number().finite().min(0.1).max(300).optional(),
+  bodyFatPct: z.number().finite().min(0).max(80).optional(),
+  source: z.string().trim().min(1).max(100).optional(),
+  notes: z.string().trim().max(400).optional()
+}).strict().refine(input => [
+  input.heightCm, input.weightKg, input.waistCircCm, input.armRelaxedCm, input.armFlexedCm,
+  input.chestCm, input.thighCm, input.hipCm, input.shoulderCircCm, input.calfCm, input.bodyFatPct
+].some(value => value !== undefined), {
+  message: 'Informe ao menos um valor corporal para salvar a medição.'
+});
+
 export const WeightRecordInputSchema = z.object({
   id: z.string().optional(),
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),
