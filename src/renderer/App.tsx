@@ -309,6 +309,11 @@ export const App: React.FC = () => {
     setRecipes(await api.getRecipes());
   };
 
+  const handleSetRecipeFinalWeight = async (id: string, finalWeightG: number | null) => {
+    await api.setRecipeFinalWeight(id, finalWeightG);
+    setRecipes(await api.getRecipes());
+  };
+
   const handleSetFoodFavorite = async (id: string, isFavorite: boolean) => {
     await api.setFoodFavorite(id, isFavorite);
     setFoods(await api.getFoods());
@@ -549,6 +554,7 @@ export const App: React.FC = () => {
               onApplyMealTemplate={handleApplyMealTemplate}
               onSetRecipeFavorite={handleSetRecipeFavorite}
               onSetRecipeServings={handleSetRecipeServings}
+              onSetRecipeFinalWeight={handleSetRecipeFinalWeight}
               onSetFoodFavorite={handleSetFoodFavorite}
             />
           )}

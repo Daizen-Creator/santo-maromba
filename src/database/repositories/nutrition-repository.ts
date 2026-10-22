@@ -2,7 +2,7 @@ import { IDatabase } from '../driver';
 import { randomUUID } from 'crypto';
 import { CustomFoodInput, FoodItem, FoodPortionPreference, PantryItem, Recipe } from '../../shared/types';
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../seeds/nutrition-seeds';
-import { normalizeRecipeServings } from '../../domain/recipe-portions';
+import { normalizeRecipeFinalWeight, normalizeRecipeServings } from '../../domain/recipe-portions';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
 
 export class NutritionRepository {
@@ -271,6 +271,7 @@ export class NutritionRepository {
         prepTimeMinutes: Number(row.prep_time_minutes || 0),
         instructions: row.instructions,
         servings: normalizeRecipeServings(Number(row.servings || 1)),
+        finalWeightG: row.final_weight_g == null ? undefined : Number(row.final_weight_g),
         imageUrl: row.image_url || undefined,
         imageCredit: row.image_credit || undefined,
         ingredients,
@@ -300,6 +301,15 @@ export class NutritionRepository {
     if (result.changes === 0) throw new Error('Receita não encontrada.');
     const recipe = this.getRecipes().find(item => item.id === id);
     if (!recipe) throw new Error('Não foi possível carregar o rendimento atualizado.');
+    return recipe;
+  }
+
+  setRecipeFinalWeight(id: string, finalWeightG: number | null): Recipe {
+    const validatedWeight = normalizeRecipeFinalWeight(finalWeightG);
+    const result = this.db.execute('UPDATE recipes SET final_weight_g = ? WHERE id = ?', [validatedWeight, id]);
+    if (result.changes === 0) throw new Error('Receita não encontrada.');
+    const recipe = this.getRecipes().find(item => item.id === id);
+    if (!recipe) throw new Error('Não foi possível carregar o peso final da receita.');
     return recipe;
   }
 

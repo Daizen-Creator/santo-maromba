@@ -328,6 +328,10 @@ export class FitTrackService {
     return this.nutritionRepo.setRecipeServings(id, servings);
   }
 
+  setRecipeFinalWeight(id: string, finalWeightG: number | null): Recipe {
+    return this.nutritionRepo.setRecipeFinalWeight(id, finalWeightG);
+  }
+
   getPantry(): PantryItem[] {
     return this.nutritionRepo.getPantry();
   }

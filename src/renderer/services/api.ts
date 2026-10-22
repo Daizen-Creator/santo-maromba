@@ -103,6 +103,7 @@ const LOCAL_STORAGE_KEY_FOOD_PORTION_PREFERENCES = 'fittrack_food_portion_prefer
 const LOCAL_STORAGE_KEY_PERSONAL_DIARY = 'fittrack_personal_diary';
 const LOCAL_STORAGE_KEY_FAVORITE_RECIPES = 'fittrack_favorite_recipes';
 const LOCAL_STORAGE_KEY_RECIPE_SERVINGS = 'fittrack_recipe_servings';
+const LOCAL_STORAGE_KEY_RECIPE_FINAL_WEIGHTS = 'fittrack_recipe_final_weights';
 const LOCAL_STORAGE_KEY_VISUAL_CUSTOMIZATION = 'fittrack_visual_customization';
 const LOCAL_STORAGE_KEY_MEASUREMENT_UNITS = 'fittrack_measurement_units';
 
@@ -622,7 +623,8 @@ export const api = {
     }
     const favorites = new Set<string>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_FAVORITE_RECIPES) || '[]'));
     const servingValues = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_SERVINGS) || '{}') as Record<string, number>;
-    return INITIAL_RECIPES.map(recipe => ({ ...recipe, servings: servingValues[recipe.id] ?? 1, isFavorite: favorites.has(recipe.id) }));
+    const finalWeights = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_FINAL_WEIGHTS) || '{}') as Record<string, number>;
+    return INITIAL_RECIPES.map(recipe => ({ ...recipe, servings: servingValues[recipe.id] ?? 1, finalWeightG: finalWeights[recipe.id], isFavorite: favorites.has(recipe.id) }));
   },
 
   setRecipeFavorite: async (id: string, isFavorite: boolean): Promise<Recipe> => {
@@ -655,6 +657,24 @@ export const api = {
     servingValues[id] = servings;
     localStorage.setItem(LOCAL_STORAGE_KEY_RECIPE_SERVINGS, JSON.stringify(servingValues));
     return { ...recipe, servings };
+  },
+
+  setRecipeFinalWeight: async (id: string, finalWeightG: number | null): Promise<Recipe> => {
+    if (finalWeightG !== null && (!Number.isFinite(finalWeightG) || finalWeightG < 1 || finalWeightG > 50000)) {
+      throw new Error('O peso final deve ficar entre 1 g e 50.000 g.');
+    }
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.setRecipeFinalWeight(id, finalWeightG);
+      if (!res.success) throw new Error(res.error || 'Erro ao atualizar o peso final da receita.');
+      return res.data!;
+    }
+    const recipe = INITIAL_RECIPES.find(item => item.id === id);
+    if (!recipe) throw new Error('Receita não encontrada.');
+    const finalWeights = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_FINAL_WEIGHTS) || '{}') as Record<string, number>;
+    if (finalWeightG === null) delete finalWeights[id];
+    else finalWeights[id] = Math.round((finalWeightG + Number.EPSILON) * 10) / 10;
+    localStorage.setItem(LOCAL_STORAGE_KEY_RECIPE_FINAL_WEIGHTS, JSON.stringify(finalWeights));
+    return { ...recipe, finalWeightG: finalWeights[id] };
   },
 
   getPantry: async (): Promise<PantryItem[]> => {

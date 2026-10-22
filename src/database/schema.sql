@@ -158,6 +158,7 @@ CREATE TABLE IF NOT EXISTS recipes (
   prep_time_minutes INTEGER,
   instructions TEXT NOT NULL,
   servings INTEGER NOT NULL DEFAULT 1 CHECK(servings BETWEEN 1 AND 50),
+  final_weight_g REAL CHECK(final_weight_g IS NULL OR final_weight_g BETWEEN 1 AND 50000),
     image_url TEXT,
     image_credit TEXT,
   budget_swaps TEXT NOT NULL DEFAULT '[]',

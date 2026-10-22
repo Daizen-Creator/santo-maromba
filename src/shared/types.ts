@@ -685,6 +685,8 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
   /** Porções informadas para a receita inteira; receitas do catálogo começam com 1 porção. */
   servings?: number;
+  /** Peso do lote depois do preparo, quando medido pelo usuário. */
+  finalWeightG?: number;
   totalCalories: number;
   totalProteinG: number;
   totalCarbsG: number;

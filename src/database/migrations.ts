@@ -109,6 +109,9 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!recipeCatalogColumns.some(column => column.name === 'servings')) {
     db.exec('ALTER TABLE recipes ADD COLUMN servings INTEGER NOT NULL DEFAULT 1 CHECK(servings BETWEEN 1 AND 50)');
   }
+  if (!recipeCatalogColumns.some(column => column.name === 'final_weight_g')) {
+    db.exec('ALTER TABLE recipes ADD COLUMN final_weight_g REAL CHECK(final_weight_g IS NULL OR final_weight_g BETWEEN 1 AND 50000)');
+  }
   if (!recipeCatalogColumns.some(column => column.name === 'image_url')) {
     db.exec('ALTER TABLE recipes ADD COLUMN image_url TEXT');
   }
@@ -372,6 +375,13 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [26, 'Composição e rendimento de alimentos caseiros', new Date().toISOString()]
+    );
+  }
+  const version27 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 27');
+  if (!version27) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [27, 'Peso final da receita e macros por 100 g preparados', new Date().toISOString()]
     );
   }
 }

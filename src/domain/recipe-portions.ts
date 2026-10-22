@@ -16,6 +16,28 @@ export function normalizeRecipeServings(value: number): number {
   return value;
 }
 
+export function normalizeRecipeFinalWeight(value: number | null): number | null {
+  if (value === null) return null;
+  if (!Number.isFinite(value) || value < 1 || value > 50000) {
+    throw new Error('O peso final deve ficar entre 1 g e 50.000 g.');
+  }
+  return roundOneDecimal(value);
+}
+
+export function getRecipeNutritionPer100g(recipe: Recipe): RecipeNutritionTotals | null {
+  const finalWeightG = recipe.finalWeightG;
+  if (finalWeightG === undefined || finalWeightG === null) return null;
+  const weight = normalizeRecipeFinalWeight(finalWeightG);
+  if (weight === null) return null;
+  const scale = 100 / weight;
+  return {
+    calories: roundOneDecimal(recipe.totalCalories * scale),
+    proteinG: roundOneDecimal(recipe.totalProteinG * scale),
+    carbsG: roundOneDecimal(recipe.totalCarbsG * scale),
+    fatsG: roundOneDecimal(recipe.totalFatsG * scale)
+  };
+}
+
 export function getRecipeNutritionPerServing(recipe: Recipe): RecipeNutritionTotals {
   const servings = normalizeRecipeServings(recipe.servings ?? 1);
   const ingredients = recipe.ingredients.map(ingredient => getIngredientPerServing(ingredient, servings));

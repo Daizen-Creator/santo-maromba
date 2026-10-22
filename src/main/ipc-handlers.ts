@@ -37,6 +37,7 @@ import {
   CustomFoodUpdateInputSchema,
   RecipeFavoriteInputSchema,
   RecipeServingsInputSchema,
+  RecipeFinalWeightInputSchema,
   SaveFoodPortionPreferenceInputSchema,
   PersonalDiaryDateSchema,
   PersonalDiaryDateRangeSchema,
@@ -367,6 +368,15 @@ export function registerIpcHandlers(
       return { success: true, data: service.setRecipeServings(input.id, input.servings) };
     } catch (err: any) {
       return { success: false, error: err.message || 'Não foi possível salvar o rendimento da receita.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SET_RECIPE_FINAL_WEIGHT, async (_, rawInput) => {
+    try {
+      const input = RecipeFinalWeightInputSchema.parse(rawInput);
+      return { success: true, data: service.setRecipeFinalWeight(input.id, input.finalWeightG) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar o peso final da receita.' };
     }
   });
 

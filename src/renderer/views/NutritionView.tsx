@@ -21,7 +21,7 @@ import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
-import { getIngredientPerServing, getRecipeNutritionPerServing } from '../../domain/recipe-portions';
+import { getIngredientPerServing, getRecipeNutritionPer100g, getRecipeNutritionPerServing } from '../../domain/recipe-portions';
 import { DAILY_MEAL_STATUSES, summarizeDailyMealStatuses } from '../../domain/meal-status-summary';
 import { calculateConsumedFromLeftovers, calculateLeftoverAmount } from '../../domain/meal-leftovers';
 import { compareMealNutrition } from '../../domain/meal-nutrition-comparison';
@@ -86,6 +86,7 @@ interface NutritionViewProps {
   onApplyMealTemplate: (input: ApplyMealTemplateInput) => Promise<ApplyMealTemplateResult>;
   onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
   onSetRecipeServings: (id: string, servings: number) => Promise<void>;
+  onSetRecipeFinalWeight: (id: string, finalWeightG: number | null) => Promise<void>;
   onSetFoodFavorite: (id: string, isFavorite: boolean) => Promise<void>;
 }
 
@@ -123,6 +124,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onApplyMealTemplate,
   onSetRecipeFavorite,
   onSetRecipeServings,
+  onSetRecipeFinalWeight,
   onSetFoodFavorite
 }) => {
   const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat' | 'foods' | 'history'>('meals');
@@ -164,6 +166,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [recipeActionError, setRecipeActionError] = useState<string | null>(null);
   const [recipeServingDrafts, setRecipeServingDrafts] = useState<Record<string, string>>({});
+  const [recipeFinalWeightDrafts, setRecipeFinalWeightDrafts] = useState<Record<string, string>>({});
   const [recentFoods, setRecentFoods] = useState<RecentlyUsedFood[]>([]);
   const [recentFoodsError, setRecentFoodsError] = useState<string | null>(null);
   const [foodPortionPreferences, setFoodPortionPreferences] = useState<FoodPortionPreference[]>([]);
@@ -416,6 +419,23 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     } catch (error) {
       setRecipeActionError(error instanceof Error ? error.message : 'Não foi possível salvar o rendimento da receita.');
       setRecipeServingDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
+    }
+  };
+
+  const saveRecipeFinalWeight = async (recipe: Recipe, rawValue: string) => {
+    const finalWeightG = rawValue.trim() === '' ? null : Number(rawValue);
+    if (finalWeightG !== null && (!Number.isFinite(finalWeightG) || finalWeightG < 1 || finalWeightG > 50000)) {
+      setRecipeActionError('Informe o peso final preparado entre 1 g e 50.000 g.');
+      setRecipeFinalWeightDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
+      return;
+    }
+    setRecipeActionError(null);
+    try {
+      await onSetRecipeFinalWeight(recipe.id, finalWeightG);
+      setRecipeFinalWeightDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
+    } catch (error) {
+      setRecipeActionError(error instanceof Error ? error.message : 'Não foi possível salvar o peso final da receita.');
+      setRecipeFinalWeightDrafts(current => { const next = { ...current }; delete next[recipe.id]; return next; });
     }
   };
 
@@ -1505,6 +1525,27 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
                       Nutrientes por porção são o total dos ingredientes dividido pelo rendimento informado.
                     </p>
+                    <label className="mt-3 flex items-center justify-between gap-3 border-t border-border/50 pt-3 text-xs text-foreground">
+                      <span>Peso final preparado</span>
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={50000}
+                          step={0.1}
+                          aria-label={`Peso final preparado em gramas para ${recipe.name}`}
+                          value={recipeFinalWeightDrafts[recipe.id] ?? (recipe.finalWeightG == null ? '' : String(recipe.finalWeightG))}
+                          onChange={event => setRecipeFinalWeightDrafts(current => ({ ...current, [recipe.id]: event.target.value }))}
+                          onBlur={event => void saveRecipeFinalWeight(recipe, event.currentTarget.value)}
+                          onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                          className="w-24 rounded-lg border border-border bg-background px-2 py-1.5 text-center tabular-nums text-foreground outline-none focus:border-primary"
+                        />
+                        <span className="text-muted-foreground">g</span>
+                      </span>
+                    </label>
+                    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                      Pese a receita pronta. Isso considera a perda ou absorção de água no preparo.
+                    </p>
                   </div>
 
                   {/* Macros */}
@@ -1525,6 +1566,11 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                   <p className="text-[10px] text-muted-foreground">
                     Lote completo: {recipe.totalCalories} kcal · {recipe.totalProteinG}g proteína · {recipe.totalCarbsG}g carboidratos · {servings} porção(ões).
                   </p>
+                  {getRecipeNutritionPer100g(recipe) && (
+                    <p className="rounded-xl border border-primary/20 bg-primary/[0.05] px-3 py-2 text-[11px] text-foreground">
+                      Por 100 g preparados: {getRecipeNutritionPer100g(recipe)!.calories} kcal · {getRecipeNutritionPer100g(recipe)!.proteinG}g proteína · {getRecipeNutritionPer100g(recipe)!.carbsG}g carboidratos · {getRecipeNutritionPer100g(recipe)!.fatsG}g gorduras.
+                    </p>
+                  )}
                   {recipe.ingredients.some(ingredient => ingredient.dataQuality !== 'verified') && (
                     <p role="status" className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-relaxed text-amber-100/85">
                       Macros calculados com dados estimados ou não verificados. A origem declarada de cada ingrediente está disponível no cadastro quando informada.
