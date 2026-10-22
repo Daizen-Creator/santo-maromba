@@ -52,4 +52,34 @@ describe('Checklist alimentar na versão web', () => {
     expect(ingredients.some(item => item.dataQuality === 'estimated')).toBe(true);
     expect(ingredients.some(item => item.dataQuality === 'unverified')).toBe(true);
   });
+
+  it('mantém alimentos pessoais e favoritos no armazenamento local da PWA', async () => {
+    const saved = await api.saveCustomFood({
+      name: 'Mingau da casa', category: 'carb', calories: 120, proteinG: 5,
+      carbsG: 20, fatsG: 2, fiberG: 3
+    });
+    expect((await api.getFoods()).find(food => food.id === saved.id)?.dataQuality).toBe('user_reported');
+
+    const updated = await api.saveCustomFood({
+      name: 'Mingau da casa', category: 'carb', calories: 130, proteinG: 6,
+      carbsG: 21, fatsG: 2, fiberG: 3
+    }, saved.id);
+    expect(updated.calories).toBe(130);
+    await expect(api.saveCustomFood({
+      name: 'mingau da casa', category: 'carb', calories: 120, proteinG: 5,
+      carbsG: 20, fatsG: 2
+    })).rejects.toThrow('Já existe um alimento com esse nome no catálogo.');
+
+    const recipe = (await api.getRecipes())[0];
+    await api.setRecipeFavorite(recipe.id, true);
+    expect((await api.getRecipes()).find(item => item.id === recipe.id)?.isFavorite).toBe(true);
+    await api.setRecipeFavorite(recipe.id, false);
+    expect((await api.getRecipes()).find(item => item.id === recipe.id)?.isFavorite).toBe(false);
+
+    const food = (await api.getFoods())[0];
+    await api.setFoodFavorite(food.id, true);
+    expect((await api.getFoods()).find(item => item.id === food.id)?.isFavorite).toBe(true);
+    await api.setFoodFavorite(food.id, false);
+    expect((await api.getFoods()).find(item => item.id === food.id)?.isFavorite).toBe(false);
+  });
 });

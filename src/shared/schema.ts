@@ -164,6 +164,28 @@ export const ExerciseMediaInputSchema = z.object({
 
 export const ExerciseMediaIdSchema = z.string().min(1).max(160).regex(/^[a-zA-Z0-9_-]+$/);
 
+export const CustomFoodInputSchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  category: z.enum(['protein', 'carb', 'fat', 'fruit', 'vegetable', 'dairy', 'legume', 'supplement']),
+  calories: z.number().finite().min(0).max(1000),
+  proteinG: z.number().finite().min(0).max(100),
+  carbsG: z.number().finite().min(0).max(100),
+  fatsG: z.number().finite().min(0).max(100),
+  fiberG: z.number().finite().min(0).max(100).optional(),
+  isCooked: z.boolean().default(false),
+  substituteGroupId: z.string().trim().min(1).max(80).optional()
+}).strict();
+
+export const CustomFoodIdSchema = z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/);
+export const CustomFoodUpdateInputSchema = z.object({
+  id: CustomFoodIdSchema,
+  food: CustomFoodInputSchema
+}).strict();
+export const RecipeFavoriteInputSchema = z.object({
+  id: CustomFoodIdSchema,
+  isFavorite: z.boolean()
+}).strict();
+
 export const WorkoutSessionInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data de treino válida.'),
   splitName: z.string().trim().min(1).max(120),

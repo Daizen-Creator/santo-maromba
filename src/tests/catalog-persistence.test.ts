@@ -8,6 +8,7 @@ import { NutritionRepository } from '../database/repositories/nutrition-reposito
 import { WorkoutRepository } from '../database/repositories/workout-repository';
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../database/seeds/nutrition-seeds';
 import { INITIAL_EXERCISES } from '../database/seeds/exercise-seeds';
+import { CustomFoodInput } from '../shared/types';
 
 describe('Catálogos locais de alimentação e treino', () => {
   let tempDirectory: string;
@@ -87,6 +88,56 @@ describe('Catálogos locais de alimentação e treino', () => {
     expect(db!.queryOne<{ total: number }>('SELECT COUNT(*) AS total FROM recipes')?.total).toBe(200);
     expect(db!.queryOne<{ total: number }>('SELECT COUNT(*) AS total FROM exercises')?.total)
       .toBe(exercises.length);
+  });
+
+  it('salva, edita e reabre alimentos personalizados sem confundi-los com dados verificados', async () => {
+    const input: CustomFoodInput = {
+      name: 'Iogurte caseiro de teste', category: 'dairy', calories: 91,
+      proteinG: 5.2, carbsG: 7.1, fatsG: 4.1, fiberG: 0, isCooked: false,
+      substituteGroupId: 'laticinio'
+    };
+    const first = new NutritionRepository(db!).createCustomFood(input);
+
+    expect(first.isCustom).toBe(true);
+    expect(first.dataQuality).toBe('user_reported');
+    expect(first.confidenceLevel).toBe('unknown');
+    expect(first.source).toBe('Informado pelo usuário');
+    expect(first.fiberG).toBe(0);
+    expect(() => new NutritionRepository(db!).createCustomFood({ ...input, name: 'iogurte caseiro de teste' }))
+      .toThrow('Já existe um alimento com esse nome no catálogo.');
+
+    db!.close();
+    db = await createDatabaseDriver(path.join(tempDirectory, 'fittrack.db'));
+    await runMigrations(db!);
+    const reopened = new NutritionRepository(db!);
+    expect(reopened.getFoods().find(food => food.id === first.id)?.name).toBe(input.name);
+
+    const updated = reopened.updateCustomFood(first.id, { ...input, calories: 95, fiberG: undefined });
+    expect(updated.calories).toBe(95);
+    expect(updated.fiberG).toBeUndefined();
+    expect(updated.dataQuality).toBe('user_reported');
+    expect(() => reopened.updateCustomFood('food-frango', input)).toThrow('Alimento personalizado não encontrado.');
+  });
+
+  it('persiste favoritos de receitas e os preserva durante a reabertura do catálogo', async () => {
+    const repository = new NutritionRepository(db!);
+    const recipe = repository.getRecipes()[0];
+    const food = repository.getFoods()[0];
+    expect(recipe).toBeDefined();
+    expect(food).toBeDefined();
+    expect(repository.setRecipeFavorite(recipe.id, true).isFavorite).toBe(true);
+    expect(repository.setFoodFavorite(food.id, true).isFavorite).toBe(true);
+
+    db!.close();
+    db = await createDatabaseDriver(path.join(tempDirectory, 'fittrack.db'));
+    await runMigrations(db!);
+    const reopened = new NutritionRepository(db!);
+    expect(reopened.getRecipes().find(item => item.id === recipe.id)?.isFavorite).toBe(true);
+    expect(reopened.getFoods().find(item => item.id === food.id)?.isFavorite).toBe(true);
+    expect(reopened.setRecipeFavorite(recipe.id, false).isFavorite).toBe(false);
+    expect(reopened.setFoodFavorite(food.id, false).isFavorite).toBe(false);
+    expect(() => reopened.setRecipeFavorite('missing-recipe', true)).toThrow('Receita não encontrada.');
+    expect(() => reopened.setFoodFavorite('missing-food', true)).toThrow('Alimento não encontrado.');
   });
 
   it('migra tabelas antigas de alimentos e receitas sem perder dados nem falhar no índice de substituição', async () => {

@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas. A etapa de proveniência está implementada no working tree 1.0.4, com testes e artefatos Windows locais aprovados; a publicação 1.0.4 aguarda o CI do GitHub. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das duas especificações anexadas. O cadastro e os favoritos de alimentos/receitas estão implementados localmente e passam por validação para a próxima versão. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -15,7 +15,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 |---|---|---|
 | PERF | `src/renderer/views/ProfileView.tsx`; `src/database/repositories/profile-repository.ts`; `src/database/schema.sql`; `src/domain/nutrition-calculator.ts` | `src/tests/nutrition-calculator.test.ts`; `src/tests/weight-analytics.test.ts`; `src/tests/validation.test.ts` |
 | DIAR | `src/renderer/views/NutritionView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/daily-log-repository.ts`; `src/database/schema.sql`; `src/main/ipc-handlers.ts`; `src/preload/index.ts` | `src/tests/daily-log-persistence.test.ts`; `src/tests/daily-meal-api.test.ts`; `src/tests/meal-schedule.test.ts` |
-| NUTR | `src/renderer/views/NutritionView.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
+| NUTR | `src/renderer/views/NutritionView.tsx`; `src/renderer/components/CustomFoodLibrary.tsx`; `src/database/seeds/nutrition-seeds.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/migrations.ts`; `src/database/connection.ts`; `src/domain/nutrition-calculator.ts`; `src/domain/nutrition-catalog.ts`; `src/shared/types.ts`; `src/database/schema.sql` | `src/tests/catalog-persistence.test.ts`; `src/tests/nutrition-catalog.test.ts`; `src/tests/nutrition-calculator.test.ts`; `src/tests/substitution-engine.test.ts`; `src/tests/database-migration-backup.test.ts` |
 | TREI | `src/renderer/views/WorkoutView.tsx`; `src/domain/workout-engine.ts`; `src/database/repositories/workout-repository.ts`; `src/database/repositories/exercise-media-repository.ts`; `src/database/schema.sql` | `src/tests/workout-engine.test.ts`; `src/tests/workout-media-persistence.test.ts` |
 | SHAP | `src/renderer/views/ShapeCalendarView.tsx`; `src/renderer/views/ProjectionView.tsx`; `src/database/repositories/photo-repository.ts`; `src/database/repositories/measurement-repository.ts`; `src/services/photo-storage.ts`; `src/database/schema.sql` | `src/tests/photo-persistence.test.ts`; `src/tests/physique-projection.test.ts`; `src/tests/physique-projection-persistence.test.ts` |
 | DESP | `src/renderer/views/NutritionView.tsx`; `src/domain/substitution-engine.ts`; `src/database/repositories/nutrition-repository.ts`; `src/database/schema.sql` | `src/tests/substitution-engine.test.ts`; `src/tests/catalog-persistence.test.ts` |
@@ -81,7 +81,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 |---:|---|---|---|---|
 | 41 | Calcular kcal por ingrediente e quantidade em gramas. | NUTR | — | V · fórmula por 100 g e `nutrition-calculator.test.ts` |
 | 42 | Calcular proteínas, carboidratos e gorduras por porção. | NUTR | — | V · testes de cálculo e receitas |
-| 43 | Somar fibras sem transformar dado ausente em zero. | NUTR | migração para nutrientes anuláveis | P · campo opcional no tipo, schema/seed usa zero em ausências |
+| 43 | Somar fibras sem transformar dado ausente em zero. | NUTR | migração para nutrientes anuláveis | V · SQLite guarda ausência como `NULL`, preserva fibra explicitamente igual a zero; persistência coberta por `catalog-persistence.test.ts` |
 | 44 | Calcular sódio quando a fonte informar. | NUTR | base com sódio verificado | A · campo ausente |
 | 45 | Mostrar vitaminas/minerais somente quando verificados. | NUTR | base nutricional verificada | A · campos ausentes |
 | 46 | Mostrar referência exata e data da fonte nutricional. | NUTR | metadados de fontes | P · campos e rótulo de origem existem; seeds ainda não têm referência/data por item |
@@ -104,13 +104,13 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 | ID | Comportamento verificável (critério de aceitação) | Arquivos | Dependência | Estado / teste |
 |---:|---|---|---|---|
-| 61 | Buscar receitas/alimentos por texto. | NUTR | — | V · busca de receitas; alimentos não têm busca dedicada |
+| 61 | Buscar receitas/alimentos por texto. | NUTR | — | V · busca sem acentos/caixa no nome de receitas, ingredientes e catálogo de alimentos; `nutrition-catalog.test.ts` |
 | 62 | Consultar itens com referências TBCA/TACO rastreáveis. | NUTR | dados e termos de uso das bases | P · rótulo de fonte sem referência comprovada |
 | 63 | Diferenciar marcas e rótulos de produtos embalados. | NUTR | catálogo de marcas/rótulos | A · sem campos de marca |
 | 64 | Localizar produto pelo barcode. | NUTR | API/base externa de barcode | B · integração não configurada |
-| 65 | Criar/editar alimento pessoal no SQLite. | NUTR; IPC | — | A · sem formulário/handler de cadastro |
+| 65 | Criar/editar alimento pessoal no SQLite. | NUTR; IPC | — | V · formulário, IPC validado por schema e persistência/reabertura testadas em `catalog-persistence.test.ts` |
 | 66 | Encontrar alimento pelos sinônimos cadastrados. | NUTR | dados de sinônimos | A · sem campo de sinônimos |
-| 67 | Favoritar alimentos/receitas e filtrar favoritos. | NUTR | — | A · existe coluna de receita sem fluxo UI/IPC |
+| 67 | Favoritar alimentos/receitas e filtrar favoritos. | NUTR; IPC | — | V · favoritos persistem no SQLite e no armazenamento local da PWA; catálogo de receitas e alimentos tem filtro; `catalog-persistence.test.ts` e `daily-meal-api.test.ts` |
 | 68 | Consultar itens recentemente usados. | NUTR; DIAR | — | A · sem histórico de recentes |
 | 69 | Sugerir possíveis duplicatas por nome/código. | NUTR | índice de barcode para produtos | P · IDs são únicos; detecção semântica ausente |
 | 70 | Armazenar e distinguir nutrientes de rótulo. | NUTR | usuário informa o rótulo | P · uma fonte textual, sem estrutura de rótulo |
@@ -295,17 +295,20 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- `npm test`: 61/61 testes aprovados localmente; inclui snapshots v7→v8, metadados de qualidade e armazenamento de fibra ausente como `NULL`.
-- `npm run build`: build de renderer e Electron aprovado.
-- Instalador NSIS e portable 1.0.4: empacotados; smoke test do portable ficou ativo por 12 segundos e criou `fittrack.db` num perfil temporário isolado.
+- `npm test`: 67/67 testes aprovados localmente; inclui snapshots v7→v8, metadados de qualidade, fibra `NULL`, alimentos pessoais, favoritos e busca nutricional.
+- `npm run build`: build de renderer e Electron aprovado após a biblioteca pessoal e as ações de favoritos.
+- Instalador NSIS e portable 1.0.4: publicados; smoke test do portable criou `fittrack.db` num perfil temporário isolado.
+- Portable 1.0.5: empacotado e smoke test de 12 segundos criou `fittrack.db` num perfil isolado.
 - GitHub Actions e release 1.0.4: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39721903982).
 - Release 1.0.4: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.4.
+- Incremento 1.0.5: 67 testes, build e abertura do portable passaram localmente; publicação ainda pendente.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
 
-- IDs **31, 43, 46, 47, 58 e 157** receberam tratamento de transparência/proveniência, ainda **parcial**: qualidade, origem declarada, referência, data e confiança têm campos persistentes; a interface marca valores estimados/não verificados e fibra ausente fica nula.
+- IDs **31, 46, 47, 58 e 157** receberam tratamento de transparência/proveniência, ainda **parcial**: qualidade, origem declarada, referência, data e confiança têm campos persistentes; a interface marca valores estimados/não verificados.
 - IDs **CAT-02, CAT-04, CAT-12 e CAT-13** avançaram parcialmente. Os seeds ainda não têm referências rastreáveis por item, densidade, micronutrientes ou 500 cadastros verificados, então esses critérios permanecem incompletos.
+- IDs **61, 65 e 67** estão concluídos e validados: busca de receitas/alimentos; cadastro e edição de alimento pessoal com rótulo de origem e persistência; favoritos e filtros de favoritos para receitas e alimentos no SQLite/PWA.
 - A migração **v8** salva cópia pré-migração somente quando um banco antigo ainda precisa da alteração. Testes cobrem a cópia do banco v7 e evitam snapshots falsamente chamados de pré-migração em banco novo.
 
 ## Próximas etapas sugeridas

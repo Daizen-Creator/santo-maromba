@@ -9,10 +9,14 @@ import {
   ChefHat,
   CheckCircle2,
   Circle,
-  SkipForward
+  SkipForward,
+  Plus,
+  Star
 } from 'lucide-react';
-import { DailyMealEntry, DailyMealEntryInput, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, SubstitutionOption } from '../../shared/types';
+import { CustomFoodInput, DailyMealEntry, DailyMealEntryInput, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
+import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
+import { searchRecipes } from '../../domain/nutrition-catalog';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -35,6 +39,9 @@ interface NutritionViewProps {
   onUpdatePantry: (foodId: string, amountG: number) => Promise<void>;
   onFindRecipesFromPantry: (maxPrepTime?: number) => Promise<Array<Recipe & { matchRate: number }>>;
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
+  onSaveCustomFood: (input: CustomFoodInput, id?: string) => Promise<FoodItem>;
+  onSetRecipeFavorite: (id: string, isFavorite: boolean) => Promise<void>;
+  onSetFoodFavorite: (id: string, isFavorite: boolean) => Promise<void>;
 }
 
 export const NutritionView: React.FC<NutritionViewProps> = ({
@@ -48,9 +55,12 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   onGetSubstitutions,
   onUpdatePantry,
   onFindRecipesFromPantry,
-  onSaveDailyMeal
+  onSaveDailyMeal,
+  onSaveCustomFood,
+  onSetRecipeFavorite,
+  onSetFoodFavorite
 }) => {
-  const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat'>('meals');
+  const [activeTab, setActiveTab] = useState<'meals' | 'catalog200' | 'pantry' | 'what_to_eat' | 'foods'>('meals');
 
   // Filtros do Catálogo de 200 Receitas
   const [selectedTurn, setSelectedTurn] = useState<MealTurn | 'all'>('all');
@@ -76,6 +86,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [savingMealSlot, setSavingMealSlot] = useState<string | null>(null);
   const [mealListFilter, setMealListFilter] = useState<'all' | 'eaten' | 'remaining'>('all');
   const [mealSaveError, setMealSaveError] = useState<string | null>(null);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [recipeActionError, setRecipeActionError] = useState<string | null>(null);
 
   const today = new Date();
   const todayString = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
@@ -166,19 +178,19 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
   // Filtragem das 200 Receitas
   const filteredRecipes = useMemo(() => {
+    const matchingRecipeIds = new Set(searchRecipes(recipes, searchTerm).map(recipe => recipe.id));
     return recipes.filter(r => {
       const matchTurn = selectedTurn === 'all' || r.category === selectedTurn;
-      const matchSearch =
-        r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.ingredients.some(ing => ing.foodName.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchSearch = matchingRecipeIds.has(r.id);
       const matchCost = !r.estimatedCost || r.estimatedCost <= maxCostFilter;
-      return matchTurn && matchSearch && matchCost;
+      const matchFavorite = !favoritesOnly || Boolean(r.isFavorite);
+      return matchTurn && matchSearch && matchCost && matchFavorite;
     });
-  }, [recipes, selectedTurn, searchTerm, maxCostFilter]);
+  }, [recipes, selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
 
   useEffect(() => {
     setRecipePage(0);
-  }, [selectedTurn, searchTerm, maxCostFilter]);
+  }, [selectedTurn, searchTerm, maxCostFilter, favoritesOnly]);
 
   const visibleRecipes = useMemo(
     () => filteredRecipes.slice(recipePage * recipesPerPage, (recipePage + 1) * recipesPerPage),
@@ -260,6 +272,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           {[
             { id: 'meals', label: 'Plano do Dia', icon: Utensils },
             { id: 'catalog200', label: '200 Variedades de Refeições', icon: ChefHat },
+            { id: 'foods', label: 'Meus Alimentos', icon: Plus },
             { id: 'what_to_eat', label: 'O Que Comer Agora?', icon: Sparkles },
             { id: 'pantry', label: 'Minha Despensa', icon: ShoppingBag }
           ].map(t => {
@@ -561,6 +574,12 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               </div>
             </div>
 
+            <button type="button" aria-pressed={favoritesOnly} onClick={() => setFavoritesOnly(value => !value)}
+              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${favoritesOnly ? 'border-amber-400/40 bg-amber-400/10 text-amber-200' : 'border-border text-muted-foreground hover:text-foreground'}`}>
+              <Star className="h-3.5 w-3.5" />{favoritesOnly ? 'Exibindo favoritas' : 'Filtrar favoritas'}
+            </button>
+            {recipeActionError && <p role="alert" className="text-xs text-red-300">{recipeActionError}</p>}
+
             {/* Turnos */}
             <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/50">
               {[
@@ -614,9 +633,19 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <span className="font-display text-sm font-bold text-foreground">
                       {recipe.name}
                     </span>
-                    <span className="shrink-0 rounded-lg bg-secondary px-2 py-0.5 text-[10px] font-bold text-primary uppercase">
-                      {recipe.category}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button type="button" aria-label={recipe.isFavorite ? `Remover ${recipe.name} das favoritas` : `Favoritar ${recipe.name}`}
+                        aria-pressed={Boolean(recipe.isFavorite)} onClick={async () => {
+                          setRecipeActionError(null);
+                          try { await onSetRecipeFavorite(recipe.id, !recipe.isFavorite); }
+                          catch (error) { setRecipeActionError(error instanceof Error ? error.message : 'Não foi possível salvar o favorito.'); }
+                        }} className={`rounded-lg border p-1.5 transition-colors ${recipe.isFavorite ? 'border-amber-400/30 bg-amber-400/10 text-amber-200' : 'border-border text-muted-foreground hover:text-amber-200'}`}>
+                        <Star className="h-3.5 w-3.5" fill={recipe.isFavorite ? 'currentColor' : 'none'} />
+                      </button>
+                      <span className="rounded-lg bg-secondary px-2 py-0.5 text-[10px] font-bold text-primary uppercase">
+                        {recipe.category}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -711,6 +740,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
           )}
         </div>
       )}
+
+      {activeTab === 'foods' && <CustomFoodLibrary foods={foods} onSave={onSaveCustomFood} onSetFavorite={onSetFoodFavorite} />}
 
       {/* 3. ABA O QUE POSSO COMER COM O QUE TENHO */}
       {activeTab === 'what_to_eat' && (
@@ -901,6 +932,16 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     </div>
 
                     <p className="text-xs font-semibold text-foreground">{opt.description}</p>
+                    {opt.items.length > 0 && <div className="space-y-1 text-[10px] text-muted-foreground">
+                      {opt.items.map((item, index) => (
+                        <p key={`${opt.id}-${item.foodId}-${index}`}>
+                          {item.amountG} g de {item.foodName} · {item.dataQuality === 'user_reported'
+                            ? 'valores informados pelo usuário'
+                            : item.dataQuality === 'verified' ? 'fonte verificada' : 'fonte não verificada'}
+                          {item.dataSource ? ` · ${item.dataSource}` : ''}
+                        </p>
+                      ))}
+                    </div>}
 
                     {/* Comparativo Nutricional */}
                     <div className="rounded-xl border border-border/60 bg-background/50 p-2.5 grid grid-cols-4 gap-2 text-center text-xs">

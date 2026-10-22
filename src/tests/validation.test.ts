@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   InitialHistoryConfirmationSchema,
+  CustomFoodInputSchema,
   PhotoInputSchema,
   PhotoNotesUpdateSchema,
   ProfileInputSchema,
@@ -8,6 +9,19 @@ import {
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
+  it('valida cadastro nutricional por 100 g e rejeita macros negativos', () => {
+    const food = CustomFoodInputSchema.parse({
+      name: '  Receita pessoal  ', category: 'dairy', calories: 110,
+      proteinG: 8, carbsG: 9, fatsG: 4, isCooked: false
+    });
+    expect(food.name).toBe('Receita pessoal');
+    expect(food.isCooked).toBe(false);
+    expect(() => CustomFoodInputSchema.parse({
+      name: 'Alimento inválido', category: 'protein', calories: 100,
+      proteinG: -1, carbsG: 0, fatsG: 0
+    })).toThrow();
+  });
+
   it('deve validar um perfil válido com biometria completa', () => {
     const validProfile = {
       name: 'João Silva',

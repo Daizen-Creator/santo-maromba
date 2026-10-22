@@ -395,6 +395,19 @@ export interface FoodItem {
   imageUrl?: string;
   imageCredit?: string;
   isCustom?: boolean;
+  isFavorite?: boolean;
+}
+
+export interface CustomFoodInput {
+  name: string;
+  category: FoodCategory;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatsG: number;
+  fiberG?: number;
+  isCooked?: boolean;
+  substituteGroupId?: string;
 }
 
 export type NutritionDataQuality = 'verified' | 'estimated' | 'user_reported' | 'unverified';

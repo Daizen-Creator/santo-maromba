@@ -17,7 +17,10 @@ import {
   CustomizationMediaInputSchema,
   CustomizationMediaIdSchema,
   DailyMealDateSchema,
-  DailyMealEntryInputSchema
+  DailyMealEntryInputSchema,
+  CustomFoodInputSchema,
+  CustomFoodUpdateInputSchema,
+  RecipeFavoriteInputSchema
 } from '../shared/schema';
 import { FitTrackService } from '../services/fittrack-service';
 import { IDatabase } from '../database/driver';
@@ -207,11 +210,46 @@ export function registerIpcHandlers(
     }
   });
 
+  ipcMain.handle(IPC_CHANNELS.ADD_CUSTOM_FOOD, async (_, rawInput) => {
+    try {
+      return { success: true, data: service.createCustomFood(CustomFoodInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível cadastrar o alimento.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SET_FOOD_FAVORITE, async (_, rawInput) => {
+    try {
+      const input = RecipeFavoriteInputSchema.parse(rawInput);
+      return { success: true, data: service.setFoodFavorite(input.id, input.isFavorite) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível atualizar o favorito.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.UPDATE_CUSTOM_FOOD, async (_, rawInput) => {
+    try {
+      const input = CustomFoodUpdateInputSchema.parse(rawInput);
+      return { success: true, data: service.updateCustomFood(input.id, input.food) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível atualizar o alimento.' };
+    }
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_RECIPES, async () => {
     try {
       return { success: true, data: service.getRecipes() };
     } catch (err: any) {
       return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SET_RECIPE_FAVORITE, async (_, rawInput) => {
+    try {
+      const input = RecipeFavoriteInputSchema.parse(rawInput);
+      return { success: true, data: service.setRecipeFavorite(input.id, input.isFavorite) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível atualizar o favorito.' };
     }
   });
 

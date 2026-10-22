@@ -1,5 +1,6 @@
 import {
   BodyMeasurementRecord,
+  CustomFoodInput,
   DashboardSummary,
   Exercise,
   FoodItem,
@@ -39,6 +40,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
+import { CustomFoodInputSchema } from '../../shared/schema';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
@@ -48,9 +50,11 @@ const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
 const LOCAL_STORAGE_KEY_PROJECTIONS = 'fittrack_physique_projections';
 const LOCAL_STORAGE_KEY_DAILY_LOGS = 'fittrack_daily_logs';
 const LOCAL_STORAGE_KEY_DAILY_MEALS = 'fittrack_daily_meals';
+const LOCAL_STORAGE_KEY_CUSTOM_FOODS = 'fittrack_custom_foods';
+const LOCAL_STORAGE_KEY_FAVORITE_FOODS = 'fittrack_favorite_foods';
+const LOCAL_STORAGE_KEY_FAVORITE_RECIPES = 'fittrack_favorite_recipes';
 const LOCAL_STORAGE_KEY_VISUAL_CUSTOMIZATION = 'fittrack_visual_customization';
 
-const substitutionEngine = new SubstitutionEngine(INITIAL_FOODS, INITIAL_RECIPES);
 const workoutEngine = new WorkoutEngine(INITIAL_EXERCISES);
 
 export const api = {
@@ -284,7 +288,66 @@ export const api = {
       if (!res.success) throw new Error(res.error || 'Erro ao obter alimentos.');
       return res.data || [];
     }
-    return INITIAL_FOODS;
+    const json = localStorage.getItem(LOCAL_STORAGE_KEY_CUSTOM_FOODS);
+    const customFoods: FoodItem[] = json ? JSON.parse(json) : [];
+    const favorites = new Set<string>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_FAVORITE_FOODS) || '[]'));
+    return [...INITIAL_FOODS, ...customFoods].map(food => ({ ...food, isFavorite: favorites.has(food.id) }));
+  },
+
+  setFoodFavorite: async (id: string, isFavorite: boolean): Promise<FoodItem> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.setFoodFavorite(id, isFavorite);
+      if (!res.success) throw new Error(res.error || 'Erro ao atualizar favorito.');
+      return res.data!;
+    }
+    const food = (await api.getFoods()).find(item => item.id === id);
+    if (!food) throw new Error('Alimento não encontrado.');
+    const favorites = new Set<string>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_FAVORITE_FOODS) || '[]'));
+    if (isFavorite) favorites.add(id);
+    else favorites.delete(id);
+    localStorage.setItem(LOCAL_STORAGE_KEY_FAVORITE_FOODS, JSON.stringify([...favorites]));
+    return { ...food, isFavorite };
+  },
+
+  saveCustomFood: async (input: CustomFoodInput, id?: string): Promise<FoodItem> => {
+    const validatedInput = CustomFoodInputSchema.parse(input);
+    if (api.isElectron()) {
+      const res = id
+        ? await window.fitTrackAPI.updateCustomFood(id, validatedInput)
+        : await window.fitTrackAPI.createCustomFood(validatedInput);
+      if (!res.success) throw new Error(res.error || 'Erro ao salvar alimento personalizado.');
+      return res.data!;
+    }
+
+    const customFoods = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_CUSTOM_FOODS) || '[]') as FoodItem[];
+    const duplicate = [...INITIAL_FOODS, ...customFoods].find(food =>
+      food.name.localeCompare(validatedInput.name, undefined, { sensitivity: 'accent' }) === 0 && food.id !== id
+    );
+    if (duplicate) throw new Error('Já existe um alimento com esse nome no catálogo.');
+
+    const existing = id ? customFoods.find(food => food.id === id && food.isCustom) : undefined;
+    if (id && !existing) throw new Error('Alimento personalizado não encontrado.');
+    const food: FoodItem = {
+      id: existing?.id || `custom-food-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
+      name: validatedInput.name,
+      category: validatedInput.category,
+      servingSizeG: 100,
+      calories: validatedInput.calories,
+      proteinG: validatedInput.proteinG,
+      carbsG: validatedInput.carbsG,
+      fatsG: validatedInput.fatsG,
+      fiberG: validatedInput.fiberG,
+      isCooked: validatedInput.isCooked ?? false,
+      source: 'Informado pelo usuário',
+      dataQuality: 'user_reported',
+      confidenceLevel: 'unknown',
+      substituteGroupId: validatedInput.substituteGroupId?.trim() || undefined,
+      isCustom: true
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY_CUSTOM_FOODS, JSON.stringify([
+      ...customFoods.filter(item => item.id !== food.id), food
+    ]));
+    return food;
   },
 
   getRecipes: async (): Promise<Recipe[]> => {
@@ -293,7 +356,23 @@ export const api = {
       if (!res.success) throw new Error(res.error || 'Erro ao obter receitas.');
       return res.data || [];
     }
-    return INITIAL_RECIPES;
+    const favorites = new Set<string>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_FAVORITE_RECIPES) || '[]'));
+    return INITIAL_RECIPES.map(recipe => ({ ...recipe, isFavorite: favorites.has(recipe.id) }));
+  },
+
+  setRecipeFavorite: async (id: string, isFavorite: boolean): Promise<Recipe> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.setRecipeFavorite(id, isFavorite);
+      if (!res.success) throw new Error(res.error || 'Erro ao atualizar favorito.');
+      return res.data!;
+    }
+    const recipe = INITIAL_RECIPES.find(item => item.id === id);
+    if (!recipe) throw new Error('Receita não encontrada.');
+    const favorites = new Set<string>(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_FAVORITE_RECIPES) || '[]'));
+    if (isFavorite) favorites.add(id);
+    else favorites.delete(id);
+    localStorage.setItem(LOCAL_STORAGE_KEY_FAVORITE_RECIPES, JSON.stringify([...favorites]));
+    return { ...recipe, isFavorite };
   },
 
   getPantry: async (): Promise<PantryItem[]> => {
@@ -318,7 +397,7 @@ export const api = {
       existing.amountAvailableG = amountG;
       existing.updatedAt = new Date().toISOString().split('T')[0];
     } else {
-      const food = INITIAL_FOODS.find(f => f.id === foodId);
+      const food = (await api.getFoods()).find(f => f.id === foodId);
       if (food) {
         pantry.push({
           id: `p-${Date.now()}`,
@@ -339,7 +418,21 @@ export const api = {
       return res.data || [];
     }
     const pantry = await api.getPantry();
-    return substitutionEngine.generateSubstitutions(missingFoodId, amountG, pantry);
+    const [foods, recipes] = await Promise.all([api.getFoods(), api.getRecipes()]);
+    return new SubstitutionEngine(foods, recipes).generateSubstitutions(missingFoodId, amountG, pantry)
+      .map(option => ({
+        ...option,
+        items: option.items.map(item => {
+          const food = foods.find(candidate => candidate.id === item.foodId);
+          return {
+            ...item,
+            dataQuality: food?.dataQuality ?? item.dataQuality ?? 'unverified',
+            dataSource: food?.source ?? item.dataSource ?? 'Origem não registrada',
+            sourceReference: food?.sourceReference ?? item.sourceReference,
+            confidenceLevel: food?.confidenceLevel ?? item.confidenceLevel ?? 'unknown'
+          };
+        })
+      }));
   },
 
   findRecipesFromPantry: async (maxPrepTime?: number): Promise<Array<Recipe & { matchRate: number }>> => {
@@ -350,7 +443,8 @@ export const api = {
     }
     const pantry = await api.getPantry();
     const pantryIds = pantry.map(p => p.foodId);
-    return substitutionEngine.findRecipesFromPantry(pantryIds, maxPrepTime);
+    const [foods, recipes] = await Promise.all([api.getFoods(), api.getRecipes()]);
+    return new SubstitutionEngine(foods, recipes).findRecipesFromPantry(pantryIds, maxPrepTime);
   },
 
   // --- TREINOS ---

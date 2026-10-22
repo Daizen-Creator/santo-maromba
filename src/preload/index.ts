@@ -26,7 +26,8 @@ import {
   AppUpdateStatus,
   CustomizationMediaInput,
   CustomizationMediaRecord,
-  VisualCustomization
+  VisualCustomization,
+  CustomFoodInput
 } from '../shared/types';
 import { DailyWorkoutPlan } from '../domain/workout-engine';
 
@@ -59,7 +60,11 @@ export interface FitTrackAPI {
 
   // Nutrição & Substituições
   getFoods: () => Promise<{ success: boolean; data?: FoodItem[]; error?: string }>;
+  setFoodFavorite: (id: string, isFavorite: boolean) => Promise<{ success: boolean; data?: FoodItem; error?: string }>;
+  createCustomFood: (food: CustomFoodInput) => Promise<{ success: boolean; data?: FoodItem; error?: string }>;
+  updateCustomFood: (id: string, food: CustomFoodInput) => Promise<{ success: boolean; data?: FoodItem; error?: string }>;
   getRecipes: () => Promise<{ success: boolean; data?: Recipe[]; error?: string }>;
+  setRecipeFavorite: (id: string, isFavorite: boolean) => Promise<{ success: boolean; data?: Recipe; error?: string }>;
   getPantry: () => Promise<{ success: boolean; data?: PantryItem[]; error?: string }>;
   updatePantry: (foodId: string, amountG: number) => Promise<{ success: boolean; error?: string }>;
   getSubstitutions: (missingFoodId: string, amountG: number) => Promise<{ success: boolean; data?: SubstitutionOption[]; error?: string }>;
@@ -120,7 +125,11 @@ const api: FitTrackAPI = {
   getPhysiqueProjections: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PHYSIQUE_PROJECTIONS),
 
   getFoods: () => ipcRenderer.invoke(IPC_CHANNELS.GET_FOODS),
+  setFoodFavorite: (id, isFavorite) => ipcRenderer.invoke(IPC_CHANNELS.SET_FOOD_FAVORITE, { id, isFavorite }),
+  createCustomFood: food => ipcRenderer.invoke(IPC_CHANNELS.ADD_CUSTOM_FOOD, food),
+  updateCustomFood: (id, food) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CUSTOM_FOOD, { id, food }),
   getRecipes: () => ipcRenderer.invoke(IPC_CHANNELS.GET_RECIPES),
+  setRecipeFavorite: (id, isFavorite) => ipcRenderer.invoke(IPC_CHANNELS.SET_RECIPE_FAVORITE, { id, isFavorite }),
   getPantry: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PANTRY),
   updatePantry: (foodId, amountG) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_PANTRY, { foodId, amountG }),
   getSubstitutions: (missingFoodId, amountG) => ipcRenderer.invoke(IPC_CHANNELS.GET_SUBSTITUTIONS, { missingFoodId, amountG }),

@@ -1,5 +1,6 @@
 import { IDatabase } from '../driver';
-import { FoodItem, PantryItem, Recipe } from '../../shared/types';
+import { randomUUID } from 'crypto';
+import { CustomFoodInput, FoodItem, PantryItem, Recipe } from '../../shared/types';
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../seeds/nutrition-seeds';
 
 export class NutritionRepository {
@@ -82,6 +83,15 @@ export class NutritionRepository {
 
   getFoods(): FoodItem[] {
     const rows = this.db.query<any>('SELECT * FROM foods ORDER BY name ASC');
+    const storedFavorites = this.db.queryOne<{ value: string }>(
+      'SELECT value FROM app_metadata WHERE key = ?', ['favorite_food_ids']
+    )?.value;
+    let favorites = new Set<string>();
+    try {
+      if (storedFavorites) favorites = new Set<string>(JSON.parse(storedFavorites));
+    } catch {
+      favorites = new Set<string>();
+    }
     return rows.map(r => ({
       id: r.id,
       name: r.name,
@@ -102,8 +112,78 @@ export class NutritionRepository {
       substituteGroupId: r.substitute_group_id || undefined,
       imageUrl: r.image_url || undefined,
       imageCredit: r.image_credit || undefined,
-      isCustom: Boolean(r.is_custom)
+      isCustom: Boolean(r.is_custom),
+      isFavorite: favorites.has(r.id)
     }));
+  }
+
+  setFoodFavorite(id: string, isFavorite: boolean): FoodItem {
+    const exists = this.db.queryOne<{ id: string }>('SELECT id FROM foods WHERE id = ?', [id]);
+    if (!exists) throw new Error('Alimento não encontrado.');
+    const stored = this.db.queryOne<{ value: string }>(
+      'SELECT value FROM app_metadata WHERE key = ?', ['favorite_food_ids']
+    )?.value;
+    let favorites = new Set<string>();
+    try {
+      if (stored) favorites = new Set<string>(JSON.parse(stored));
+    } catch {
+      favorites = new Set<string>();
+    }
+    if (isFavorite) favorites.add(id);
+    else favorites.delete(id);
+    this.db.execute(
+      `INSERT INTO app_metadata (key, value) VALUES ('favorite_food_ids', ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+      [JSON.stringify([...favorites].sort())]
+    );
+    const food = this.getFoods().find(item => item.id === id);
+    if (!food) throw new Error('Não foi possível carregar o alimento atualizado.');
+    return food;
+  }
+
+  createCustomFood(input: CustomFoodInput): FoodItem {
+    this.assertFoodNameAvailable(input.name);
+    const id = `custom-food-${randomUUID()}`;
+    this.db.execute(
+      `INSERT INTO foods (
+        id, name, category, serving_size_g, calories, protein_g, carbs_g, fats_g, fiber_g,
+        is_cooked, substitute_group_id, source, data_quality, confidence_level, is_custom, created_at
+      ) VALUES (?, ?, ?, 100, ?, ?, ?, ?, ?, ?, ?, 'Informado pelo usuário', 'user_reported', 'unknown', 1, ?)`,
+      [id, input.name.trim(), input.category, input.calories, input.proteinG, input.carbsG, input.fatsG,
+        input.fiberG ?? null, input.isCooked ? 1 : 0, input.substituteGroupId?.trim() || null, new Date().toISOString()]
+    );
+    return this.requireFood(id);
+  }
+
+  updateCustomFood(id: string, input: CustomFoodInput): FoodItem {
+    const existing = this.db.queryOne<{ id: string }>(
+      'SELECT id FROM foods WHERE id = ? AND is_custom = 1', [id]
+    );
+    if (!existing) throw new Error('Alimento personalizado não encontrado.');
+    this.assertFoodNameAvailable(input.name, id);
+    this.db.execute(
+      `UPDATE foods SET name = ?, category = ?, serving_size_g = 100, calories = ?, protein_g = ?,
+       carbs_g = ?, fats_g = ?, fiber_g = ?, is_cooked = ?, substitute_group_id = ?,
+       source = 'Informado pelo usuário', data_quality = 'user_reported', confidence_level = 'unknown'
+       WHERE id = ? AND is_custom = 1`,
+      [input.name.trim(), input.category, input.calories, input.proteinG, input.carbsG, input.fatsG,
+        input.fiberG ?? null, input.isCooked ? 1 : 0, input.substituteGroupId?.trim() || null, id]
+    );
+    return this.requireFood(id);
+  }
+
+  private assertFoodNameAvailable(name: string, exceptId?: string): void {
+    const duplicate = this.db.queryOne<{ id: string }>(
+      'SELECT id FROM foods WHERE name = ? COLLATE NOCASE AND (? IS NULL OR id <> ?) LIMIT 1',
+      [name.trim(), exceptId ?? null, exceptId ?? null]
+    );
+    if (duplicate) throw new Error('Já existe um alimento com esse nome no catálogo.');
+  }
+
+  private requireFood(id: string): FoodItem {
+    const food = this.getFoods().find(item => item.id === id);
+    if (!food) throw new Error('Não foi possível carregar o alimento salvo.');
+    return food;
   }
 
   getRecipes(): Recipe[] {
@@ -154,6 +234,14 @@ export class NutritionRepository {
         isFavorite: Boolean(row.is_favorite)
       };
     });
+  }
+
+  setRecipeFavorite(id: string, isFavorite: boolean): Recipe {
+    const result = this.db.execute('UPDATE recipes SET is_favorite = ? WHERE id = ?', [isFavorite ? 1 : 0, id]);
+    if (result.changes === 0) throw new Error('Receita não encontrada.');
+    const recipe = this.getRecipes().find(item => item.id === id);
+    if (!recipe) throw new Error('Não foi possível carregar a receita atualizada.');
+    return recipe;
   }
 
   getPantry(): PantryItem[] {

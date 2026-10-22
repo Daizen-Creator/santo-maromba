@@ -35,7 +35,11 @@ export const IPC_CHANNELS = {
 
   // Nutrition Catalog & Substitutions
   GET_FOODS: 'nutrition:get-foods',
+  SET_FOOD_FAVORITE: 'nutrition:set-food-favorite',
+  ADD_CUSTOM_FOOD: 'nutrition:add-custom-food',
+  UPDATE_CUSTOM_FOOD: 'nutrition:update-custom-food',
   GET_RECIPES: 'nutrition:get-recipes',
+  SET_RECIPE_FAVORITE: 'nutrition:set-recipe-favorite',
   GET_PANTRY: 'nutrition:get-pantry',
   UPDATE_PANTRY: 'nutrition:update-pantry',
   GET_SUBSTITUTIONS: 'nutrition:get-substitutions',

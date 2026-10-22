@@ -23,6 +23,7 @@ import {
 } from '../domain/weight-analytics';
 import {
   BodyMeasurementRecord,
+  CustomFoodInput,
   DashboardSummary,
   Exercise,
   FoodItem,
@@ -64,7 +65,6 @@ export class FitTrackService {
   private exerciseMediaRepo: ExerciseMediaRepository;
   private dailyLogRepo: DailyLogRepository;
   private customizationRepo: CustomizationRepository;
-  private substitutionEngine: SubstitutionEngine;
   private workoutEngine: WorkoutEngine;
   private photoStorage: PhotoStorage;
   private exerciseMediaStorage: ExerciseMediaStorage;
@@ -90,7 +90,6 @@ export class FitTrackService {
     this.exerciseMediaRepo = new ExerciseMediaRepository(db);
     this.dailyLogRepo = new DailyLogRepository(db);
     this.customizationRepo = new CustomizationRepository(db);
-    this.substitutionEngine = new SubstitutionEngine();
     this.workoutEngine = new WorkoutEngine(this.workoutRepo.getExercises());
   }
 
@@ -233,8 +232,24 @@ export class FitTrackService {
     return this.nutritionRepo.getFoods();
   }
 
+  createCustomFood(input: CustomFoodInput): FoodItem {
+    return this.nutritionRepo.createCustomFood(input);
+  }
+
+  setFoodFavorite(id: string, isFavorite: boolean): FoodItem {
+    return this.nutritionRepo.setFoodFavorite(id, isFavorite);
+  }
+
+  updateCustomFood(id: string, input: CustomFoodInput): FoodItem {
+    return this.nutritionRepo.updateCustomFood(id, input);
+  }
+
   getRecipes(): Recipe[] {
     return this.nutritionRepo.getRecipes();
+  }
+
+  setRecipeFavorite(id: string, isFavorite: boolean): Recipe {
+    return this.nutritionRepo.setRecipeFavorite(id, isFavorite);
   }
 
   getPantry(): PantryItem[] {
@@ -251,13 +266,28 @@ export class FitTrackService {
 
   getSubstitutions(missingFoodId: string, amountG: number): SubstitutionOption[] {
     const pantry = this.nutritionRepo.getPantry();
-    return this.substitutionEngine.generateSubstitutions(missingFoodId, amountG, pantry);
+    const engine = new SubstitutionEngine(this.nutritionRepo.getFoods(), this.nutritionRepo.getRecipes());
+    const foodById = new Map(this.nutritionRepo.getFoods().map(food => [food.id, food]));
+    return engine.generateSubstitutions(missingFoodId, amountG, pantry).map(option => ({
+      ...option,
+      items: option.items.map(item => {
+        const food = foodById.get(item.foodId);
+        return {
+          ...item,
+          dataQuality: food?.dataQuality ?? item.dataQuality ?? 'unverified',
+          dataSource: food?.source ?? item.dataSource ?? 'Origem não registrada',
+          sourceReference: food?.sourceReference ?? item.sourceReference,
+          confidenceLevel: food?.confidenceLevel ?? item.confidenceLevel ?? 'unknown'
+        };
+      })
+    }));
   }
 
   findRecipesFromPantry(maxPrepTime?: number): Array<Recipe & { matchRate: number }> {
     const pantry = this.nutritionRepo.getPantry();
     const pantryIds = pantry.map(p => p.foodId);
-    return this.substitutionEngine.findRecipesFromPantry(pantryIds, maxPrepTime);
+    return new SubstitutionEngine(this.nutritionRepo.getFoods(), this.nutritionRepo.getRecipes())
+      .findRecipesFromPantry(pantryIds, maxPrepTime);
   }
 
   // --- TREINOS E EXERCÍCIOS ---

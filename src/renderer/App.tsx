@@ -16,6 +16,7 @@ import { InitialHistoryModal } from './components/InitialHistoryModal';
 import { api } from './services/api';
 import {
   BodyMeasurementRecord,
+  CustomFoodInput,
   DashboardSummary,
   Exercise,
   FoodItem,
@@ -249,6 +250,22 @@ export const App: React.FC = () => {
     setSummary(updatedSummary);
   };
 
+  const handleSaveCustomFood = async (input: CustomFoodInput, id?: string): Promise<FoodItem> => {
+    const saved = await api.saveCustomFood(input, id);
+    setFoods(await api.getFoods());
+    return saved;
+  };
+
+  const handleSetRecipeFavorite = async (id: string, isFavorite: boolean) => {
+    await api.setRecipeFavorite(id, isFavorite);
+    setRecipes(await api.getRecipes());
+  };
+
+  const handleSetFoodFavorite = async (id: string, isFavorite: boolean) => {
+    await api.setFoodFavorite(id, isFavorite);
+    setFoods(await api.getFoods());
+  };
+
   const handleAddWater = async (amountMl: number) => {
     const now = new Date();
     const date = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
@@ -453,6 +470,9 @@ export const App: React.FC = () => {
               onUpdatePantry={handleUpdatePantry}
               onFindRecipesFromPantry={api.findRecipesFromPantry}
               onSaveDailyMeal={handleSaveDailyMeal}
+              onSaveCustomFood={handleSaveCustomFood}
+              onSetRecipeFavorite={handleSetRecipeFavorite}
+              onSetFoodFavorite={handleSetFoodFavorite}
             />
           )}
 
