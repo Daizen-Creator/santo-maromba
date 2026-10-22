@@ -22,6 +22,10 @@ describe('despensa e consumo no armazenamento offline da PWA', () => {
 
   it('valida estoque, desconta consumo sem duplicar e persiste a reabertura e o desfazer', async () => {
     await api.updatePantry('food-arroz', 500, '2026-10-28');
+    await api.updatePantryPrice({ foodId: 'food-arroz', unitPrice: 25.5, priceSource: 'Mercado do bairro' });
+    expect((await api.getPantry()).find(item => item.foodId === 'food-arroz')).toMatchObject({
+      amountAvailableG: 500, unitPrice: 25.5, priceSource: 'Mercado do bairro'
+    });
     expect((await api.getPantry()).find(item => item.foodId === 'food-arroz')?.expiresAt).toBe('2026-10-28');
     await expect(api.updatePantry('food-arroz', 500, '2026-02-30')).rejects.toThrow();
     const food = (await api.getFoods()).find(item => item.id === 'food-arroz')!;

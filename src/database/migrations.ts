@@ -476,4 +476,18 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [33, 'Datas de validade e alertas da despensa', new Date().toISOString()]
     );
   }
+  const updatedPantryColumns = db.query<{ name: string }>('PRAGMA table_info(pantry_items)');
+  if (!updatedPantryColumns.some(column => column.name === 'price_source')) {
+    db.exec('ALTER TABLE pantry_items ADD COLUMN price_source TEXT');
+  }
+  if (!updatedPantryColumns.some(column => column.name === 'price_updated_at')) {
+    db.exec('ALTER TABLE pantry_items ADD COLUMN price_updated_at TEXT');
+  }
+  const version34 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 34');
+  if (!version34) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [34, 'Preços informados e custo por grama de proteína', new Date().toISOString()]
+    );
+  }
 }

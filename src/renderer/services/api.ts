@@ -13,6 +13,7 @@ import {
   FoodItem,
   NutritionTargets,
   PantryItem,
+  PantryPriceUpdateInput,
   PantryRecipeSearchInput,
   ShoppingListItem,
   ShoppingListPurchaseInput,
@@ -81,7 +82,7 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryItemUpdateInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryItemUpdateInputSchema, PantryPriceUpdateInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -756,6 +757,37 @@ export const api = {
     localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION, JSON.stringify(
       consumption.map(record => record.foodId === input.foodId ? { ...record, deductedG: 0 } : record)
     ));
+  },
+
+  updatePantryPrice: async (rawInput: PantryPriceUpdateInput): Promise<void> => {
+    const input = PantryPriceUpdateInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.updatePantryPrice(input);
+      if (!res.success) throw new Error(res.error || 'Erro ao atualizar o preço informado.');
+      return;
+    }
+    const pantry = await api.getPantry();
+    const existing = pantry.find(item => item.foodId === input.foodId);
+    const food = (await api.getFoods()).find(item => item.id === input.foodId);
+    if (!food) throw new Error('Alimento não encontrado no catálogo.');
+    const now = new Date().toISOString();
+    if (existing) {
+      existing.unitPrice = input.unitPrice ?? undefined;
+      existing.priceSource = input.priceSource ?? undefined;
+      existing.priceUpdatedAt = input.unitPrice === null ? undefined : now;
+    } else {
+      pantry.push({
+        id: `p-${Date.now()}`,
+        foodId: input.foodId,
+        foodName: food.name,
+        amountAvailableG: 0,
+        unitPrice: input.unitPrice ?? undefined,
+        priceSource: input.priceSource ?? undefined,
+        priceUpdatedAt: input.unitPrice === null ? undefined : now,
+        updatedAt: now
+      });
+    }
+    localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY, JSON.stringify(pantry));
   },
 
   getSubstitutions: async (missingFoodId: string, amountG: number): Promise<SubstitutionOption[]> => {

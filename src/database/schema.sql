@@ -186,6 +186,8 @@ CREATE TABLE IF NOT EXISTS pantry_items (
   food_id TEXT NOT NULL,
   amount_available_g REAL NOT NULL CHECK(amount_available_g BETWEEN 0 AND 100000),
   unit_price REAL,
+  price_source TEXT,
+  price_updated_at TEXT,
   expires_at TEXT,
   updated_at TEXT NOT NULL,
   FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE

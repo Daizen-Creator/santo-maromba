@@ -32,6 +32,7 @@ import {
   ReorderDailyMealsInputSchema,
   PantryRecipeSearchInputSchema,
   PantryItemUpdateInputSchema,
+  PantryPriceUpdateInputSchema,
   ShoppingListPurchaseInputSchema,
   DailyMealEntryInputSchema,
   DailyMealIdentityInputSchema,
@@ -412,6 +413,17 @@ export function registerIpcHandlers(
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.UPDATE_PANTRY_PRICE, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      const input = PantryPriceUpdateInputSchema.parse(rawInput);
+      service.updatePantryPrice(input.foodId, input.unitPrice, input.priceSource);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível atualizar o preço informado.' };
     }
   });
 

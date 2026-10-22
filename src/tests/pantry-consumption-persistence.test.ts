@@ -77,4 +77,28 @@ describe('estoque e consumo confirmado no SQLite', () => {
     service.saveDailyMeal(meal);
     expect(service.getPantry().find(item => item.foodId === rice.id)?.amountAvailableG).toBe(500);
   });
+
+  it('salva preço por kg, origem e data sem alterar saldo e recupera após reabrir o SQLite', async () => {
+    directory = fs.mkdtempSync(path.join(os.tmpdir(), 'santo-maromba-pantry-price-'));
+    const databasePath = path.join(directory, 'fittrack.db');
+    db = await createDatabaseDriver(databasePath);
+    await runMigrations(db);
+    let service = new FitTrackService(db);
+    const rice = service.getFoods().find(food => food.id === 'food-arroz')!;
+    service.updatePantryItem(rice.id, 350);
+    service.updatePantryPrice(rice.id, 25.5, 'Mercado do bairro');
+    expect(service.getPantry().find(item => item.foodId === rice.id)).toMatchObject({ amountAvailableG: 350, unitPrice: 25.5, priceSource: 'Mercado do bairro' });
+    expect(db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 34')?.version).toBe(34);
+
+    db.close();
+    db = await createDatabaseDriver(databasePath);
+    await runMigrations(db);
+    service = new FitTrackService(db);
+    expect(service.getPantry().find(item => item.foodId === rice.id)).toMatchObject({ amountAvailableG: 350, unitPrice: 25.5, priceSource: 'Mercado do bairro' });
+    expect(service.getPantry().find(item => item.foodId === rice.id)?.priceUpdatedAt).toBeTruthy();
+
+    service.updatePantryPrice(rice.id, null, null);
+    expect(service.getPantry().find(item => item.foodId === rice.id)).toMatchObject({ amountAvailableG: 350 });
+    expect(service.getPantry().find(item => item.foodId === rice.id)?.unitPrice).toBeUndefined();
+  });
 });

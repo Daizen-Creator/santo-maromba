@@ -16,7 +16,7 @@ import {
   ImagePlus,
   X
 } from 'lucide-react';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, ShoppingListItem, ShoppingListPurchaseInput, SubstitutionOption } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealItemLog, DailyMealRestoreInput, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealPhotoInput, MealPhotoRecord, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, PantryPriceUpdateInput, PantryRecipeSearchInput, Recipe, RecipeFeedbackInput, RecentlyUsedFood, ReorderDailyMealsInput, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, ShoppingListItem, ShoppingListPurchaseInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 import { filterRecipesForProfile, getRecipePreferenceScore, rankRecipesByPreferences } from '../../domain/recipe-compatibility';
 import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
@@ -34,6 +34,7 @@ import { getMealTurnLabel, MEAL_TURN_OPTIONS } from '../../domain/meal-turn';
 import { createPlannedMealFoodItem, removePlannedMealFoodItem } from '../../domain/meal-composition';
 import { WeeklyMealPlanner } from '../components/WeeklyMealPlanner';
 import { getPantryExpiryReminder } from '../../domain/pantry-expiry';
+import { calculateCostPerProteinGram } from '../../domain/nutrition-cost';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -70,6 +71,7 @@ interface NutritionViewProps {
   pantry: PantryItem[];
   onGetSubstitutions: (foodId: string, amountG: number) => Promise<SubstitutionOption[]>;
   onUpdatePantry: (foodId: string, amountG: number, expiresAt?: string | null) => Promise<void>;
+  onUpdatePantryPrice: (input: PantryPriceUpdateInput) => Promise<void>;
   onFindRecipesFromPantry: (input?: PantryRecipeSearchInput) => Promise<Array<Recipe & { matchRate: number }>>;
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
   onDeleteDailyMeal: (input: DailyMealIdentityInput) => Promise<DailyMealEntry>;
@@ -114,6 +116,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   pantry,
   onGetSubstitutions,
   onUpdatePantry,
+  onUpdatePantryPrice,
   onFindRecipesFromPantry,
   onSaveDailyMeal,
   onDeleteDailyMeal,
@@ -151,6 +154,28 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     .filter(item => item.amountAvailableG > 0)
     .map(item => ({ item, reminder: getPantryExpiryReminder(item.expiresAt) }))
     .filter(({ reminder }) => reminder.status === 'expired' || reminder.status === 'expiring'), [pantry]);
+  const [pantryPriceDrafts, setPantryPriceDrafts] = useState<Record<string, string>>({});
+  const [pantryPriceSourceDrafts, setPantryPriceSourceDrafts] = useState<Record<string, string>>({});
+  const [savingPantryPriceFoodId, setSavingPantryPriceFoodId] = useState<string | null>(null);
+  const [pantryPriceError, setPantryPriceError] = useState<string | null>(null);
+
+  const savePantryPrice = async (foodId: string, current?: PantryItem) => {
+    const rawPrice = pantryPriceDrafts[foodId] ?? (current?.unitPrice === undefined ? '' : String(current.unitPrice));
+    const unitPrice = rawPrice.trim() ? Number(rawPrice) : null;
+    const rawSource = pantryPriceSourceDrafts[foodId] ?? current?.priceSource ?? '';
+    const priceSource = unitPrice === null ? null : rawSource.trim() || 'Informado pelo usuário';
+    setSavingPantryPriceFoodId(foodId);
+    setPantryPriceError(null);
+    try {
+      await onUpdatePantryPrice({ foodId, unitPrice, priceSource });
+      setPantryPriceDrafts(currentDrafts => { const next = { ...currentDrafts }; delete next[foodId]; return next; });
+      setPantryPriceSourceDrafts(currentDrafts => { const next = { ...currentDrafts }; delete next[foodId]; return next; });
+    } catch (error) {
+      setPantryPriceError(error instanceof Error ? error.message : 'Não foi possível salvar o preço informado.');
+    } finally {
+      setSavingPantryPriceFoodId(null);
+    }
+  };
 
   // Filtros do Catálogo de 200 Receitas
   const [selectedTurn, setSelectedTurn] = useState<MealTurn | 'all'>('all');
@@ -2116,6 +2141,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               <span className="mt-1 block text-amber-100/80">Confira as datas abaixo antes de usar esses alimentos.</span>
             </div>
           )}
+          {pantryPriceError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">{pantryPriceError}</p>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {foods.map(f => {
@@ -2157,6 +2183,45 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       />
                       <span className="text-xs text-muted-foreground">{unitPreferences.foodMassUnit}</span>
                     </div>
+                  </div>
+                  <div className="space-y-2 border-t border-border/60 pt-2">
+                    <label htmlFor={`pantry-price-${f.id}`} className="block text-xs text-muted-foreground">Preço informado por kg (R$):</label>
+                    <input
+                      id={`pantry-price-${f.id}`}
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      step="0.01"
+                      value={pantryPriceDrafts[f.id] ?? (inPantry?.unitPrice === undefined ? '' : String(inPantry.unitPrice))}
+                      aria-label={`Preço por kg de ${f.name}`}
+                      onChange={event => setPantryPriceDrafts(current => ({ ...current, [f.id]: event.target.value }))}
+                      className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground"
+                    />
+                    <input
+                      type="text"
+                      maxLength={120}
+                      value={pantryPriceSourceDrafts[f.id] ?? inPantry?.priceSource ?? ''}
+                      aria-label={`Origem do preço de ${f.name}`}
+                      placeholder="Origem: mercado, nota ou usuário"
+                      onChange={event => setPantryPriceSourceDrafts(current => ({ ...current, [f.id]: event.target.value }))}
+                      className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void savePantryPrice(f.id, inPantry)}
+                      disabled={savingPantryPriceFoodId === f.id}
+                      className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-medium text-foreground transition hover:bg-secondary disabled:opacity-50"
+                    >
+                      {savingPantryPriceFoodId === f.id ? 'Salvando…' : 'Salvar preço'}
+                    </button>
+                    {inPantry?.unitPrice !== undefined && (
+                      <>
+                        <p className="text-[10px] text-muted-foreground">{inPantry.priceSource} · atualizado em {inPantry.priceUpdatedAt?.slice(0, 10)}</p>
+                        {calculateCostPerProteinGram(inPantry.unitPrice, f.proteinG) !== null && (
+                          <p className="text-[11px] font-medium text-emerald-300">R$ {calculateCostPerProteinGram(inPantry.unitPrice, f.proteinG)!.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} por grama de proteína · {nutritionQualityLabel(f.dataQuality)}</p>
+                        )}
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-2">
                     <label htmlFor={`pantry-expiry-${f.id}`} className="text-xs text-muted-foreground">Validade:</label>

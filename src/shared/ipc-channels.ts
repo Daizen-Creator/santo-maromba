@@ -66,6 +66,7 @@ export const IPC_CHANNELS = {
   DELETE_PERSONAL_DIARY_ENTRY: 'diary:delete-entry',
   GET_PANTRY: 'nutrition:get-pantry',
   UPDATE_PANTRY: 'nutrition:update-pantry',
+  UPDATE_PANTRY_PRICE: 'nutrition:update-pantry-price',
   GET_SUBSTITUTIONS: 'nutrition:get-substitutions',
   FIND_RECIPES_FROM_PANTRY: 'nutrition:find-from-pantry',
   GET_SHOPPING_LIST: 'nutrition:get-shopping-list',

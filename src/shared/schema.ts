@@ -383,6 +383,15 @@ export const PantryItemUpdateInputSchema = z.object({
   expiresAt: z.string().refine(isRealCalendarDate, 'Informe uma data de validade válida.').nullable().optional()
 }).strict();
 
+export const PantryPriceUpdateInputSchema = z.object({
+  foodId: z.string().trim().min(1).max(100).regex(/^[\w-]+$/),
+  unitPrice: z.number().finite().min(0).max(1000000).nullable(),
+  priceSource: z.string().trim().min(1).max(120).nullable()
+}).strict().refine(input => input.unitPrice === null || input.priceSource !== null, {
+  message: 'Informe a origem do preço.',
+  path: ['priceSource']
+});
+
 export const ShoppingListPurchaseInputSchema = z.object({
   weekStartDate: z.string().refine(isRealCalendarDate, 'Informe uma semana válida.'),
   foodId: z.string().trim().min(1).max(120).regex(/^[\w-]+$/),

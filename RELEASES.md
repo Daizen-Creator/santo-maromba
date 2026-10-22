@@ -2,10 +2,16 @@
 
 O repositório público `Daizen-Creator/santo-maromba` publica releases pelo GitHub Actions. O workflow gera o instalador NSIS e a versão portátil para Windows, além do manifesto `latest.yml` usado pelo `electron-updater`.
 
+## v1.1.46
+
+- Permite informar e salvar preço por kg, origem e data, separado do preço estimado do catálogo.
+- Calcula o custo por grama de proteína quando há preço informado e quantidade de proteína cadastrada; a tela mantém visível a qualidade da informação nutricional.
+- 229 testes em 71 arquivos, build, instalador NSIS, portable e inicialização isolada com criação do SQLite aprovados; publicação GitHub pendente.
+
 ## v1.1.45
 
 - A lista semanal de compras exibe os alimentos agrupados por categoria, usando a categoria salva no catálogo e mantendo itens sem categoria em “Outros”.
-- 225 testes em 70 arquivos, build, instalador NSIS, portable e inicialização isolada com criação do SQLite aprovados; publicação GitHub pendente.
+- 225 testes em 70 arquivos, build, instalador NSIS, portable e inicialização isolada com criação do SQLite aprovados; GitHub Actions `39778413859` publicou instalador, portátil, blockmap e `latest.yml`.
 
 ## v1.1.44
 

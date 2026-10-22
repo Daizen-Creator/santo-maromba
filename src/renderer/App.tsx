@@ -23,6 +23,7 @@ import {
   Exercise,
   FoodItem,
   PantryItem,
+  PantryPriceUpdateInput,
   PhotoCreateInput,
   PhotoRecord,
   Recipe,
@@ -223,6 +224,11 @@ export const App: React.FC = () => {
     await api.updatePantry(foodId, amountG, expiresAt);
     const updated = await api.getPantry();
     setPantry(updated);
+  };
+
+  const handleUpdatePantryPrice = async (input: PantryPriceUpdateInput) => {
+    await api.updatePantryPrice(input);
+    setPantry(await api.getPantry());
   };
 
   const handleLogWorkoutSession = async (sessionData: any) => {
@@ -554,6 +560,7 @@ export const App: React.FC = () => {
               pantry={pantry}
               onGetSubstitutions={api.getSubstitutions}
               onUpdatePantry={handleUpdatePantry}
+              onUpdatePantryPrice={handleUpdatePantryPrice}
               onFindRecipesFromPantry={api.findRecipesFromPantry}
               onSaveDailyMeal={handleSaveDailyMeal}
               onDeleteDailyMeal={handleDeleteDailyMeal}

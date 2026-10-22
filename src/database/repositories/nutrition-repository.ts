@@ -4,7 +4,7 @@ import { CustomFoodInput, FoodItem, FoodPortionPreference, PantryItem, Recipe, R
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../seeds/nutrition-seeds';
 import { normalizeRecipeFinalWeight, normalizeRecipeServings } from '../../domain/recipe-portions';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
-import { PantryItemUpdateInputSchema } from '../../shared/schema';
+import { PantryItemUpdateInputSchema, PantryPriceUpdateInputSchema } from '../../shared/schema';
 
 export class NutritionRepository {
   constructor(private db: IDatabase) {
@@ -334,7 +334,8 @@ export class NutritionRepository {
 
   getPantry(): PantryItem[] {
     const rows = this.db.query<any>(
-      `SELECT p.id, p.food_id, f.name as food_name, p.amount_available_g, p.unit_price, p.expires_at, p.updated_at
+      `SELECT p.id, p.food_id, f.name as food_name, p.amount_available_g, p.unit_price, p.price_source,
+        p.price_updated_at, p.expires_at, p.updated_at
        FROM pantry_items p
        JOIN foods f ON p.food_id = f.id
        ORDER BY f.name ASC`
@@ -345,7 +346,9 @@ export class NutritionRepository {
       foodId: r.food_id,
       foodName: r.food_name,
       amountAvailableG: Number(r.amount_available_g),
-      unitPrice: r.unit_price ? Number(r.unit_price) : undefined,
+      unitPrice: r.unit_price == null || !r.price_source || !r.price_updated_at ? undefined : Number(r.unit_price),
+      priceSource: r.price_source || undefined,
+      priceUpdatedAt: r.price_updated_at || undefined,
       expiresAt: r.expires_at || undefined,
       updatedAt: r.updated_at
     }));
@@ -375,6 +378,28 @@ export class NutritionRepository {
       }
       // A manual stock entry is authoritative, so later edits cannot refund older deductions twice.
       this.db.execute('UPDATE pantry_consumption SET deducted_g = 0 WHERE food_id = ?', [input.foodId]);
+    });
+  }
+
+  updatePantryPrice(foodId: string, unitPrice: number | null, priceSource: string | null): void {
+    const input = PantryPriceUpdateInputSchema.parse({ foodId, unitPrice, priceSource });
+    const food = this.db.queryOne<{ id: string }>('SELECT id FROM foods WHERE id = ?', [input.foodId]);
+    if (!food) throw new Error('Alimento não encontrado no catálogo.');
+    const existing = this.db.queryOne<{ id: string }>('SELECT id FROM pantry_items WHERE food_id = ?', [input.foodId]);
+    const now = new Date().toISOString();
+    this.db.transaction(() => {
+      if (existing) {
+        this.db.execute(
+          'UPDATE pantry_items SET unit_price = ?, price_source = ?, price_updated_at = ? WHERE id = ?',
+          [input.unitPrice, input.priceSource, input.unitPrice === null ? null : now, existing.id]
+        );
+      } else {
+        this.db.execute(
+          `INSERT INTO pantry_items (id, food_id, amount_available_g, unit_price, price_source, price_updated_at, updated_at)
+           VALUES (?, ?, 0, ?, ?, ?, ?)`,
+          [`pantry-${randomUUID()}`, input.foodId, input.unitPrice, input.priceSource, input.unitPrice === null ? null : now, now]
+        );
+      }
     });
   }
 

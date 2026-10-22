@@ -766,9 +766,18 @@ export interface PantryItem {
   foodId: string;
   foodName: string;
   amountAvailableG: number;
+  /** User entered purchase price in local currency per kilogram. */
   unitPrice?: number;
+  priceSource?: string;
+  priceUpdatedAt?: string;
   expiresAt?: string;
   updatedAt: string;
+}
+
+export interface PantryPriceUpdateInput {
+  foodId: string;
+  unitPrice: number | null;
+  priceSource: string | null;
 }
 
 export interface PantryRecipeSearchInput {

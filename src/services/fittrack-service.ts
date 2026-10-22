@@ -353,6 +353,10 @@ export class FitTrackService {
     this.nutritionRepo.updatePantryItem(foodId, amountG, expiresAt);
   }
 
+  updatePantryPrice(foodId: string, unitPrice: number | null, priceSource: string | null): void {
+    this.nutritionRepo.updatePantryPrice(foodId, unitPrice, priceSource);
+  }
+
   removePantryItem(foodId: string): void {
     this.nutritionRepo.removePantryItem(foodId);
   }

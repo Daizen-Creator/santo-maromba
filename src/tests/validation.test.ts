@@ -22,6 +22,7 @@ import {
   MeasurementUnitPreferencesSchema,
   PantryRecipeSearchInputSchema,
   PantryItemUpdateInputSchema,
+  PantryPriceUpdateInputSchema,
   ShoppingListPurchaseInputSchema
 } from '../shared/schema';
 
@@ -49,6 +50,15 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(() => ShoppingListPurchaseInputSchema.parse({ weekStartDate: '2026-02-30', foodId: 'food-arroz', purchased: true })).toThrow();
     expect(() => ShoppingListPurchaseInputSchema.parse({ weekStartDate: '2026-10-19', foodId: '../unsafe', purchased: true })).toThrow();
     expect(() => ShoppingListPurchaseInputSchema.parse({ weekStartDate: '2026-10-19', foodId: 'food-arroz', purchased: 'yes' })).toThrow();
+  });
+
+  it('exige preço, origem e identificador válido ao registrar uma cotação', () => {
+    expect(PantryPriceUpdateInputSchema.parse({ foodId: 'food-arroz', unitPrice: 25.5, priceSource: 'Mercado do bairro' }))
+      .toEqual({ foodId: 'food-arroz', unitPrice: 25.5, priceSource: 'Mercado do bairro' });
+    expect(PantryPriceUpdateInputSchema.parse({ foodId: 'food-arroz', unitPrice: null, priceSource: null }).unitPrice).toBeNull();
+    expect(() => PantryPriceUpdateInputSchema.parse({ foodId: '../arroz', unitPrice: 25.5, priceSource: 'mercado' })).toThrow();
+    expect(() => PantryPriceUpdateInputSchema.parse({ foodId: 'food-arroz', unitPrice: -1, priceSource: 'mercado' })).toThrow();
+    expect(() => PantryPriceUpdateInputSchema.parse({ foodId: 'food-arroz', unitPrice: 25.5, priceSource: null })).toThrow();
   });
 
   it('aceita rendimento inteiro de receita e rejeita valores fora de 1 a 50', () => {
