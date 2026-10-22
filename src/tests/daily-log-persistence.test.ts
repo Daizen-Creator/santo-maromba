@@ -6,6 +6,7 @@ import { createDatabaseDriver, IDatabase } from '../database/driver';
 import { runMigrations } from '../database/migrations';
 import { ProfileRepository } from '../database/repositories/profile-repository';
 import { FitTrackService } from '../services/fittrack-service';
+import { calculateLeftoverAmount } from '../domain/meal-leftovers';
 
 const localDate = (): string => {
   const now = new Date();
@@ -116,5 +117,25 @@ describe('Registros reais do painel diário', () => {
     });
     expect(duplicateIngredientEntry.items).toHaveLength(2);
     expect(duplicateIngredientEntry.calories).toBe(195);
+  });
+
+  it('persiste as quantidades planejadas e consumidas para consultar sobras após reabrir', async () => {
+    const date = localDate();
+    service.saveDailyMeal({
+      date, slotId: 'lunch', mealName: 'Almoço', scheduledTime: '12:30', status: 'partial',
+      items: [{ itemId: 'rice-0', foodId: 'rice', foodName: 'Arroz', plannedAmountG: 180, consumedAmountG: 135,
+        calories: 360, proteinG: 7, carbsG: 80, fatsG: 1 }]
+    });
+    expect(service.getDailyMeals(date)[0].calories).toBe(270);
+
+    db!.close();
+    db = null;
+    const reopened = await createDatabaseDriver(dbPath);
+    db = reopened;
+    await runMigrations(reopened);
+    service = new FitTrackService(reopened);
+    const item = service.getDailyMeals(date)[0].items[0];
+    expect(item.consumedAmountG).toBe(135);
+    expect(calculateLeftoverAmount(item.plannedAmountG, item.consumedAmountG)).toBe(45);
   });
 });

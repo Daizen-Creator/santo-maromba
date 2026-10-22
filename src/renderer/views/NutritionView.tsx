@@ -19,6 +19,7 @@ import { CustomFoodLibrary } from '../components/CustomFoodLibrary';
 import { searchRecipes } from '../../domain/nutrition-catalog';
 import { getIngredientPerServing, getRecipeNutritionPerServing } from '../../domain/recipe-portions';
 import { DAILY_MEAL_STATUSES, summarizeDailyMealStatuses } from '../../domain/meal-status-summary';
+import { calculateConsumedFromLeftovers, calculateLeftoverAmount } from '../../domain/meal-leftovers';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -665,6 +666,22 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                                 className="w-16 rounded-md border border-border bg-card px-1.5 py-1 text-right text-xs text-foreground"
                               />g
                             </label>
+                            <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              Sobras
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.plannedAmountG}
+                                step="5"
+                                value={calculateLeftoverAmount(item.plannedAmountG, amount)}
+                                aria-label={`Sobras de ${item.foodName} em gramas`}
+                                onChange={event => {
+                                  const leftoverG = Math.min(item.plannedAmountG, Math.max(0, Number(event.target.value) || 0));
+                                  setDraftAmounts(current => ({ ...current, [draftKey]: calculateConsumedFromLeftovers(item.plannedAmountG, leftoverG) }));
+                                }}
+                                className="w-16 rounded-md border border-border bg-card px-1.5 py-1 text-right text-xs text-foreground"
+                              />g
+                            </label>
                           </div>
                         );
                       })}
@@ -1077,7 +1094,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     {entry.items.map(item => (
                       <li key={item.itemId} className="rounded-xl bg-secondary/30 px-3 py-2 text-xs">
                         <span className="font-medium text-foreground">{item.foodName}</span>
-                        <span className="ml-2 text-muted-foreground">{item.consumedAmountG} / {item.plannedAmountG} g</span>
+                        <span className="ml-2 text-muted-foreground">{item.consumedAmountG} / {item.plannedAmountG} g · sobrou {calculateLeftoverAmount(item.plannedAmountG, item.consumedAmountG)} g</span>
                       </li>
                     ))}
                   </ul>

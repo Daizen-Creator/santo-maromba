@@ -64,6 +64,11 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Horários do plano ainda sem lançamento entram na contagem de pendentes.
 - Cópias e modelos aplicados para hoje recarregam o painel diário e suas contagens a partir dos dados salvos.
 
+## v1.1.4
+
+- Permite informar a quantidade de sobras por ingrediente; o aplicativo recalcula a quantidade realmente consumida.
+- Histórico e macros continuam usando o consumo real, e as sobras podem ser reconstruídas pelas quantidades planejadas e consumidas persistidas.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.
