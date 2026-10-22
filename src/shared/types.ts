@@ -45,6 +45,18 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+export type ProfileGoalChangeField = 'fitnessGoal' | 'targetWeightKg';
+
+export interface ProfileGoalHistoryRecord {
+  id: string;
+  profileId: string;
+  fitnessGoal: FitnessGoal;
+  targetWeightKg: number | null;
+  changeKind: 'initial' | 'updated';
+  changedFields: ProfileGoalChangeField[];
+  changedAt: string;
+}
+
 export interface WeightRecord {
   id: string;
   date: string; // YYYY-MM-DD

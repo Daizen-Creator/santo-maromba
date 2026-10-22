@@ -1,5 +1,6 @@
+import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { UserProfile } from '../../shared/types';
+import { FitnessGoal, ProfileGoalChangeField, ProfileGoalHistoryRecord, UserProfile } from '../../shared/types';
 import { calculateAge } from '../../domain/nutrition-calculator';
 
 export class ProfileRepository {
@@ -41,6 +42,23 @@ export class ProfileRepository {
     };
   }
 
+  getGoalHistory(): ProfileGoalHistoryRecord[] {
+    const profile = this.getProfile();
+    if (!profile) return [];
+    return this.db.query<any>(
+      'SELECT * FROM profile_goal_history WHERE profile_id = ? ORDER BY changed_at DESC, rowid DESC',
+      [profile.id]
+    ).map(row => ({
+      id: row.id,
+      profileId: row.profile_id,
+      fitnessGoal: row.fitness_goal as FitnessGoal,
+      targetWeightKg: row.target_weight_kg === null ? null : Number(row.target_weight_kg),
+      changeKind: row.change_kind,
+      changedFields: JSON.parse(row.changed_fields) as ProfileGoalChangeField[],
+      changedAt: row.changed_at
+    }));
+  }
+
   saveProfile(profile: Partial<UserProfile> & { name: string; birthDate: string; heightCm: number }): UserProfile {
     const existing = this.getProfile();
     const now = new Date().toISOString();
@@ -57,8 +75,19 @@ export class ProfileRepository {
     const allergies = JSON.stringify(profile.allergies || existing?.allergies || []);
     const availableEquipment = JSON.stringify(profile.availableEquipment || existing?.availableEquipment || []);
 
-    if (existing) {
-      this.db.execute(
+    const targetWeightKg = Object.prototype.hasOwnProperty.call(profile, 'targetWeightKg')
+      ? profile.targetWeightKg ?? null
+      : existing?.targetWeightKg ?? null;
+    const changedFields: ProfileGoalChangeField[] = existing
+      ? [
+          ...(fitnessGoal !== existing.fitnessGoal ? ['fitnessGoal' as const] : []),
+          ...(targetWeightKg !== (existing.targetWeightKg ?? null) ? ['targetWeightKg' as const] : [])
+        ]
+      : ['fitnessGoal', 'targetWeightKg'];
+
+    this.db.transaction(() => {
+      if (existing) {
+        this.db.execute(
         `UPDATE profiles SET
           name = ?,
           birth_date = ?,
@@ -91,7 +120,7 @@ export class ProfileRepository {
           activityLevel,
           trainingExperience,
           fitnessGoal,
-          profile.targetWeightKg ?? existing.targetWeightKg ?? null,
+          targetWeightKg,
           dietaryRestrictions,
           allergies,
           profile.dietaryPreferences ?? existing.dietaryPreferences ?? null,
@@ -110,9 +139,9 @@ export class ProfileRepository {
           now,
           id
         ]
-      );
-    } else {
-      this.db.execute(
+        );
+      } else {
+        this.db.execute(
         `INSERT INTO profiles (
           id, name, birth_date, height_cm, biological_sex, activity_level,
           training_experience, fitness_goal, target_weight_kg, dietary_restrictions,
@@ -130,7 +159,7 @@ export class ProfileRepository {
           activityLevel,
           trainingExperience,
           fitnessGoal,
-          profile.targetWeightKg ?? null,
+          targetWeightKg,
           dietaryRestrictions,
           allergies,
           profile.dietaryPreferences ?? null,
@@ -147,8 +176,26 @@ export class ProfileRepository {
           now,
           now
         ]
-      );
-    }
+        );
+      }
+
+      if (changedFields.length > 0) {
+        this.db.execute(
+          `INSERT INTO profile_goal_history (
+            id, profile_id, fitness_goal, target_weight_kg, change_kind, changed_fields, changed_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            `profile-goal-${randomUUID()}`,
+            id,
+            fitnessGoal,
+            targetWeightKg,
+            existing ? 'updated' : 'initial',
+            JSON.stringify(changedFields),
+            now
+          ]
+        );
+      }
+    });
 
     const saved = this.getProfile();
     if (!saved) throw new Error('Falha ao recuperar perfil após persistência.');

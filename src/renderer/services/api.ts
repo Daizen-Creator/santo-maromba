@@ -1,5 +1,6 @@
 import {
   BodyMeasurementRecord,
+  ProfileGoalHistoryRecord,
   CustomBodyMeasurements,
   CustomMeasurementDefinition,
   CustomMeasurementRecord,
@@ -60,13 +61,14 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
 import { calculateNutritionDistribution } from '../../domain/nutrition-distribution';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
+const LOCAL_STORAGE_KEY_PROFILE_GOAL_HISTORY = 'fittrack_profile_goal_history';
 const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
 const LOCAL_STORAGE_KEY_MEASUREMENTS = 'fittrack_measurements';
 const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENT_DEFINITIONS = 'fittrack_custom_measurement_definitions';
@@ -87,6 +89,28 @@ const LOCAL_STORAGE_KEY_VISUAL_CUSTOMIZATION = 'fittrack_visual_customization';
 
 const workoutEngine = new WorkoutEngine(INITIAL_EXERCISES);
 
+function recordBrowserProfileGoalChange(previous: UserProfile | null, next: UserProfile, changedAt: string): void {
+  const changedFields: ProfileGoalHistoryRecord['changedFields'] = previous
+    ? [
+        ...(previous.fitnessGoal !== next.fitnessGoal ? ['fitnessGoal' as const] : []),
+        ...((previous.targetWeightKg ?? null) !== (next.targetWeightKg ?? null) ? ['targetWeightKg' as const] : [])
+      ]
+    : ['fitnessGoal', 'targetWeightKg'];
+  if (changedFields.length === 0) return;
+
+  const current = api.getProfileGoalHistoryFromStorage();
+  const record: ProfileGoalHistoryRecord = {
+    id: `profile-goal-${globalThis.crypto.randomUUID()}`,
+    profileId: next.id,
+    fitnessGoal: next.fitnessGoal,
+    targetWeightKg: next.targetWeightKg ?? null,
+    changeKind: previous ? 'updated' : 'initial',
+    changedFields,
+    changedAt
+  };
+  localStorage.setItem(LOCAL_STORAGE_KEY_PROFILE_GOAL_HISTORY, JSON.stringify([record, ...current]));
+}
+
 export const api = {
   isElectron: (): boolean => {
     return typeof window !== 'undefined' && Boolean(window.fitTrackAPI);
@@ -103,15 +127,45 @@ export const api = {
     return json ? JSON.parse(json) : null;
   },
 
+  getProfileGoalHistoryFromStorage: (): ProfileGoalHistoryRecord[] => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PROFILE_GOAL_HISTORY) || '[]');
+      if (!Array.isArray(parsed)) return [];
+      return parsed.flatMap(item => {
+        const result = ProfileGoalHistoryRecordSchema.safeParse(item);
+        return result.success ? [result.data] : [];
+      });
+    } catch {
+      return [];
+    }
+  },
+
+  getProfileGoalHistory: async (): Promise<ProfileGoalHistoryRecord[]> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getProfileGoalHistory();
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar o histórico de metas.');
+      return res.data || [];
+    }
+    return api.getProfileGoalHistoryFromStorage();
+  },
+
   saveProfile: async (profile: any): Promise<UserProfile> => {
     if (api.isElectron()) {
       const res = await window.fitTrackAPI.saveProfile(profile);
       if (!res.success) throw new Error(res.error || 'Erro ao salvar perfil.');
       return res.data!;
     }
-    const current = (await api.getProfile()) || {};
-    const updated = { ...current, ...profile, updatedAt: new Date().toISOString() };
+    const current = await api.getProfile();
+    const now = new Date().toISOString();
+    const updated = {
+      ...current,
+      ...profile,
+      id: current?.id || profile.id || 'default-user',
+      createdAt: current?.createdAt || now,
+      updatedAt: now
+    } as UserProfile;
     localStorage.setItem(LOCAL_STORAGE_KEY_PROFILE, JSON.stringify(updated));
+    recordBrowserProfileGoalChange(current, updated, now);
     return updated;
   },
 
@@ -125,6 +179,7 @@ export const api = {
     if (!current) throw new Error('Preencha e salve o perfil antes de confirmar os dados iniciais.');
     const updated: UserProfile = {
       ...current,
+      id: current.id || 'default-user',
       heightCm: data.confirmedHeightCm,
       birthDate: data.confirmedBirthDate,
       targetWeightKg: data.targetWeightKg,
@@ -132,6 +187,7 @@ export const api = {
       updatedAt: new Date().toISOString()
     };
     localStorage.setItem(LOCAL_STORAGE_KEY_PROFILE, JSON.stringify(updated));
+    recordBrowserProfileGoalChange(current, updated, updated.updatedAt);
     return updated;
   },
 

@@ -12,6 +12,7 @@ import {
   Recipe,
   SubstitutionOption,
   UserProfile,
+  ProfileGoalHistoryRecord,
   WeightAnalyticsPoint,
   WeightRecord,
   WorkoutSession,
@@ -54,6 +55,7 @@ import { DailyWorkoutPlan } from '../domain/workout-engine';
 export interface FitTrackAPI {
   // Perfil
   getProfile: () => Promise<{ success: boolean; data?: UserProfile | null; error?: string }>;
+  getProfileGoalHistory: () => Promise<{ success: boolean; data?: ProfileGoalHistoryRecord[]; error?: string }>;
   saveProfile: (profile: any) => Promise<{ success: boolean; data?: UserProfile; error?: string }>;
   confirmInitialHistory: (data: any) => Promise<{ success: boolean; data?: UserProfile; error?: string }>;
 
@@ -140,6 +142,7 @@ export interface FitTrackAPI {
 
 const api: FitTrackAPI = {
   getProfile: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PROFILE),
+  getProfileGoalHistory: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PROFILE_GOAL_HISTORY),
   saveProfile: (profile) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_PROFILE, profile),
   confirmInitialHistory: (data) => ipcRenderer.invoke(IPC_CHANNELS.CONFIRM_INITIAL_HISTORY, data),
 

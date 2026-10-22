@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   User,
   Save,
@@ -15,7 +15,8 @@ import {
   BiologicalSex,
   FitnessGoal,
   TrainingExperience,
-  UserProfile
+  UserProfile,
+  ProfileGoalHistoryRecord
 } from '../../shared/types';
 import { calculateAge } from '../../domain/nutrition-calculator';
 
@@ -24,14 +25,25 @@ interface ProfileViewProps {
   mealsPerDay: number;
   onMealsPerDayChange: (count: number) => void;
   onSaveProfile: (profile: any) => Promise<void>;
+  onGetGoalHistory: () => Promise<ProfileGoalHistoryRecord[]>;
   onOpenHistoryModal: () => void;
 }
+
+const FITNESS_GOAL_LABELS: Record<FitnessGoal, string> = {
+  muscle_gain: 'Ganhar massa muscular',
+  gradual_weight_gain: 'Ganhar peso gradualmente',
+  maintenance: 'Manter o peso',
+  fat_loss: 'Perder gordura',
+  weight_reduction: 'Reduzir peso corporal',
+  body_recomposition: 'Recomposição corporal'
+};
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   profile,
   mealsPerDay,
   onMealsPerDayChange,
   onSaveProfile,
+  onGetGoalHistory,
   onOpenHistoryModal
 }) => {
   const [name, setName] = useState<string>(profile?.name || '');
@@ -70,12 +82,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     (profile?.availableEquipment || []).join(', ')
   );
   const [interruptionNotes, setInterruptionNotes] = useState<string>(profile?.interruptionHistoryNotes || '');
+  const [goalHistory, setGoalHistory] = useState<ProfileGoalHistoryRecord[]>([]);
+  const [goalHistoryError, setGoalHistoryError] = useState<string | null>(null);
 
   const [saving, setSaving] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const calculatedAge = birthDate ? calculateAge(birthDate) : null;
+
+  useEffect(() => {
+    let active = true;
+    onGetGoalHistory()
+      .then(records => {
+        if (!active) return;
+        setGoalHistory(records);
+        setGoalHistoryError(null);
+      })
+      .catch(error => {
+        if (active) setGoalHistoryError(error instanceof Error ? error.message : 'Não foi possível carregar o histórico de metas.');
+      });
+    return () => { active = false; };
+  }, [onGetGoalHistory, profile?.updatedAt]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,6 +310,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               />
             </div>
           </div>
+
+          <section className="rounded-2xl border border-border/70 bg-background/40 p-4" aria-labelledby="goal-history-heading">
+            <div className="mb-3 flex items-center gap-2">
+              <History className="h-4 w-4 text-primary" />
+              <h4 id="goal-history-heading" className="text-xs font-bold text-foreground">Histórico de metas</h4>
+            </div>
+            {goalHistory.length === 0 && !goalHistoryError ? (
+              <p className="text-[11px] text-muted-foreground">Alterações salvas nesta versão aparecem aqui. Alterações anteriores não podem ser recuperadas.</p>
+            ) : (
+              <ol className="space-y-2">
+                {goalHistory.map(record => {
+                  const changedLabels = record.changedFields.map(field => field === 'fitnessGoal' ? 'objetivo' : 'peso-alvo').join(' e ');
+                  const dateLabel = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(record.changedAt));
+                  const targetLabel = record.targetWeightKg === null
+                    ? 'sem peso-alvo'
+                    : `${record.targetWeightKg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg`;
+                  return (
+                    <li key={record.id} className="flex flex-col gap-0.5 border-l-2 border-primary/40 pl-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <span className="text-[11px] font-medium text-foreground">
+                        {record.changeKind === 'initial' ? 'Meta inicial' : `Alteração de ${changedLabels || 'metas'}`}: {FITNESS_GOAL_LABELS[record.fitnessGoal]} · {targetLabel}
+                      </span>
+                      <time dateTime={record.changedAt} className="shrink-0 text-[10px] text-muted-foreground">{dateLabel}</time>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+            {goalHistoryError && <p role="alert" className="mt-2 text-[11px] text-destructive">{goalHistoryError}</p>}
+          </section>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
             <div className="space-y-1.5">

@@ -542,6 +542,7 @@ export const App: React.FC = () => {
               mealsPerDay={mealCount}
               onMealsPerDayChange={handleMealCountChange}
               onSaveProfile={handleSaveProfile}
+              onGetGoalHistory={api.getProfileGoalHistory}
               onOpenHistoryModal={() => setIsHistoryModalOpen(true)}
             />
           )}

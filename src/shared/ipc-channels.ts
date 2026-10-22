@@ -1,6 +1,7 @@
 export const IPC_CHANNELS = {
   // Profile
   GET_PROFILE: 'profile:get',
+  GET_PROFILE_GOAL_HISTORY: 'profile:get-goal-history',
   SAVE_PROFILE: 'profile:save',
   CONFIRM_INITIAL_HISTORY: 'profile:confirm-initial-history',
 

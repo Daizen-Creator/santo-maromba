@@ -16,7 +16,8 @@ import {
   SaveWorkoutTemplateInputSchema,
   SaveWorkoutScheduleInputSchema,
   SaveCustomMeasurementDefinitionInputSchema,
-  SaveCustomMeasurementInputSchema
+  SaveCustomMeasurementInputSchema,
+  ProfileGoalHistoryRecordSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
@@ -89,6 +90,7 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(parsed.heightCm).toBe(182);
     expect(parsed.mealsPerDay).toBe(4);
     expect(parsed.initialHistoryConfirmed).toBeUndefined();
+    expect(Object.prototype.hasOwnProperty.call(ProfileInputSchema.parse({ ...validProfile, targetWeightKg: undefined }), 'targetWeightKg')).toBe(true);
   });
 
   it('deve rejeitar perfil com dados inconsistentes ou fora dos limites clínicos', () => {
@@ -154,6 +156,17 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(() => SaveCustomMeasurementDefinitionInputSchema.parse({ name: 'Altura', unit: 'cm; DROP TABLE' })).toThrow();
     expect(() => SaveCustomMeasurementInputSchema.parse({ definitionId: 'neck', date: '2026-02-30', value: 38 })).toThrow();
     expect(() => SaveCustomMeasurementInputSchema.parse({ definitionId: 'neck', date: '2026-10-22', value: 0 })).toThrow();
+  });
+
+  it('valida snapshots de metas do perfil antes de exibi-los', () => {
+    expect(ProfileGoalHistoryRecordSchema.parse({
+      id: 'goal-1', profileId: 'default-user', fitnessGoal: 'fat_loss', targetWeightKg: 74,
+      changeKind: 'updated', changedFields: ['fitnessGoal', 'targetWeightKg'], changedAt: '2026-10-22T12:00:00.000Z'
+    }).changeKind).toBe('updated');
+    expect(() => ProfileGoalHistoryRecordSchema.parse({
+      id: 'goal-2', profileId: 'default-user', fitnessGoal: 'unknown', targetWeightKg: 74,
+      changeKind: 'updated', changedFields: [], changedAt: 'invalid'
+    })).toThrow();
   });
 
   it('deve validar registros de peso com formato correto', () => {

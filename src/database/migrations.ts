@@ -229,4 +229,12 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [16, 'Definições e histórico de medidas corporais personalizadas', new Date().toISOString()]
     );
   }
+
+  const version17 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 17');
+  if (!version17) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [17, 'Histórico datado de objetivos e pesos-alvo do perfil', new Date().toISOString()]
+    );
+  }
 }

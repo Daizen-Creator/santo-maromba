@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.18. Estado após validação do incremento: **75 validadas, 49 parciais, 53 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.19. Estado após validação do incremento: **76 validadas, 48 parciais, 53 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -34,7 +34,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 3 | Registrar pesagens com data e consultar histórico. | PERF | — | V · `weight-analytics.test.ts` |
 | 4 | Salvar objetivo físico e manter após reiniciar. | PERF | — | V · persistência do perfil |
 | 5 | Definir peso-alvo e compará-lo ao peso atual. | PERF | — | V · cálculo/perfil |
-| 6 | Revisar metas com registro datado da alteração. | PERF | — | P · meta existe, histórico de revisão ausente |
+| 6 | Alterar objetivo/peso-alvo e consultar snapshots datados sem duplicar entradas quando nada mudou. | `src/renderer/views/ProfileView.tsx`; `src/renderer/services/api.ts`; `src/database/repositories/profile-repository.ts`; `src/services/fittrack-service.ts`; `src/main/ipc-handlers.ts`; `src/preload/index.ts`; `src/shared/schema.ts`; `src/database/schema.sql` | SQLite desktop; localStorage offline na PWA | V · `profile-goal-history.test.ts` valida baseline, mudanças, remoção de peso-alvo, ausência de duplicatas e reabertura; `validation.test.ts` valida snapshots |
 | 7 | Escolher atividade e recalcular GET. | PERF | — | V · `nutrition-calculator.test.ts` |
 | 8 | Calcular idade válida pela data de nascimento. | PERF | — | V · `nutrition-calculator.test.ts` |
 | 9 | Registrar e consultar mudanças de altura por data. | PERF | — | A · só altura atual no perfil |

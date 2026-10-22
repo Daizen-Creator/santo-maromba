@@ -88,6 +88,16 @@ export const ProfileInputSchema = z.object({
   initialHistoryConfirmed: z.boolean().optional()
 });
 
+export const ProfileGoalHistoryRecordSchema = z.object({
+  id: z.string().min(1).max(160),
+  profileId: z.string().min(1).max(160),
+  fitnessGoal: FitnessGoalSchema,
+  targetWeightKg: z.number().min(30).max(300).nullable(),
+  changeKind: z.enum(['initial', 'updated']),
+  changedFields: z.array(z.enum(['fitnessGoal', 'targetWeightKg'])).max(2),
+  changedAt: z.string().datetime()
+}).strict();
+
 export const WeightRecordInputSchema = z.object({
   id: z.string().optional(),
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),

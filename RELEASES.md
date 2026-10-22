@@ -152,6 +152,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Atualiza a medição da mesma data sem criar duplicatas e mantém o histórico no SQLite do desktop e no armazenamento offline da PWA.
 - Persistência após reabrir SQLite/PWA, validação de entradas e abertura do app em perfil isolado aprovadas; 132 testes, build e empacotamento Windows aprovados; GitHub Actions 39741151028 publicou instalador, portátil, manifesto e blockmap.
 
+## v1.1.19
+
+- Registra o objetivo inicial e cada alteração de objetivo ou peso-alvo com data, exibindo o histórico no Perfil & Metas.
+- Alterações de perfil sem mudança de meta não criam entradas; limpar o peso-alvo salva a remoção e registra essa mudança.
+- Persistência SQLite/PWA, reabertura, validações e build aprovados com 135 testes; instalador, portátil e abertura isolada com a migração 17 aprovados; GitHub Actions pendente.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.

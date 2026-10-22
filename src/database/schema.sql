@@ -38,6 +38,18 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS profile_goal_history (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL,
+  fitness_goal TEXT NOT NULL CHECK(fitness_goal IN ('muscle_gain', 'gradual_weight_gain', 'maintenance', 'fat_loss', 'weight_reduction', 'body_recomposition')),
+  target_weight_kg REAL CHECK(target_weight_kg IS NULL OR target_weight_kg BETWEEN 30 AND 300),
+  change_kind TEXT NOT NULL CHECK(change_kind IN ('initial', 'updated')),
+  changed_fields TEXT NOT NULL,
+  changed_at TEXT NOT NULL,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_profile_goal_history_profile_date ON profile_goal_history(profile_id, changed_at DESC);
+
 -- 2. Histórico de Peso
 CREATE TABLE IF NOT EXISTS weight_records (
   id TEXT PRIMARY KEY,

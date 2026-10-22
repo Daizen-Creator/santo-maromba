@@ -35,6 +35,7 @@ import {
   Recipe,
   SubstitutionOption,
   UserProfile,
+  ProfileGoalHistoryRecord,
   WeightAnalyticsPoint,
   WeightRecord,
   WorkoutSession,
@@ -119,6 +120,10 @@ export class FitTrackService {
   // --- PERFIL ---
   getProfile(): UserProfile | null {
     return this.profileRepo.getProfile();
+  }
+
+  getProfileGoalHistory(): ProfileGoalHistoryRecord[] {
+    return this.profileRepo.getGoalHistory();
   }
 
   saveProfile(profileData: Partial<UserProfile> & { name: string; birthDate: string; heightCm: number }): UserProfile {
