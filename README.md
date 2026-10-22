@@ -1,6 +1,6 @@
 # FitTrack Personal — Sistema Inteligente de Evolução Física
 
-Aplicativo desktop offline-first para acompanhamento de musculação, planejamento nutricional baseado em evidências, análise de evolução física e calibragem de metas corporais por médias móveis.
+Aplicativo desktop offline-first para acompanhamento de musculação, planejamento nutricional com origem dos dados identificada, análise de evolução física e calibragem de metas corporais por médias móveis.
 
 ---
 
@@ -100,7 +100,11 @@ O modo navegador ainda salva os dados de perfil e registros no armazenamento loc
 
 ### Checklist alimentar e preservação local
 
-No plano diário, marque os ingredientes efetivamente consumidos ou informe a quantidade real. O checklist grava por data e horário, atualiza calorias e macronutrientes sem contar refeições apenas planejadas e permite desfazer, adiar ou pular. No desktop, a próxima migração cria `fittrack.db.pre-v7.bak` ao lado do banco existente antes de aplicar a tabela do checklist. Na PWA, esses registros ficam no armazenamento local do navegador até uma sincronização autenticada ser configurada.
+No plano diário, marque os ingredientes efetivamente consumidos ou informe a quantidade real. O checklist grava por data e horário, atualiza calorias e macronutrientes sem contar refeições apenas planejadas e permite desfazer, adiar ou pular. Na migração de proveniência nutricional, o desktop cria `fittrack.db.pre-v8.bak` ao lado de um banco existente antes de aplicar as novas colunas. Na PWA, esses registros ficam no armazenamento local do navegador até uma sincronização autenticada ser configurada.
+
+### Proveniência dos alimentos
+
+O catálogo inicial tem 39 alimentos e 200 receitas derivadas de 40 preparações-base. As receitas indicam quando usam valores estimados ou ainda não verificados. Os itens iniciais não têm referência por linha, data de coleta nem confiança documentada; por isso são classificados como `estimated` ou `unverified`, e fibras ausentes permanecem sem valor. Não trate esses dados como análise laboratorial ou rótulo confirmado. O catálogo de 500 alimentos com referências verificáveis ainda está pendente.
 
 ---
 

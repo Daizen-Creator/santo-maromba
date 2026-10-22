@@ -14,6 +14,15 @@ import {
 import { DailyMealEntry, DailyMealEntryInput, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, MealTurn, NutritionTargets, PantryItem, Recipe, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
 
+const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
+  switch (quality) {
+    case 'verified': return 'Fonte verificada';
+    case 'estimated': return 'Estimativa local';
+    case 'user_reported': return 'Informado pelo usuário';
+    default: return 'Fonte não verificada';
+  }
+};
+
 interface NutritionViewProps {
   targets: NutritionTargets | null;
   summary: DashboardSummary | null;
@@ -73,17 +82,24 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
   const itemsForMeal = (recipe: Recipe | null, substitution?: SubstitutionOption): DailyMealItemLog[] => {
     const ingredients = substitution?.items ?? recipe?.ingredients ?? [];
-    return ingredients.map((item, index) => ({
-      itemId: `${item.foodId}-${index}`,
-      foodId: item.foodId,
-      foodName: item.foodName,
-      plannedAmountG: item.amountG,
-      consumedAmountG: 0,
-      calories: item.calories,
-      proteinG: item.proteinG,
-      carbsG: item.carbsG,
-      fatsG: item.fatsG
-    }));
+    return ingredients.map((item, index) => {
+      const food = foods.find(candidate => candidate.id === item.foodId);
+      return {
+        itemId: `${item.foodId}-${index}`,
+        foodId: item.foodId,
+        foodName: item.foodName,
+        plannedAmountG: item.amountG,
+        consumedAmountG: 0,
+        calories: item.calories,
+        proteinG: item.proteinG,
+        carbsG: item.carbsG,
+        fatsG: item.fatsG,
+        dataQuality: item.dataQuality ?? food?.dataQuality ?? 'unverified',
+        dataSource: item.dataSource ?? food?.source ?? 'Origem não registrada',
+        sourceReference: item.sourceReference ?? food?.sourceReference,
+        confidenceLevel: item.confidenceLevel ?? food?.confidenceLevel ?? 'unknown'
+      };
+    });
   };
 
   const getCurrentAmounts = (slotId: string, items: DailyMealItemLog[]) => {
@@ -355,6 +371,12 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
                     {!slot.target && <p className="rounded-xl border border-border/70 bg-secondary/35 p-3 text-xs leading-relaxed text-muted-foreground">Esta é uma sugestão de receita do catálogo. As porções não foram ajustadas a uma meta pessoal porque ainda faltam dados do perfil e do peso.</p>}
 
+                    {checklistItems.length > 0 && checklistItems.some(item => item.dataQuality !== 'verified') && (
+                      <p role="status" className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-relaxed text-amber-100/85">
+                        Os valores incluem dados estimados ou ainda não verificados. Confira a origem declarada antes de tratar os macros como medição confirmada.
+                      </p>
+                    )}
+
                     {substitution ? (
                       <div className="rounded-xl border border-primary/25 bg-primary/5 p-3.5 space-y-2">
                         <div className="flex items-center justify-between gap-2">
@@ -624,6 +646,11 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       <strong className="text-foreground">{recipe.totalCarbsG}g</strong>
                     </div>
                   </div>
+                  {recipe.ingredients.some(ingredient => ingredient.dataQuality !== 'verified') && (
+                    <p role="status" className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-relaxed text-amber-100/85">
+                      Macros calculados com dados estimados ou não verificados. A origem declarada de cada ingrediente está disponível no cadastro quando informada.
+                    </p>
+                  )}
 
                   {/* Ingredientes */}
                   <div className="space-y-1 text-[11px] text-muted-foreground">
@@ -632,6 +659,9 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                       {recipe.ingredients.map((ing, iIdx) => (
                         <li key={iIdx}>
                           {ing.amountG}g de {ing.foodName}
+                          <span className="ml-1 text-[10px] text-amber-200/70">
+                            ({nutritionQualityLabel(ing.dataQuality)} · {ing.dataSource || 'origem não registrada'}{ing.sourceReference ? ` · ${ing.sourceReference}` : ''} · confiança {ing.confidenceLevel === 'unknown' || !ing.confidenceLevel ? 'desconhecida' : ing.confidenceLevel})
+                          </span>
                         </li>
                       ))}
                     </ul>

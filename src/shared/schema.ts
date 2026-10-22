@@ -211,7 +211,11 @@ export const DailyMealEntryInputSchema = z.object({
     calories: z.number().min(0).max(10000),
     proteinG: z.number().min(0).max(1000),
     carbsG: z.number().min(0).max(2000),
-    fatsG: z.number().min(0).max(1000)
+    fatsG: z.number().min(0).max(1000),
+    dataQuality: z.enum(['verified', 'estimated', 'user_reported', 'unverified']).optional(),
+    dataSource: z.string().trim().max(160).optional(),
+    sourceReference: z.string().trim().max(500).optional(),
+    confidenceLevel: z.enum(['high', 'medium', 'low', 'unknown']).optional()
 }).strict()).max(100),
   note: z.string().trim().max(300).optional()
 }).strict();

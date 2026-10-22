@@ -314,6 +314,9 @@ const FOOD_SUBSTITUTE_GROUP_BY_ID: Record<string, string> = {
 
 export const INITIAL_FOODS: FoodItem[] = BASE_FOODS.map(food => ({
   ...food,
+  // Seed values have no row-level reference or collection date, so do not present them as verified.
+  dataQuality: food.source === 'Estimativa local' ? 'estimated' : 'unverified',
+  confidenceLevel: 'unknown',
   substituteGroupId: FOOD_SUBSTITUTE_GROUP_BY_ID[food.id] || `category-${food.category}`,
   imageUrl: food.imageUrl || FOOD_IMAGE_BY_CATEGORY[food.category],
   imageCredit: food.imageCredit || 'Imagem ilustrativa · Unsplash'
@@ -444,7 +447,11 @@ export function generate200Recipes(): Recipe[] {
           calories: Math.round(food.calories * portion),
           proteinG: Number((food.proteinG * portion).toFixed(1)),
           carbsG: Number((food.carbsG * portion).toFixed(1)),
-          fatsG: Number((food.fatsG * portion).toFixed(1))
+          fatsG: Number((food.fatsG * portion).toFixed(1)),
+          dataQuality: food.dataQuality,
+          dataSource: food.source,
+          sourceReference: food.sourceReference,
+          confidenceLevel: food.confidenceLevel
         };
       });
 

@@ -41,4 +41,15 @@ describe('Checklist alimentar na versão web', () => {
     expect(reopenedView[0].calories).toBe(130);
     expect(reopenedView[0].status).toBe('consumed');
   });
+
+  it('mantém origem e qualidade nutricional nos ingredientes do catálogo web', async () => {
+    const recipes = await api.getRecipes();
+    const ingredients = recipes.flatMap(recipe => recipe.ingredients);
+
+    expect(ingredients.length).toBeGreaterThan(0);
+    expect(ingredients.every(item => ['verified', 'estimated', 'user_reported', 'unverified'].includes(item.dataQuality || ''))).toBe(true);
+    expect(ingredients.every(item => item.dataSource && item.dataSource.length > 0)).toBe(true);
+    expect(ingredients.some(item => item.dataQuality === 'estimated')).toBe(true);
+    expect(ingredients.some(item => item.dataQuality === 'unverified')).toBe(true);
+  });
 });

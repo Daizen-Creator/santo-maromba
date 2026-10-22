@@ -140,6 +140,10 @@ export interface DailyMealItemLog {
   proteinG: number;
   carbsG: number;
   fatsG: number;
+  dataQuality?: NutritionDataQuality;
+  dataSource?: string;
+  sourceReference?: string;
+  confidenceLevel?: NutritionConfidenceLevel;
 }
 
 export interface DailyMealEntryInput {
@@ -380,6 +384,10 @@ export interface FoodItem {
   carbsG: number;
   fatsG: number;
   fiberG?: number;
+  dataQuality?: NutritionDataQuality;
+  sourceReference?: string;
+  sourceDate?: string;
+  confidenceLevel?: NutritionConfidenceLevel;
   isCooked: boolean;
   priceEstimated?: number; // Preço estimado por 100g
   source: string;
@@ -388,6 +396,9 @@ export interface FoodItem {
   imageCredit?: string;
   isCustom?: boolean;
 }
+
+export type NutritionDataQuality = 'verified' | 'estimated' | 'user_reported' | 'unverified';
+export type NutritionConfidenceLevel = 'high' | 'medium' | 'low' | 'unknown';
 
 export type MealTurn =
   | 'breakfast'    // Café da manhã
@@ -406,6 +417,10 @@ export interface RecipeIngredient {
   proteinG: number;
   carbsG: number;
   fatsG: number;
+  dataQuality?: NutritionDataQuality;
+  dataSource?: string;
+  sourceReference?: string;
+  confidenceLevel?: NutritionConfidenceLevel;
 }
 
 export interface Recipe {
@@ -446,6 +461,10 @@ export interface SubstitutionOption {
     carbsG: number;
     fatsG: number;
     estimatedCost?: number;
+    dataQuality?: NutritionDataQuality;
+    dataSource?: string;
+    sourceReference?: string;
+    confidenceLevel?: NutritionConfidenceLevel;
   }>;
   totalCalories: number;
   totalProteinG: number;

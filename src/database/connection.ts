@@ -32,16 +32,25 @@ export async function getDatabase(customPath?: string): Promise<IDatabase> {
     dbPath = path.join(dataDir, 'fittrack.db');
   }
 
-  // Preserve the existing SQLite file before the additive daily-checklist schema is applied.
-  // The stable name prevents repeated full copies on every app launch.
-  if (fs.existsSync(dbPath)) {
-    const preChecklistBackup = `${dbPath}.pre-v7.bak`;
-    if (!fs.existsSync(preChecklistBackup)) {
-      fs.copyFileSync(dbPath, preChecklistBackup, fs.constants.COPYFILE_EXCL);
+  const databaseAlreadyExisted = fs.existsSync(dbPath);
+  dbInstance = await createDatabaseDriver(dbPath);
+
+  // Snapshot only databases that still need migration; never label a current database as pre-migration.
+  if (databaseAlreadyExisted) {
+    let nutritionMigrationApplied = false;
+    try {
+      nutritionMigrationApplied = Boolean(
+        dbInstance.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 8')
+      );
+    } catch {
+      // Databases predating the migration table also need a pre-migration snapshot.
+    }
+    const preNutritionBackup = `${dbPath}.pre-v8.bak`;
+    if (!nutritionMigrationApplied && !fs.existsSync(preNutritionBackup)) {
+      fs.copyFileSync(dbPath, preNutritionBackup, fs.constants.COPYFILE_EXCL);
     }
   }
 
-  dbInstance = await createDatabaseDriver(dbPath);
   await runMigrations(dbInstance);
 
   return dbInstance;

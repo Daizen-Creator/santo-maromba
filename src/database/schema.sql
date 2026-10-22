@@ -115,13 +115,17 @@ CREATE TABLE IF NOT EXISTS foods (
   protein_g REAL NOT NULL,
   carbs_g REAL NOT NULL,
   fats_g REAL NOT NULL,
-  fiber_g REAL DEFAULT 0,
+  fiber_g REAL,
   is_cooked INTEGER NOT NULL DEFAULT 0, -- 0 = cru, 1 = cozido
   price_estimated REAL,
     substitute_group_id TEXT,
     image_url TEXT,
     image_credit TEXT,
-  source TEXT NOT NULL DEFAULT 'TACO/TBCA',
+  source TEXT NOT NULL DEFAULT 'Origem não informada',
+  data_quality TEXT NOT NULL DEFAULT 'unverified',
+  source_reference TEXT,
+  source_date TEXT,
+  confidence_level TEXT NOT NULL DEFAULT 'unknown',
   is_custom INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );

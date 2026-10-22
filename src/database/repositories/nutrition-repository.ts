@@ -12,7 +12,7 @@ export class NutritionRepository {
       'SELECT value FROM app_metadata WHERE key = ?',
       ['nutrition_catalog_version']
     );
-    if (catalog?.value === '4') return;
+    if (catalog?.value === '5') return;
 
     this.db.transaction(() => {
       const now = new Date().toISOString();
@@ -21,21 +21,24 @@ export class NutritionRepository {
           `INSERT INTO foods (
             id, name, category, serving_size_g, calories, protein_g, carbs_g, fats_g,
             fiber_g, is_cooked, price_estimated, substitute_group_id, image_url, image_credit,
-            source, is_custom, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+            source, data_quality, source_reference, source_date, confidence_level, is_custom, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
           ON CONFLICT(id) DO UPDATE SET
             name = excluded.name, category = excluded.category, serving_size_g = excluded.serving_size_g,
             calories = excluded.calories, protein_g = excluded.protein_g, carbs_g = excluded.carbs_g,
             fats_g = excluded.fats_g, fiber_g = excluded.fiber_g, is_cooked = excluded.is_cooked,
             price_estimated = excluded.price_estimated,
             substitute_group_id = excluded.substitute_group_id, image_url = excluded.image_url,
-            image_credit = excluded.image_credit, source = excluded.source
+            image_credit = excluded.image_credit, source = excluded.source,
+            data_quality = excluded.data_quality, source_reference = excluded.source_reference,
+            source_date = excluded.source_date, confidence_level = excluded.confidence_level
           WHERE foods.is_custom = 0`,
           [
             food.id, food.name, food.category, food.servingSizeG, food.calories,
-            food.proteinG, food.carbsG, food.fatsG, food.fiberG || 0,
+            food.proteinG, food.carbsG, food.fatsG, food.fiberG ?? null,
             food.isCooked ? 1 : 0, food.priceEstimated ?? null, food.substituteGroupId || null,
-            food.imageUrl || null, food.imageCredit || null, food.source, now
+            food.imageUrl || null, food.imageCredit || null, food.source, food.dataQuality || 'unverified',
+            food.sourceReference ?? null, food.sourceDate ?? null, food.confidenceLevel || 'unknown', now
           ]
         );
       }
@@ -72,7 +75,7 @@ export class NutritionRepository {
       this.db.execute(
         `INSERT INTO app_metadata (key, value) VALUES (?, ?)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-        ['nutrition_catalog_version', '4']
+        ['nutrition_catalog_version', '5']
       );
     });
   }
@@ -88,7 +91,11 @@ export class NutritionRepository {
       proteinG: Number(r.protein_g),
       carbsG: Number(r.carbs_g),
       fatsG: Number(r.fats_g),
-      fiberG: r.fiber_g ? Number(r.fiber_g) : undefined,
+      fiberG: r.fiber_g === null || r.fiber_g === undefined ? undefined : Number(r.fiber_g),
+      dataQuality: r.data_quality || 'unverified',
+      sourceReference: r.source_reference || undefined,
+      sourceDate: r.source_date || undefined,
+      confidenceLevel: r.confidence_level || 'unknown',
       isCooked: Boolean(r.is_cooked),
       priceEstimated: r.price_estimated ? Number(r.price_estimated) : undefined,
       source: r.source,
@@ -103,7 +110,8 @@ export class NutritionRepository {
     const rows = this.db.query<any>('SELECT * FROM recipes ORDER BY name ASC');
     return rows.map(row => {
       const ingredients = this.db.query<any>(
-        `SELECT ri.food_id, f.name, ri.amount_g, f.calories, f.protein_g, f.carbs_g, f.fats_g, f.price_estimated
+        `SELECT ri.food_id, f.name, ri.amount_g, f.calories, f.protein_g, f.carbs_g, f.fats_g, f.price_estimated,
+                f.source, f.data_quality, f.source_reference, f.confidence_level
          FROM recipe_ingredients ri
          JOIN foods f ON f.id = ri.food_id
          WHERE ri.recipe_id = ?
@@ -119,6 +127,10 @@ export class NutritionRepository {
           proteinG: Number((Number(ingredient.protein_g) * amount).toFixed(1)),
           carbsG: Number((Number(ingredient.carbs_g) * amount).toFixed(1)),
           fatsG: Number((Number(ingredient.fats_g) * amount).toFixed(1)),
+          dataQuality: ingredient.data_quality || 'unverified',
+          dataSource: ingredient.source || 'Origem não registrada',
+          sourceReference: ingredient.source_reference || undefined,
+          confidenceLevel: ingredient.confidence_level || 'unknown',
           priceEstimated: ingredient.price_estimated ? Number(ingredient.price_estimated) : 0
         };
       });

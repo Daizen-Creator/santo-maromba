@@ -62,14 +62,20 @@ describe('Catálogos locais de alimentação e treino', () => {
     const nutrition = new NutritionRepository(db!);
     const workout = new WorkoutRepository(db!);
     const recipes = nutrition.getRecipes();
+    const foods = nutrition.getFoods();
     const exercises = workout.getExercises();
 
     expect(recipes).toHaveLength(200);
-    expect(db!.queryOne<{ value: string }>('SELECT value FROM app_metadata WHERE key = ?', ['nutrition_catalog_version'])?.value).toBe('4');
+    expect(db!.queryOne<{ value: string }>('SELECT value FROM app_metadata WHERE key = ?', ['nutrition_catalog_version'])?.value).toBe('5');
     expect(db!.queryOne<{ value: string }>('SELECT value FROM app_metadata WHERE key = ?', ['exercise_catalog_version'])?.value).toBe('3');
     expect(recipes.every(recipe => !/[\u00c3\u00c2\u0080-\u009f\ufffd]/.test(`${recipe.name} ${recipe.instructions} ${(recipe.budgetSwaps || []).join(' ')}`))).toBe(true);
     expect(recipes.find(recipe => recipe.id === 'recipe-1')?.isFavorite).toBe(true);
     expect(recipes.every(recipe => recipe.ingredients.length > 0)).toBe(true);
+    expect(recipes[0].ingredients.every(ingredient => ingredient.dataQuality === 'unverified' || ingredient.dataQuality === 'estimated')).toBe(true);
+    expect(foods.find(food => food.id === 'food-frango')?.dataQuality).toBe('unverified');
+    expect(foods.find(food => food.id === 'food-tomate')?.dataQuality).toBe('estimated');
+    expect(foods.find(food => food.id === 'food-frango')?.fiberG).toBeUndefined();
+    expect(db!.queryOne<{ fiber_g: number | null }>('SELECT fiber_g FROM foods WHERE id = ?', ['food-frango'])?.fiber_g).toBeNull();
     expect(INITIAL_EXERCISES.length).toBeGreaterThanOrEqual(100);
     expect(INITIAL_EXERCISES.every(exercise => exercise.imageUrl && exercise.youtubeUrl && exercise.executionTips)).toBe(true);
     expect(new Set(exercises.map(exercise => exercise.id)).size).toBe(exercises.length);
@@ -110,6 +116,10 @@ describe('Catálogos locais de alimentação e treino', () => {
       const foodColumns = oldDb.query<{ name: string }>('PRAGMA table_info(foods)').map(column => column.name);
       expect(foodColumns).toContain('substitute_group_id');
       expect(foodColumns).toContain('image_url');
+      expect(foodColumns).toContain('data_quality');
+      expect(foodColumns).toContain('source_reference');
+      expect(foodColumns).toContain('source_date');
+      expect(foodColumns).toContain('confidence_level');
       expect(oldDb.queryOne<{ name: string }>('SELECT name FROM foods WHERE id = ?', ['food-legacy'])?.name)
         .toBe('Arroz antigo');
       expect(oldDb.queryOne<{ name: string }>(

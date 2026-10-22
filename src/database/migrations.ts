@@ -46,6 +46,18 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!foodColumns.some(column => column.name === 'image_credit')) {
     db.exec('ALTER TABLE foods ADD COLUMN image_credit TEXT');
   }
+  if (!foodColumns.some(column => column.name === 'data_quality')) {
+    db.exec("ALTER TABLE foods ADD COLUMN data_quality TEXT NOT NULL DEFAULT 'unverified'");
+  }
+  if (!foodColumns.some(column => column.name === 'source_reference')) {
+    db.exec('ALTER TABLE foods ADD COLUMN source_reference TEXT');
+  }
+  if (!foodColumns.some(column => column.name === 'source_date')) {
+    db.exec('ALTER TABLE foods ADD COLUMN source_date TEXT');
+  }
+  if (!foodColumns.some(column => column.name === 'confidence_level')) {
+    db.exec("ALTER TABLE foods ADD COLUMN confidence_level TEXT NOT NULL DEFAULT 'unknown'");
+  }
   db.exec('CREATE INDEX IF NOT EXISTS idx_foods_substitute_group ON foods(substitute_group_id)');
   const recipeCatalogColumns = db.query<{ name: string }>('PRAGMA table_info(recipes)');
   if (!recipeCatalogColumns.some(column => column.name === 'image_url')) {
@@ -129,6 +141,14 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [7, 'Checklist diário de refeições com consumo real por ingrediente', new Date().toISOString()]
+    );
+  }
+
+  const version8 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 8');
+  if (!version8) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [8, 'Proveniência e qualidade dos dados nutricionais', new Date().toISOString()]
     );
   }
 }
