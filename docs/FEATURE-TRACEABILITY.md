@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.60. Estado após validação dos incrementos: **130 validadas, 28 parciais, 19 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.61. Estado após validação dos incrementos: **132 validadas, 28 parciais, 17 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -241,8 +241,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 170 | Pedir consentimento e controlar notificações. | NENHUM | permissão do sistema | A · sem implementação de notificações |
 | 171 | Mostrar sequência sem punir dias perdidos. | NENHUM | — | A · sem sequência de hábitos |
 | 172 | Distinguir descanso planejado de treino não realizado. | TREI | — | P · dias de recuperação existem, falta registrar treino perdido |
-| 173 | Registrar suplementos consumidos. | DIAR; NUTR | — | A · suplemento só aparece como categoria de alimento |
-| 174 | Registrar dose/quantidade e consultar histórico de suplementos. | DIAR; NUTR | — | A · sem histórico específico |
+| 173 | Registrar suplementos consumidos. | `NutritionView.tsx`; `supplement-intake.ts`; diário SQLite/PWA | alimento classificado como suplemento | V · registro rápido salva o item no diário real, no resumo nutricional e também funciona offline; `supplement-intake.test.ts`, `daily-log-persistence.test.ts`, `daily-meal-api.test.ts` |
+| 174 | Registrar dose/quantidade e consultar histórico de suplementos. | `NutritionView.tsx`; `supplement-intake.ts`; histórico alimentar | quantidade em gramas e data do diário | V · calcula macros por porção identificada e lista doses realmente consumidas por data/horário, sem incluir planejamentos; os mesmos testes do item 173 validam cálculo e recuperação |
 | 175 | Marcar aquecimento concluído por treino. | `WorkoutView.tsx`; SQLite/PWA; migração 40 | — | V · checklist por sessão permanece após reabrir o SQLite e funciona offline; `workout-media-persistence.test.ts`, `workout-recovery-persistence.test.ts`, `workout-migration.test.ts`, `validation.test.ts` |
 | 176 | Marcar volta à calma concluída. | `WorkoutView.tsx`; SQLite/PWA; migração 40 | — | V · conclusão separada e persistente por sessão; coberta pelos mesmos testes dos itens 175 |
 | 177 | Gerar revisão semanal de treino, alimentação e hábitos. | DASH | — | A · sem relatório semanal combinado |

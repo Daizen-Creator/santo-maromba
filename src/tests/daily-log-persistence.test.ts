@@ -7,6 +7,7 @@ import { runMigrations } from '../database/migrations';
 import { ProfileRepository } from '../database/repositories/profile-repository';
 import { FitTrackService } from '../services/fittrack-service';
 import { calculateLeftoverAmount } from '../domain/meal-leftovers';
+import { buildSupplementMealInput, getSupplementHistory } from '../domain/supplement-intake';
 
 const localDate = (): string => {
   const now = new Date();
@@ -123,6 +124,30 @@ describe('Registros reais do painel diário', () => {
     });
     expect(duplicateIngredientEntry.items).toHaveLength(2);
     expect(duplicateIngredientEntry.calories).toBe(195);
+  });
+
+  it('registra a dose de suplemento com macros identificados e recupera o histórico após reabrir SQLite', async () => {
+    const date = localDate();
+    const whey = service.getFoods().find(food => food.id === 'food-whey')!;
+    const input = buildSupplementMealInput({
+      food: whey, date, scheduledTime: '07:15', amountG: 30, slotId: `supplement-${date}-test`
+    });
+    const saved = service.saveDailyMeal(input);
+    expect(saved).toMatchObject({ status: 'consumed', calories: 120, proteinG: 24 });
+
+    db!.close();
+    db = null;
+    const reopened = await createDatabaseDriver(dbPath);
+    db = reopened;
+    await runMigrations(reopened);
+    service = new FitTrackService(reopened);
+
+    const restored = service.getDailyMeals(date).find(entry => entry.id === saved.id)!;
+    expect(restored.items[0]).toMatchObject({ foodId: 'food-whey', plannedAmountG: 30, consumedAmountG: 30, calories: 120 });
+    expect(getSupplementHistory([restored], service.getFoods())).toMatchObject([
+      { date, scheduledTime: '07:15', foodId: 'food-whey', amountG: 30, calories: 120, proteinG: 24 }
+    ]);
+    expect(service.getDashboardSummary().caloriesLogged).toBe(120);
   });
 
   it('persiste as quantidades planejadas e consumidas para consultar sobras após reabrir', async () => {

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { api } from '../renderer/services/api';
+import { INITIAL_FOODS } from '../database/seeds/nutrition-seeds';
+import { buildSupplementMealInput, getSupplementHistory } from '../domain/supplement-intake';
 
 function memoryStorage() {
   const values = new Map<string, string>();
@@ -50,6 +52,19 @@ describe('Checklist alimentar na versão web', () => {
       { status: 'pending', items: [{ foodId: 'rice', consumedAmountG: 0 }] }
     ]);
     await expect(api.copyDailyMeals({ sourceDate: input.date, targetDate: input.date })).rejects.toThrow();
+  });
+
+  it('registra dose e consulta o histórico de suplementos no armazenamento offline da PWA', async () => {
+    const date = '2026-10-22';
+    const whey = INITIAL_FOODS.find(food => food.id === 'food-whey')!;
+    const input = buildSupplementMealInput({ food: whey, date, scheduledTime: '07:15', amountG: 25, slotId: 'supplement-pwa-1' });
+    const saved = await api.saveDailyMeal(input);
+    expect(saved).toMatchObject({ status: 'consumed', calories: 100, proteinG: 20 });
+
+    const reopenedHistory = await api.getMealHistory({ fromDate: date, toDate: date });
+    expect(getSupplementHistory(reopenedHistory, INITIAL_FOODS)).toMatchObject([
+      { date, scheduledTime: '07:15', foodId: 'food-whey', amountG: 25, calories: 100, proteinG: 20 }
+    ]);
   });
 
   it('mantém a porção planejada e o horário real ao editar uma refeição já consumida', async () => {

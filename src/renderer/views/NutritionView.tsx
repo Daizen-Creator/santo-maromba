@@ -39,6 +39,7 @@ import { getPantryExpiryReminder } from '../../domain/pantry-expiry';
 import { calculateCostPerProteinGram } from '../../domain/nutrition-cost';
 import { getRecipeCostPerGramProtein, getRecipeCostPerServing } from '../../domain/recipe-cost';
 import { getAverageMealBudget, prioritizeRecipesForMealBudget } from '../../domain/monthly-food-budget';
+import { buildSupplementMealInput, getSupplementHistory } from '../../domain/supplement-intake';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -51,6 +52,9 @@ const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string
 
 const formatDateInput = (date: Date) =>
   [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+
+const formatTimeInput = (date: Date) =>
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
 const formatNutritionBalance = (balance: NutritionBalanceMetric | null, unit: string): string => {
   if (!balance) return 'Sem registro';
@@ -231,6 +235,12 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [recipeFeedbackDrafts, setRecipeFeedbackDrafts] = useState<Record<string, { rating: number | null; personalNotes: string }>>({});
   const [savingRecipeFeedbackId, setSavingRecipeFeedbackId] = useState<string | null>(null);
   const [recentFoods, setRecentFoods] = useState<RecentlyUsedFood[]>([]);
+  const [supplementFoodId, setSupplementFoodId] = useState('');
+  const [supplementAmountDraft, setSupplementAmountDraft] = useState('');
+  const [supplementTime, setSupplementTime] = useState(() => formatTimeInput(new Date()));
+  const [supplementSaving, setSupplementSaving] = useState(false);
+  const [supplementError, setSupplementError] = useState<string | null>(null);
+  const [supplementMessage, setSupplementMessage] = useState<string | null>(null);
   const [recentFoodsError, setRecentFoodsError] = useState<string | null>(null);
   const [foodPortionPreferences, setFoodPortionPreferences] = useState<FoodPortionPreference[]>([]);
   const [foodPortionDrafts, setFoodPortionDrafts] = useState<Record<string, string>>({});
@@ -287,7 +297,38 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
   const today = new Date();
   const todayString = formatDateInput(today);
+  const supplementFoods = useMemo(() => foods.filter(food => food.category === 'supplement').sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')), [foods]);
+  const selectedSupplement = supplementFoods.find(food => food.id === supplementFoodId) || supplementFoods[0] || null;
+  const supplementHistory = useMemo(() => getSupplementHistory(historyEntries, foods), [historyEntries, foods]);
   const averageMealBudget = getAverageMealBudget(foodBudgetMonthly, mealsPerDay, todayString);
+
+  const saveSupplementIntake = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedSupplement) {
+      setSupplementError('Cadastre ou selecione um alimento classificado como suplemento.');
+      return;
+    }
+    const amountG = displayMassToGrams(Number(supplementAmountDraft), unitPreferences.foodMassUnit);
+    const slotId = `supplement-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setSupplementSaving(true);
+    setSupplementError(null);
+    setSupplementMessage(null);
+    try {
+      await onSaveDailyMeal(buildSupplementMealInput({
+        food: selectedSupplement,
+        date: todayString,
+        scheduledTime: supplementTime,
+        amountG,
+        slotId
+      }));
+      setSupplementAmountDraft('');
+      setSupplementMessage(`${selectedSupplement.name} (${formatMass(amountG)}) registrado para hoje.`);
+    } catch (error) {
+      setSupplementError(error instanceof Error ? error.message : 'Não foi possível registrar o suplemento.');
+    } finally {
+      setSupplementSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (activeTab !== 'pantry') return;
@@ -1879,6 +1920,41 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
 
       {activeTab === 'foods' && (
         <div className="space-y-5">
+          <section className="rounded-2xl border border-primary/20 bg-card p-5" aria-label="Registrar suplemento consumido">
+            <div className="mb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              <div>
+                <h3 className="font-display text-sm font-semibold text-foreground">Registrar suplemento de hoje</h3>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">A dose em massa é salva no diário alimentar e entra nos macros calculados do dia.</p>
+              </div>
+            </div>
+            <form onSubmit={event => void saveSupplementIntake(event)} className="grid gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(110px,0.6fr)_minmax(110px,0.6fr)_auto] sm:items-end">
+              <label className="space-y-1.5 text-xs text-muted-foreground">
+                <span>Suplemento</span>
+                <select required aria-label="Suplemento consumido" value={selectedSupplement?.id || ''} onChange={event => setSupplementFoodId(event.target.value)} disabled={supplementFoods.length === 0}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground">
+                  {supplementFoods.length === 0 ? <option value="">Nenhum suplemento no catálogo</option> : supplementFoods.map(food => <option key={food.id} value={food.id}>{food.name}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1.5 text-xs text-muted-foreground">
+                <span>Dose ({unitPreferences.foodMassUnit})</span>
+                <input required type="number" min={displayFoodMass(0.1)} max={displayFoodMass(5000)} step={foodMassInputStep} inputMode="decimal" value={supplementAmountDraft}
+                  aria-label={`Dose do suplemento em ${unitPreferences.foodMassUnit}`} onChange={event => setSupplementAmountDraft(event.target.value)}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" />
+              </label>
+              <label className="space-y-1.5 text-xs text-muted-foreground">
+                <span>Horário</span>
+                <input required type="time" value={supplementTime} onChange={event => setSupplementTime(event.target.value)} aria-label="Horário do suplemento"
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground" />
+              </label>
+              <button type="submit" disabled={supplementSaving || !selectedSupplement || !supplementAmountDraft}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">
+                {supplementSaving ? 'Salvando…' : 'Registrar dose'}
+              </button>
+            </form>
+            {supplementMessage && <p role="status" className="mt-3 text-xs text-emerald-300">{supplementMessage}</p>}
+            {supplementError && <p role="alert" className="mt-3 text-xs text-red-300">{supplementError}</p>}
+          </section>
           <section className="rounded-2xl border border-border bg-card p-5" aria-label="Alimentos consumidos recentemente">
             <div className="mb-3 flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
@@ -2040,6 +2116,26 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               </button>
             </div>
           )}
+          <section className="rounded-2xl border border-primary/20 bg-card p-4" aria-label="Histórico de suplementos no período pesquisado">
+            <div className="mb-3 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Histórico de suplementos</h3>
+                <p className="text-[10px] text-muted-foreground">Doses consumidas dentro do período pesquisado.</p>
+              </div>
+            </div>
+            {supplementHistory.length === 0 ? <p className="text-xs text-muted-foreground">Nenhuma dose de suplemento registrada nesse período.</p> : (
+              <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {supplementHistory.map((record, index) => (
+                  <li key={`${record.date}-${record.scheduledTime}-${record.foodId}-${index}`} className="rounded-xl border border-border/70 bg-secondary/25 px-3 py-2.5">
+                    <strong className="block text-xs text-foreground">{record.foodName}</strong>
+                    <span className="mt-1 block text-[11px] text-muted-foreground">{formatMass(record.amountG)} · {new Date(`${record.date}T12:00:00`).toLocaleDateString('pt-BR')} às {record.scheduledTime}</span>
+                    {record.calories !== null && <span className="mt-1 block text-[10px] text-muted-foreground">{Math.round(record.calories)} kcal · P {record.proteinG?.toFixed(1)} g · C {record.carbsG?.toFixed(1)} g · G {record.fatsG?.toFixed(1)} g</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           {historyEntries.length === 0 && !historyLoading ? (
             <div className="rounded-2xl border border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
               Nenhum lançamento encontrado nesse período. Registros futuros aparecerão aqui depois que forem salvos no checklist.
