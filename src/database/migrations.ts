@@ -431,4 +431,38 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [31, 'Lista de compras semanal gerada do plano alimentar', new Date().toISOString()]
     );
   }
+  const version32 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 32');
+  if (!version32) {
+    const catalogIds = new Set(db.query<{ id: string }>('SELECT id FROM foods').map(row => row.id));
+    const consumedEntries = db.query<any>(
+      `SELECT date, slot_id, items_json, updated_at FROM daily_meal_entries
+       WHERE status IN ('consumed', 'partial')`
+    );
+    for (const entry of consumedEntries) {
+      let items: Array<{ foodId?: unknown; consumedAmountG?: unknown }>;
+      try {
+        items = JSON.parse(entry.items_json);
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(items)) continue;
+      const amounts = new Map<string, number>();
+      for (const item of items) {
+        if (typeof item.foodId !== 'string' || !catalogIds.has(item.foodId)
+          || typeof item.consumedAmountG !== 'number' || !Number.isFinite(item.consumedAmountG) || item.consumedAmountG <= 0) continue;
+        amounts.set(item.foodId, (amounts.get(item.foodId) || 0) + item.consumedAmountG);
+      }
+      for (const [foodId, consumedG] of amounts) {
+        db.execute(
+          `INSERT OR IGNORE INTO pantry_consumption (date, slot_id, food_id, consumed_g, deducted_g, updated_at)
+           VALUES (?, ?, ?, ?, 0, ?)`,
+          [entry.date, entry.slot_id, foodId, consumedG, entry.updated_at || new Date().toISOString()]
+        );
+      }
+    }
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [32, 'Controle de estoque e consumo confirmado por refeição', new Date().toISOString()]
+    );
+  }
 }

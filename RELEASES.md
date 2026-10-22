@@ -2,6 +2,12 @@
 
 O repositório público `Daizen-Creator/santo-maromba` publica releases pelo GitHub Actions. O workflow gera o instalador NSIS e a versão portátil para Windows, além do manifesto `latest.yml` usado pelo `electron-updater`.
 
+## v1.1.43
+
+- A despensa valida alimento e quantidade em gramas e mantém o saldo após reabrir o app.
+- O checklist desconta consumo parcial/total sem repetir a baixa; edição, exclusão e desfazer reconciliam o estoque. Quantidades maiores que o saldo disponível zeram o estoque sem criar valor negativo.
+- 222 testes em 69 arquivos passaram após corrigir transações aninhadas ao aplicar modelos de refeições. Build, instalador NSIS, portable e inicialização isolada com criação do SQLite aprovados; publicação GitHub pendente.
+
 ## v1.1.42
 
 - Gera uma lista semanal de compras a partir do plano, soma ingredientes repetidos e permite marcar itens comprados.

@@ -184,9 +184,20 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
 CREATE TABLE IF NOT EXISTS pantry_items (
   id TEXT PRIMARY KEY,
   food_id TEXT NOT NULL,
-  amount_available_g REAL NOT NULL,
+  amount_available_g REAL NOT NULL CHECK(amount_available_g BETWEEN 0 AND 100000),
   unit_price REAL,
   updated_at TEXT NOT NULL,
+  FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pantry_consumption (
+  date TEXT NOT NULL,
+  slot_id TEXT NOT NULL,
+  food_id TEXT NOT NULL,
+  consumed_g REAL NOT NULL CHECK(consumed_g >= 0),
+  deducted_g REAL NOT NULL CHECK(deducted_g >= 0 AND deducted_g <= consumed_g),
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(date, slot_id, food_id),
   FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
 );
 

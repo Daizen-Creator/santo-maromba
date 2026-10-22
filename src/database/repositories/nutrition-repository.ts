@@ -4,6 +4,7 @@ import { CustomFoodInput, FoodItem, FoodPortionPreference, PantryItem, Recipe, R
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../seeds/nutrition-seeds';
 import { normalizeRecipeFinalWeight, normalizeRecipeServings } from '../../domain/recipe-portions';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
+import { PantryItemUpdateInputSchema } from '../../shared/schema';
 
 export class NutritionRepository {
   constructor(private db: IDatabase) {
@@ -350,24 +351,32 @@ export class NutritionRepository {
   }
 
   updatePantryItem(foodId: string, amountAvailableG: number): void {
-    const existing = this.db.queryOne<any>('SELECT id FROM pantry_items WHERE food_id = ?', [foodId]);
+    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG: amountAvailableG });
+    const existing = this.db.queryOne<any>('SELECT id FROM pantry_items WHERE food_id = ?', [input.foodId]);
     const now = new Date().toISOString();
 
-    if (existing) {
-      this.db.execute(
-        'UPDATE pantry_items SET amount_available_g = ?, updated_at = ? WHERE id = ?',
-        [amountAvailableG, now, existing.id]
-      );
-    } else {
-      const id = `pantry-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      this.db.execute(
-        'INSERT INTO pantry_items (id, food_id, amount_available_g, updated_at) VALUES (?, ?, ?, ?)',
-        [id, foodId, amountAvailableG, now]
-      );
-    }
+    this.db.transaction(() => {
+      if (existing) {
+        this.db.execute(
+          'UPDATE pantry_items SET amount_available_g = ?, updated_at = ? WHERE id = ?',
+          [input.amountG, now, existing.id]
+        );
+      } else {
+        const id = `pantry-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        this.db.execute(
+          'INSERT INTO pantry_items (id, food_id, amount_available_g, updated_at) VALUES (?, ?, ?, ?)',
+          [id, input.foodId, input.amountG, now]
+        );
+      }
+      // A manual stock entry is authoritative, so later edits cannot refund older deductions twice.
+      this.db.execute('UPDATE pantry_consumption SET deducted_g = 0 WHERE food_id = ?', [input.foodId]);
+    });
   }
 
   removePantryItem(foodId: string): void {
-    this.db.execute('DELETE FROM pantry_items WHERE food_id = ?', [foodId]);
+    this.db.transaction(() => {
+      this.db.execute('DELETE FROM pantry_items WHERE food_id = ?', [foodId]);
+      this.db.execute('UPDATE pantry_consumption SET deducted_g = 0 WHERE food_id = ?', [foodId]);
+    });
   }
 }

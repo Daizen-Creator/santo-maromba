@@ -21,6 +21,7 @@ import {
   SaveBodyMeasurementInputSchema,
   MeasurementUnitPreferencesSchema,
   PantryRecipeSearchInputSchema,
+  PantryItemUpdateInputSchema,
   ShoppingListPurchaseInputSchema
 } from '../shared/schema';
 
@@ -30,6 +31,14 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
       .toEqual({ maxPrepTime: 30, requireAllIngredients: true });
     expect(() => PantryRecipeSearchInputSchema.parse({ maxPrepTime: 0 })).toThrow();
     expect(() => PantryRecipeSearchInputSchema.parse({ requireAllIngredients: 'yes' })).toThrow();
+  });
+
+  it('aceita estoque em gramas dentro do limite e rejeita IDs inseguros ou quantidades inválidas', () => {
+    expect(PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: 250 })).toEqual({ foodId: 'food-arroz', amountG: 250 });
+    expect(PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: 0 }).amountG).toBe(0);
+    expect(() => PantryItemUpdateInputSchema.parse({ foodId: '../arroz', amountG: 250 })).toThrow();
+    expect(() => PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: -1 })).toThrow();
+    expect(() => PantryItemUpdateInputSchema.parse({ foodId: 'food-arroz', amountG: 100001 })).toThrow();
   });
 
   it('valida a marcação de compra por semana e alimento', () => {

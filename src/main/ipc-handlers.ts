@@ -31,6 +31,7 @@ import {
   ApplyWeeklyMealTemplateInputSchema,
   ReorderDailyMealsInputSchema,
   PantryRecipeSearchInputSchema,
+  PantryItemUpdateInputSchema,
   ShoppingListPurchaseInputSchema,
   DailyMealEntryInputSchema,
   DailyMealIdentityInputSchema,
@@ -394,16 +395,19 @@ export function registerIpcHandlers(
     }
   });
 
-  ipcMain.handle(IPC_CHANNELS.GET_PANTRY, async () => {
+  ipcMain.handle(IPC_CHANNELS.GET_PANTRY, async event => {
     try {
+      getCallingWindow(event);
       return { success: true, data: service.getPantry() };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
   });
 
-  ipcMain.handle(IPC_CHANNELS.UPDATE_PANTRY, async (_, { foodId, amountG }) => {
+  ipcMain.handle(IPC_CHANNELS.UPDATE_PANTRY, async (event, rawInput) => {
     try {
+      getCallingWindow(event);
+      const { foodId, amountG } = PantryItemUpdateInputSchema.parse(rawInput);
       service.updatePantryItem(foodId, amountG);
       return { success: true };
     } catch (err: any) {

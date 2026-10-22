@@ -377,6 +377,11 @@ export const PantryRecipeSearchInputSchema = z.object({
   requireAllIngredients: z.boolean().optional()
 }).strict();
 
+export const PantryItemUpdateInputSchema = z.object({
+  foodId: z.string().trim().min(1).max(100).regex(/^[\w-]+$/),
+  amountG: z.number().finite().min(0).max(100000)
+}).strict();
+
 export const ShoppingListPurchaseInputSchema = z.object({
   weekStartDate: z.string().refine(isRealCalendarDate, 'Informe uma semana válida.'),
   foodId: z.string().trim().min(1).max(120).regex(/^[\w-]+$/),

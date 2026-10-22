@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { IDatabase } from '../driver';
-import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateInput, ApplyWeeklyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealRestoreInput, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, NutritionAnalytics, NutritionAnalyticsQuery, NutritionMealDistributionEntry, RecentlyUsedFood, ReorderDailyMealsInput, SaveMealTemplateInput } from '../../shared/types';
+import { ApplyMealTemplateInput, ApplyMealTemplateResult, ApplyWeeklyMealTemplateInput, ApplyWeeklyMealTemplateResult, DailyIntakeProgress, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealIdentityInput, DailyMealRestoreInput, HydrationLogInput, LoggedMealInput, MealTemplate, MealTemplateMeal, NutritionAnalytics, NutritionAnalyticsQuery, NutritionMealDistributionEntry, PantryItem, RecentlyUsedFood, ReorderDailyMealsInput, SaveMealTemplateInput } from '../../shared/types';
 import { getRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { sortDailyMealEntries } from '../../domain/daily-meal-order';
@@ -8,9 +8,67 @@ import { getWorkoutWeekDates } from '../../domain/workout-week-calendar';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
 import { calculateNutritionDistribution } from '../../domain/nutrition-distribution';
 import { inferMealTurn } from '../../domain/meal-turn';
+import { PantryConsumptionRecord, reconcilePantryConsumption } from '../../domain/pantry-consumption';
 
 export class DailyLogRepository {
+  private transactionDepth = 0;
+
   constructor(private db: IDatabase) {}
+
+  private runInTransaction<T>(operation: () => T): T {
+    if (this.transactionDepth > 0) return operation();
+    this.transactionDepth += 1;
+    try {
+      return this.db.transaction(operation);
+    } finally {
+      this.transactionDepth -= 1;
+    }
+  }
+
+  private reconcilePantry(meal: DailyMealEntryInput, updatedAt: string): void {
+    const stockRows = this.db.query<any>(
+      `SELECT p.id, p.food_id, f.name AS food_name, p.amount_available_g, p.unit_price, p.updated_at
+       FROM pantry_items p JOIN foods f ON f.id = p.food_id`
+    );
+    const pantry: PantryItem[] = stockRows.map(row => ({
+      id: row.id,
+      foodId: row.food_id,
+      foodName: row.food_name,
+      amountAvailableG: Number(row.amount_available_g),
+      unitPrice: row.unit_price == null ? undefined : Number(row.unit_price),
+      updatedAt: row.updated_at
+    }));
+    const records = this.db.query<any>(
+      'SELECT * FROM pantry_consumption WHERE date = ? AND slot_id = ?', [meal.date, meal.slotId]
+    ).map(row => ({
+      date: row.date,
+      slotId: row.slot_id,
+      foodId: row.food_id,
+      consumedG: Number(row.consumed_g),
+      deductedG: Number(row.deducted_g),
+      updatedAt: row.updated_at
+    } as PantryConsumptionRecord));
+    const result = reconcilePantryConsumption(meal, pantry, records, updatedAt);
+    const currentByFood = new Map(pantry.map(item => [item.foodId, item]));
+
+    for (const item of result.pantry) {
+      const current = currentByFood.get(item.foodId);
+      if (current && current.amountAvailableG !== item.amountAvailableG) {
+        this.db.execute(
+          'UPDATE pantry_items SET amount_available_g = ?, updated_at = ? WHERE food_id = ?',
+          [item.amountAvailableG, item.updatedAt, item.foodId]
+        );
+      }
+    }
+    this.db.execute('DELETE FROM pantry_consumption WHERE date = ? AND slot_id = ?', [meal.date, meal.slotId]);
+    for (const record of result.records) {
+      this.db.execute(
+        `INSERT INTO pantry_consumption (date, slot_id, food_id, consumed_g, deducted_g, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [record.date, record.slotId, record.foodId, record.consumedG, record.deductedG, record.updatedAt]
+      );
+    }
+  }
 
   addMeal(input: LoggedMealInput): void {
     this.db.execute(
@@ -168,7 +226,7 @@ export class DailyLogRepository {
     const copiedOrder: string[] = [];
     let copiedCount = 0;
     let skippedCount = 0;
-    this.db.transaction(() => {
+    this.runInTransaction(() => {
       for (const meal of sourceMeals) {
         const targetExists = this.db.queryOne<{ present: number }>(
           'SELECT 1 AS present FROM daily_meal_entries WHERE date = ? AND slot_id = ?',
@@ -204,7 +262,7 @@ export class DailyLogRepository {
       || input.slotIds.some(slotId => !currentSlots.has(slotId))) {
       throw new Error('A lista mudou desde que você abriu a semana. Recarregue e tente novamente.');
     }
-    this.db.transaction(() => this.setMealOrder(input.date, input.slotIds));
+    this.runInTransaction(() => this.setMealOrder(input.date, input.slotIds));
     return this.getMeals(input.date);
   }
 
@@ -274,7 +332,7 @@ export class DailyLogRepository {
     const addedOrder: string[] = [];
     let copiedCount = 0;
     let skippedCount = 0;
-    this.db.transaction(() => {
+    this.runInTransaction(() => {
       for (const meal of template.meals) {
         const occupied = this.db.queryOne<{ present: number }>(
           'SELECT 1 AS present FROM daily_meal_entries WHERE date = ? AND slot_id = ?',
@@ -314,7 +372,7 @@ export class DailyLogRepository {
     const dates = getWorkoutWeekDates(input.weekStartDate);
     let copiedCount = 0;
     let skippedCount = 0;
-    this.db.transaction(() => {
+    this.runInTransaction(() => {
       for (const date of dates) {
         const existingOrder = sortDailyMealEntries(this.getMeals(date)).map(meal => meal.slotId);
         const addedOrder: string[] = [];
@@ -362,8 +420,10 @@ export class DailyLogRepository {
     const id = `daily-meal-${input.date}-${input.slotId}`;
     const completedAt = countsAsConsumed ? now : null;
 
-    this.db.execute(
-      `INSERT INTO daily_meal_entries (
+    this.runInTransaction(() => {
+      this.reconcilePantry(input, now);
+      this.db.execute(
+        `INSERT INTO daily_meal_entries (
         id, date, slot_id, sort_order, meal_name, meal_turn, scheduled_time, recipe_id, status, items_json,
         calories, protein_g, carbs_g, fats_g, note, completed_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -381,17 +441,21 @@ export class DailyLogRepository {
           ELSE excluded.completed_at
         END,
         updated_at = excluded.updated_at`,
-      [id, input.date, input.slotId, input.sortOrder ?? null, input.mealName.trim(), input.mealTurn || inferMealTurn(input.slotId, input.mealName), input.scheduledTime, input.recipeId || null,
-        input.status, JSON.stringify(input.items), totals.calories, totals.proteinG, totals.carbsG,
-        totals.fatsG, input.note?.trim() || null, completedAt, now]
-    );
+        [id, input.date, input.slotId, input.sortOrder ?? null, input.mealName.trim(), input.mealTurn || inferMealTurn(input.slotId, input.mealName), input.scheduledTime, input.recipeId || null,
+          input.status, JSON.stringify(input.items), totals.calories, totals.proteinG, totals.carbsG,
+          totals.fatsG, input.note?.trim() || null, completedAt, now]
+      );
+    });
     return this.getMeals(input.date).find(meal => meal.slotId === input.slotId)!;
   }
 
   deleteMeal(input: DailyMealIdentityInput): DailyMealEntry {
     const entry = this.getMeals(input.date).find(meal => meal.slotId === input.slotId);
     if (!entry) throw new Error('O lançamento alimentar não foi encontrado.');
-    this.db.execute('DELETE FROM daily_meal_entries WHERE date = ? AND slot_id = ?', [input.date, input.slotId]);
+    this.runInTransaction(() => {
+      this.reconcilePantry({ ...entry, status: 'pending' }, new Date().toISOString());
+      this.db.execute('DELETE FROM daily_meal_entries WHERE date = ? AND slot_id = ?', [input.date, input.slotId]);
+    });
     return entry;
   }
 
@@ -402,15 +466,18 @@ export class DailyLogRepository {
     );
     if (occupied) throw new Error('Já existe uma refeição neste horário; a exclusão não pode ser desfeita sem sobrescrever esse registro.');
     const mealTurn = input.mealTurn || inferMealTurn(input.slotId, input.mealName);
-    this.db.execute(
-      `INSERT INTO daily_meal_entries (
+    this.runInTransaction(() => {
+      this.reconcilePantry(input, new Date().toISOString());
+      this.db.execute(
+        `INSERT INTO daily_meal_entries (
         id, date, slot_id, sort_order, meal_name, meal_turn, scheduled_time, recipe_id, status, items_json,
         calories, protein_g, carbs_g, fats_g, note, completed_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [input.id, input.date, input.slotId, input.sortOrder ?? null, input.mealName, mealTurn, input.scheduledTime, input.recipeId || null,
-        input.status, JSON.stringify(input.items), input.calories, input.proteinG, input.carbsG, input.fatsG,
-        input.note || null, input.completedAt || null, input.updatedAt]
-    );
+        [input.id, input.date, input.slotId, input.sortOrder ?? null, input.mealName, mealTurn, input.scheduledTime, input.recipeId || null,
+          input.status, JSON.stringify(input.items), input.calories, input.proteinG, input.carbsG, input.fatsG,
+          input.note || null, input.completedAt || null, input.updatedAt]
+      );
+    });
     return this.getMeals(input.date).find(meal => meal.slotId === input.slotId)!;
   }
 

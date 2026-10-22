@@ -81,7 +81,7 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryItemUpdateInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
 import { DEFAULT_MEASUREMENT_UNIT_PREFERENCES } from '../../domain/measurement-units';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
@@ -92,6 +92,7 @@ import { getWorkoutWeekDates } from '../../domain/workout-week-calendar';
 import { inferMealTurn } from '../../domain/meal-turn';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
 import { buildShoppingList } from '../../domain/shopping-list';
+import { PantryConsumptionRecord, reconcilePantryConsumption } from '../../domain/pantry-consumption';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
 const LOCAL_STORAGE_KEY_PROFILE_GOAL_HISTORY = 'fittrack_profile_goal_history';
@@ -100,6 +101,7 @@ const LOCAL_STORAGE_KEY_MEASUREMENTS = 'fittrack_measurements';
 const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENT_DEFINITIONS = 'fittrack_custom_measurement_definitions';
 const LOCAL_STORAGE_KEY_CUSTOM_MEASUREMENTS = 'fittrack_custom_measurements';
 const LOCAL_STORAGE_KEY_PANTRY = 'fittrack_pantry';
+const LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION = 'fittrack_pantry_consumption';
 const LOCAL_STORAGE_KEY_SHOPPING_LISTS = 'fittrack_shopping_lists';
 const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
 const LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES = 'fittrack_workout_templates';
@@ -723,29 +725,35 @@ export const api = {
   },
 
   updatePantry: async (foodId: string, amountG: number): Promise<void> => {
+    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG });
     if (api.isElectron()) {
-      const res = await window.fitTrackAPI.updatePantry(foodId, amountG);
+      const res = await window.fitTrackAPI.updatePantry(input.foodId, input.amountG);
       if (!res.success) throw new Error(res.error || 'Erro ao atualizar despensa.');
       return;
     }
     const pantry = await api.getPantry();
-    const existing = pantry.find(p => p.foodId === foodId);
+    const existing = pantry.find(p => p.foodId === input.foodId);
     if (existing) {
-      existing.amountAvailableG = amountG;
+      existing.amountAvailableG = input.amountG;
       existing.updatedAt = new Date().toISOString().split('T')[0];
     } else {
-      const food = (await api.getFoods()).find(f => f.id === foodId);
+      const food = (await api.getFoods()).find(f => f.id === input.foodId);
+      if (!food) throw new Error('Alimento não encontrado no catálogo.');
       if (food) {
         pantry.push({
           id: `p-${Date.now()}`,
-          foodId,
+          foodId: input.foodId,
           foodName: food.name,
-          amountAvailableG: amountG,
+          amountAvailableG: input.amountG,
           updatedAt: new Date().toISOString().split('T')[0]
         });
       }
     }
     localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY, JSON.stringify(pantry));
+    const consumption: PantryConsumptionRecord[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION) || '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION, JSON.stringify(
+      consumption.map(record => record.foodId === input.foodId ? { ...record, deductedG: 0 } : record)
+    ));
   },
 
   getSubstitutions: async (missingFoodId: string, amountG: number): Promise<SubstitutionOption[]> => {
@@ -1209,6 +1217,11 @@ export const api = {
     if (consumed && previous && (previous.status === 'consumed' || previous.status === 'partial') && previous.completedAt) {
       entry.completedAt = previous.completedAt;
     }
+    const pantry: PantryItem[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY) || '[]');
+    const pantryConsumption: PantryConsumptionRecord[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION) || '[]');
+    const reconciledPantry = reconcilePantryConsumption(input, pantry, pantryConsumption, now);
+    localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY, JSON.stringify(reconciledPantry.pantry));
+    localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION, JSON.stringify(reconciledPantry.records));
     if (index >= 0) entries[index] = entry;
     else entries.push(entry);
     localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(entries));
@@ -1225,6 +1238,11 @@ export const api = {
     const entries: DailyMealEntry[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_DAILY_MEALS) || '[]');
     const entry = entries.find(item => item.date === input.date && item.slotId === input.slotId);
     if (!entry) throw new Error('O lançamento alimentar não foi encontrado.');
+    const pantry: PantryItem[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY) || '[]');
+    const records: PantryConsumptionRecord[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION) || '[]');
+    const reconciled = reconcilePantryConsumption({ ...entry, status: 'pending' }, pantry, records);
+    localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY, JSON.stringify(reconciled.pantry));
+    localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION, JSON.stringify(reconciled.records));
     localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify(entries.filter(item => item.id !== entry.id)));
     return { ...entry, mealTurn: entry.mealTurn || inferMealTurn(entry.slotId, entry.mealName) };
   },
@@ -1244,6 +1262,11 @@ export const api = {
       ...input,
       mealTurn: input.mealTurn || inferMealTurn(input.slotId, input.mealName)
     };
+    const pantry: PantryItem[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY) || '[]');
+    const records: PantryConsumptionRecord[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION) || '[]');
+    const reconciled = reconcilePantryConsumption(input, pantry, records);
+    localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY, JSON.stringify(reconciled.pantry));
+    localStorage.setItem(LOCAL_STORAGE_KEY_PANTRY_CONSUMPTION, JSON.stringify(reconciled.records));
     localStorage.setItem(LOCAL_STORAGE_KEY_DAILY_MEALS, JSON.stringify([...entries, restored]));
     return restored;
   },
