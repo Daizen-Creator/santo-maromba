@@ -11,6 +11,7 @@ export const IPC_CHANNELS = {
   UPDATE_WEIGHT_RECORD: 'weight:update',
   DELETE_WEIGHT_RECORD: 'weight:delete',
   GET_WEIGHT_ANALYTICS: 'weight:get-analytics',
+  EXPORT_WEIGHT_HISTORY_CSV: 'weight:export-csv',
 
   // Targets & Nutrition
   CALCULATE_TARGETS: 'nutrition:calculate-targets',

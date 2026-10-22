@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.56. Estado após validação dos incrementos: **122 validadas, 29 parciais, 26 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.57. Estado após validação dos incrementos: **123 validadas, 29 parciais, 25 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -264,7 +264,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 188 | Enviar foto ao ImageKit com assinatura protegida. | IPC | ImageKit + Worker de assinatura | B · endpoint/Worker não configurados |
 | 189 | Abrir imagem remota privada com URL temporária autorizada. | IPC; SHAP | ImageKit privado + autenticação | B · serviço não configurado |
 | 190 | Exportar backup e restaurar com validação e confirmação. | IPC | armazenamento local acessível | P · cópia automática pré-migração; sem exportar/restaurar pelo usuário |
-| 191 | Exportar histórico em CSV legível. | NENHUM | — | A · sem exportação CSV |
+| 191 | Exportar histórico em CSV legível. | `WeightHistoryView.tsx`; `weight-history-csv.ts`; preload/IPC; SQLite/localStorage | armazenamento local | V · exporta pesos em ordem cronológica com data, origem e notas; CSV em UTF-8, decimal brasileiro e proteção contra fórmulas em notas; `weight-history-csv.test.ts` |
 | 192 | Gerar relatório PDF com fotos e métricas. | NENHUM | biblioteca/renderização local | A · sem exportação PDF |
 | 193 | Exportar dados do usuário em JSON e reimportá-los. | VIS; NENHUM | — | P · JSON exporta só personalização; importação ausente |
 | 194 | Reorganizar cards/gráficos do dashboard e persistir. | DASH; VIS | — | A · personalização visual não edita dashboard |

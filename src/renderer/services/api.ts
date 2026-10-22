@@ -26,6 +26,7 @@ import {
   MealPrepEventInput,
   PhotoCreateInput,
   PhotoExportResult,
+  FileExportResult,
   PhotoRecord,
   Recipe,
   RecipeFeedbackInput,
@@ -91,6 +92,8 @@ import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
 import { downloadOriginalPhoto } from './browser-photo-download';
+import { downloadBrowserFile } from './browser-file-download';
+import { buildWeightHistoryCsv } from '../../domain/weight-history-csv';
 import { browserMealPhotoStore } from './browser-meal-photo-store';
 import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, MealPrepEventInputSchema, MealPrepEventIdSchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, ApplyWeeklyMealTemplateInputSchema, ReorderDailyMealsInputSchema, PantryItemUpdateInputSchema, PantryPriceUpdateInputSchema, PantryRecipeSearchInputSchema, ShoppingListPurchaseInputSchema, SaveWorkoutTemplateInputSchema, SaveWorkoutScheduleInputSchema, SaveCustomMeasurementDefinitionInputSchema, SaveCustomMeasurementInputSchema, ProfileInputSchema, ProfileGoalHistoryRecordSchema, SaveBodyMeasurementInputSchema, MeasurementUnitPreferencesSchema, SaveFoodPortionPreferenceInputSchema, PersonalDiaryDateSchema, PersonalDiaryDateRangeSchema, SavePersonalDiaryEntryInputSchema, LoggedMealInputSchema, DailyMealEntryInputSchema, DailyMealIdentityInputSchema, DailyMealRestoreInputSchema, MealPhotoInputSchema, MealPhotoIdentitySchema, RecipeFeedbackInputSchema, WorkoutSessionInputSchema } from '../../shared/schema';
 import { PhotoIdSchema, ShapeMilestoneIdSchema, ShapeMilestoneInputSchema } from '../../shared/schema';
@@ -309,6 +312,18 @@ export const api = {
     }
     const list = await api.getWeightHistory();
     return calculateMovingAverages(list);
+  },
+
+  exportWeightHistoryCsv: async (): Promise<FileExportResult> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.exportWeightHistoryCsv();
+      if (!res.success) throw new Error(res.error || 'Não foi possível exportar o histórico de peso.');
+      if (!res.data) throw new Error('O aplicativo não confirmou a exportação do histórico.');
+      return res.data;
+    }
+    const csv = buildWeightHistoryCsv(await api.getWeightHistory());
+    downloadBrowserFile(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'santo-maromba-historico-peso.csv');
+    return { cancelled: false };
   },
 
   // --- FOTOS DO SHAPE ---

@@ -402,6 +402,10 @@ export interface PhotoExportResult {
   cancelled: boolean;
 }
 
+export interface FileExportResult {
+  cancelled: boolean;
+}
+
 export interface PhotoCreateInput {
   date: string;
   pose: PhotoPose;

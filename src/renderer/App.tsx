@@ -622,6 +622,7 @@ export const App: React.FC = () => {
               analytics={analytics}
               onOpenWeightModal={() => setIsWeightModalOpen(true)}
               onDeleteRecord={handleDeleteWeight}
+              onExportCsv={api.exportWeightHistoryCsv}
             />
           )}
 

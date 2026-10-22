@@ -9,26 +9,32 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownRight,
-  Minus
+  Minus,
+  Download
 } from 'lucide-react';
-import { WeightAnalyticsPoint, WeightRecord } from '../../shared/types';
+import { FileExportResult, WeightAnalyticsPoint, WeightRecord } from '../../shared/types';
 
 interface WeightHistoryViewProps {
   records: WeightRecord[];
   analytics: WeightAnalyticsPoint[];
   onOpenWeightModal: () => void;
   onDeleteRecord: (id: string) => Promise<void>;
+  onExportCsv: () => Promise<FileExportResult>;
 }
 
 export const WeightHistoryView: React.FC<WeightHistoryViewProps> = ({
   records,
   analytics,
   onOpenWeightModal,
-  onDeleteRecord
+  onDeleteRecord,
+  onExportCsv
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'verified' | 'self_reported'>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [exportingCsv, setExportingCsv] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Map analytics for fast moving average lookup by date
   const maMap = React.useMemo(() => {
@@ -64,6 +70,21 @@ export const WeightHistoryView: React.FC<WeightHistoryViewProps> = ({
     }
   };
 
+  const handleExportCsv = async () => {
+    if (records.length === 0 || exportingCsv) return;
+    setExportingCsv(true);
+    setExportMessage(null);
+    setExportError(null);
+    try {
+      const result = await onExportCsv();
+      if (!result.cancelled) setExportMessage('Histórico exportado em CSV.');
+    } catch (reason) {
+      setExportError(reason instanceof Error ? reason.message : 'Não foi possível exportar o histórico.');
+    } finally {
+      setExportingCsv(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* View Header */}
@@ -77,14 +98,28 @@ export const WeightHistoryView: React.FC<WeightHistoryViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={onOpenWeightModal}
-          className="flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover active:scale-95 transition-all self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Registrar Nova Pesagem</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => void handleExportCsv()}
+            disabled={records.length === 0 || exportingCsv}
+            className="flex items-center gap-2 rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Download className="h-4 w-4" />
+            <span>{exportingCsv ? 'Exportando...' : 'Exportar CSV'}</span>
+          </button>
+          <button
+            onClick={onOpenWeightModal}
+            className="flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover active:scale-95 transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Registrar Nova Pesagem</span>
+          </button>
+        </div>
       </div>
+
+      {exportMessage && <p role="status" className="text-xs text-emerald-500">{exportMessage}</p>}
+      {exportError && <p role="alert" className="text-xs text-destructive">{exportError}</p>}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">

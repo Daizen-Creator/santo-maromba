@@ -1,3 +1,5 @@
+import { downloadBrowserFile } from './browser-file-download';
+
 interface PhotoDownloadEnvironment {
   document: Pick<Document, 'createElement' | 'body'>;
   urlApi: Pick<typeof URL, 'createObjectURL' | 'revokeObjectURL'>;
@@ -14,16 +16,5 @@ export function downloadOriginalPhoto(
   }
 ): void {
   const extension = blob.type === 'image/jpeg' ? 'jpg' : blob.type === 'image/png' ? 'png' : 'webp';
-  const objectUrl = environment.urlApi.createObjectURL(blob);
-  const anchor = environment.document.createElement('a');
-  anchor.href = objectUrl;
-  anchor.download = `santo-maromba-${date}.${extension}`;
-  anchor.style.display = 'none';
-  environment.document.body.appendChild(anchor);
-  try {
-    anchor.click();
-  } finally {
-    anchor.remove();
-    environment.schedule(() => environment.urlApi.revokeObjectURL(objectUrl), 1000);
-  }
+  downloadBrowserFile(blob, `santo-maromba-${date}.${extension}`, environment);
 }

@@ -20,6 +20,7 @@ import {
   MealPrepEventInput,
   PhotoCreateInput,
   PhotoExportResult,
+  FileExportResult,
   PhotoRecord,
   Recipe,
   RecipeFeedbackInput,
@@ -92,6 +93,7 @@ export interface FitTrackAPI {
   updateWeightRecord: (id: string, record: any) => Promise<{ success: boolean; data?: WeightRecord; error?: string }>;
   deleteWeightRecord: (id: string) => Promise<{ success: boolean; error?: string }>;
   getWeightAnalytics: () => Promise<{ success: boolean; data?: WeightAnalyticsPoint[]; error?: string }>;
+  exportWeightHistoryCsv: () => Promise<{ success: boolean; data?: FileExportResult; error?: string }>;
 
   // Fotos
   getPhotos: () => Promise<{ success: boolean; data?: PhotoRecord[]; error?: string }>;
@@ -206,6 +208,7 @@ const api: FitTrackAPI = {
   updateWeightRecord: (id, record) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_WEIGHT_RECORD, { id, data: record }),
   deleteWeightRecord: (id) => ipcRenderer.invoke(IPC_CHANNELS.DELETE_WEIGHT_RECORD, id),
   getWeightAnalytics: () => ipcRenderer.invoke(IPC_CHANNELS.GET_WEIGHT_ANALYTICS),
+  exportWeightHistoryCsv: () => ipcRenderer.invoke(IPC_CHANNELS.EXPORT_WEIGHT_HISTORY_CSV),
 
   getPhotos: () => ipcRenderer.invoke(IPC_CHANNELS.GET_PHOTOS),
   addPhoto: (data) => ipcRenderer.invoke(IPC_CHANNELS.ADD_PHOTO, data),

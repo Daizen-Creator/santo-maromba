@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import fs from 'fs';
 import { IPC_CHANNELS } from '../shared/ipc-channels';
+import { buildWeightHistoryCsv } from '../domain/weight-history-csv';
 import {
   InitialHistoryConfirmationSchema,
   HydrationLogInputSchema,
@@ -158,6 +159,23 @@ export function registerIpcHandlers(
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.EXPORT_WEIGHT_HISTORY_CSV, async event => {
+    try {
+      const owner = getCallingWindow(event);
+      const csv = buildWeightHistoryCsv(service.getWeightHistory());
+      const result = await dialog.showSaveDialog(owner, {
+        title: 'Exportar histórico de peso',
+        defaultPath: 'santo-maromba-historico-peso.csv',
+        filters: [{ name: 'Arquivo CSV', extensions: ['csv'] }]
+      });
+      if (result.canceled || !result.filePath) return { success: true, data: { cancelled: true } };
+      await fs.promises.writeFile(result.filePath, csv, 'utf8');
+      return { success: true, data: { cancelled: false } };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível exportar o histórico de peso.' };
     }
   });
 
