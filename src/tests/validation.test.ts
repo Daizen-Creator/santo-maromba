@@ -12,7 +12,8 @@ import {
   ProfileInputSchema,
   WeightRecordInputSchema,
   RecipeServingsInputSchema,
-  WorkoutSessionInputSchema
+  WorkoutSessionInputSchema,
+  SaveWorkoutTemplateInputSchema
 } from '../shared/schema';
 
 describe('Validação de Schemas Zod — Contratos de Dados', () => {
@@ -121,6 +122,17 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
       date: '2026-10-21', splitName: 'Treino parcial', completed: false,
       sets: [{ exerciseId: 'ex-supino', setNumber: 1, weightKg: 20, reps: 8, completed: false }]
     }).sets[0].completed).toBe(false);
+  });
+
+  it('valida limites e campos dos modelos de treino antes do IPC', () => {
+    expect(SaveWorkoutTemplateInputSchema.parse({
+      name: 'Push A',
+      plans: [{
+        dayName: 'Segunda-feira', splitTitle: 'Casa A', focusMuscles: 'Peito', recoveryNotes: '',
+        exercises: [{ exerciseId: 'ex-flexao-inclinada', sets: 3, repRange: '8 - 12', restSeconds: 60 }]
+      }]
+    }).plans[0].exercises[0].sets).toBe(3);
+    expect(() => SaveWorkoutTemplateInputSchema.parse({ name: 'Plano vazio', plans: [] })).toThrow();
   });
 
   it('deve validar registros de peso com formato correto', () => {

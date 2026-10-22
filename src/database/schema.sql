@@ -250,6 +250,15 @@ CREATE TABLE IF NOT EXISTS workout_sets (
   FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT
 );
 
+CREATE TABLE IF NOT EXISTS workout_templates (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  plans_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workout_templates_updated ON workout_templates(updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS exercise_media (
   id TEXT PRIMARY KEY,
   exercise_id TEXT NOT NULL,

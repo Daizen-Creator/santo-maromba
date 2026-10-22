@@ -673,3 +673,32 @@ export interface WorkoutSession {
   notes?: string;
   createdAt: string;
 }
+
+export interface WorkoutTemplateExercise {
+  exerciseId: string;
+  sets: number;
+  repRange: string;
+  restSeconds: number;
+  recommendedWeightKg?: number;
+}
+
+export interface WorkoutTemplatePlan {
+  dayName: string;
+  splitTitle: string;
+  focusMuscles: string;
+  recoveryNotes: string;
+  exercises: WorkoutTemplateExercise[];
+}
+
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  plans: WorkoutTemplatePlan[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SaveWorkoutTemplateInput {
+  name: string;
+  plans: WorkoutTemplatePlan[];
+}

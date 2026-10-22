@@ -193,4 +193,12 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [12, 'Repetições em reserva (RIR) por série', new Date().toISOString()]
     );
   }
+
+  const version13 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 13');
+  if (!version13) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [13, 'Modelos reutilizáveis de treinos do usuário', new Date().toISOString()]
+    );
+  }
 }

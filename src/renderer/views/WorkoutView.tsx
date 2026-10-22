@@ -13,11 +13,12 @@ import {
   TrendingUp,
   Timer
 } from 'lucide-react';
-import { Exercise, ExerciseMediaInput, MuscleGroup, WorkoutSession, WorkoutSet } from '../../shared/types';
+import { Exercise, ExerciseMediaInput, MuscleGroup, SaveWorkoutTemplateInput, WorkoutSession, WorkoutSet, WorkoutTemplate } from '../../shared/types';
 import { DailyWorkoutPlan, getNextScheduledWorkout, WorkoutEngine } from '../../domain/workout-engine';
 import { YouTubePlayer } from '../components/YouTubePlayer';
 import { formatRestTime, remainingRestSeconds } from '../../domain/rest-timer';
 import { compareWorkoutSetWithHistory } from '../../domain/workout-comparison';
+import { hydrateWorkoutTemplate, serializeWorkoutPlans } from '../../domain/workout-templates';
 
 const OFFLINE_EXERCISE_IMAGE: Record<MuscleGroup, string> = {
   peitoral: './catalog-assets/exercise-peitoral.png',
@@ -40,6 +41,8 @@ interface WorkoutViewProps {
   onLogSession: (sessionData: any) => Promise<void>;
   onAddExerciseMedia: (input: ExerciseMediaInput) => Promise<void>;
   onDeleteExerciseMedia: (id: string) => Promise<void>;
+  onGetWorkoutTemplates: () => Promise<WorkoutTemplate[]>;
+  onSaveWorkoutTemplate: (input: SaveWorkoutTemplateInput) => Promise<WorkoutTemplate>;
 }
 
 export const WorkoutView: React.FC<WorkoutViewProps> = ({
@@ -48,14 +51,19 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   workoutSplit,
   onLogSession,
   onAddExerciseMedia,
-  onDeleteExerciseMedia
+  onDeleteExerciseMedia,
+  onGetWorkoutTemplates,
+  onSaveWorkoutTemplate
 }) => {
   const [activeTab, setActiveTab] = useState<'today' | 'split' | 'exercises' | 'history'>('today');
   const [homeTrainingMode, setHomeTrainingMode] = useState(false);
   const progressionEngine = useMemo(() => new WorkoutEngine(exercises), [exercises]);
+  const [appliedWorkoutTemplate, setAppliedWorkoutTemplate] = useState<WorkoutTemplate | null>(null);
   const activeWorkoutSplit = useMemo(
-    () => homeTrainingMode ? progressionEngine.generateHomeSplit() : workoutSplit,
-    [homeTrainingMode, progressionEngine, workoutSplit]
+    () => appliedWorkoutTemplate
+      ? hydrateWorkoutTemplate(appliedWorkoutTemplate, exercises)
+      : homeTrainingMode ? progressionEngine.generateHomeSplit() : workoutSplit,
+    [appliedWorkoutTemplate, exercises, homeTrainingMode, progressionEngine, workoutSplit]
   );
 
   // Treino Ativo do Dia
@@ -84,9 +92,29 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   const [savingSession, setSavingSession] = useState<boolean>(false);
   const [sessionSuccessMsg, setSessionSuccessMsg] = useState<string | null>(null);
   const [sessionValidationError, setSessionValidationError] = useState<string | null>(null);
+  const [workoutTemplates, setWorkoutTemplates] = useState<WorkoutTemplate[]>([]);
+  const [workoutTemplateName, setWorkoutTemplateName] = useState('');
+  const [selectedWorkoutTemplateId, setSelectedWorkoutTemplateId] = useState('');
+  const [savingWorkoutTemplate, setSavingWorkoutTemplate] = useState(false);
+  const [workoutTemplateMessage, setWorkoutTemplateMessage] = useState<string | null>(null);
+  const [workoutTemplateError, setWorkoutTemplateError] = useState<string | null>(null);
   const [restTimer, setRestTimer] = useState<{ exerciseName: string; durationSeconds: number; endsAtMs: number } | null>(null);
   const [restNowMs, setRestNowMs] = useState(() => Date.now());
   const [restCompleteMessage, setRestCompleteMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    onGetWorkoutTemplates()
+      .then(templates => {
+        if (!active) return;
+        setWorkoutTemplates(templates);
+        setSelectedWorkoutTemplateId(templates[0]?.id || '');
+      })
+      .catch(error => {
+        if (active) setWorkoutTemplateError(error instanceof Error ? error.message : 'Não foi possível carregar os modelos de treino.');
+      });
+    return () => { active = false; };
+  }, [onGetWorkoutTemplates]);
 
   useEffect(() => {
     if (!restTimer) return;
@@ -170,6 +198,50 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
 
   const handleRemoveSet = (index: number) => {
     setActiveSets(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveWorkoutTemplate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setWorkoutTemplateError(null);
+    setWorkoutTemplateMessage(null);
+    setSavingWorkoutTemplate(true);
+    try {
+      const template = await onSaveWorkoutTemplate({
+        name: workoutTemplateName,
+        plans: serializeWorkoutPlans(activeWorkoutSplit)
+      });
+      setWorkoutTemplates(current => [template, ...current.filter(item => item.id !== template.id)]);
+      setSelectedWorkoutTemplateId(template.id);
+      setWorkoutTemplateName('');
+      setWorkoutTemplateMessage(`Modelo “${template.name}” salvo com ${template.plans.length} dias.`);
+    } catch (error) {
+      setWorkoutTemplateError(error instanceof Error ? error.message : 'Não foi possível salvar o modelo de treino.');
+    } finally {
+      setSavingWorkoutTemplate(false);
+    }
+  };
+
+  const handleApplyWorkoutTemplate = () => {
+    setWorkoutTemplateError(null);
+    setWorkoutTemplateMessage(null);
+    if (activeSets.length > 0) {
+      setWorkoutTemplateError('Finalize ou remova as séries em andamento antes de aplicar outro modelo.');
+      return;
+    }
+    const template = workoutTemplates.find(item => item.id === selectedWorkoutTemplateId);
+    if (!template) {
+      setWorkoutTemplateError('Selecione um modelo de treino salvo.');
+      return;
+    }
+    try {
+      const plans = hydrateWorkoutTemplate(template, exercises);
+      if (!plans.some(plan => plan.exercises.length > 0)) throw new Error('Este modelo não contém exercícios disponíveis.');
+      setHomeTrainingMode(false);
+      setAppliedWorkoutTemplate(template);
+      setWorkoutTemplateMessage(`Modelo “${template.name}” aplicado à divisão desta sessão.`);
+    } catch (error) {
+      setWorkoutTemplateError(error instanceof Error ? error.message : 'Não foi possível aplicar o modelo de treino.');
+    }
   };
 
   const handleFinishWorkout = async (completed: boolean) => {
@@ -534,7 +606,9 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-display text-base font-bold text-foreground">
-                  {homeTrainingMode ? 'Rotina semanal em casa' : 'Estrutura semanal programada'}
+                  {appliedWorkoutTemplate
+                    ? `Modelo aplicado: ${appliedWorkoutTemplate.name}`
+                    : homeTrainingMode ? 'Rotina semanal em casa' : 'Estrutura semanal programada'}
                 </h3>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {homeTrainingMode
@@ -542,20 +616,61 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                     : 'Divisão calculada para respeitar o tempo de recuperação entre as sessões.'}
                 </p>
               </div>
-              <button
-                type="button"
-                aria-pressed={homeTrainingMode}
-                onClick={() => setHomeTrainingMode(current => !current)}
-                className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
-              >
-                {homeTrainingMode ? 'Voltar à divisão semanal' : 'Gerar treino em casa sem halteres'}
-              </button>
+              {appliedWorkoutTemplate ? (
+                <button type="button" onClick={() => setAppliedWorkoutTemplate(null)} className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15">
+                  Voltar à divisão semanal
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  aria-pressed={homeTrainingMode}
+                  onClick={() => setHomeTrainingMode(current => !current)}
+                  className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+                >
+                  {homeTrainingMode ? 'Voltar à divisão semanal' : 'Gerar treino em casa sem halteres'}
+                </button>
+              )}
             </div>
             {homeTrainingMode && (
               <p role="status" className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-100/80">
                 Alguns movimentos precisam de barra fixa, colchonete ou banco/apoio firme; confira as instruções e não improvise ancoragens.
               </p>
             )}
+            {appliedWorkoutTemplate && <p role="status" className="text-xs text-emerald-300">Modelo aplicado: {appliedWorkoutTemplate.name}</p>}
+            <div className="grid gap-4 border-t border-border/60 pt-4 lg:grid-cols-2">
+              <form onSubmit={handleSaveWorkoutTemplate} className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  required
+                  minLength={1}
+                  maxLength={80}
+                  value={workoutTemplateName}
+                  onChange={event => setWorkoutTemplateName(event.target.value)}
+                  placeholder="Nome do modelo de treino"
+                  aria-label="Nome do modelo de treino"
+                  className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70"
+                />
+                <button type="submit" disabled={savingWorkoutTemplate} className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 disabled:opacity-50">
+                  {savingWorkoutTemplate ? 'Salvando…' : 'Salvar divisão como modelo'}
+                </button>
+              </form>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <select
+                  value={selectedWorkoutTemplateId}
+                  onChange={event => setSelectedWorkoutTemplateId(event.target.value)}
+                  disabled={!workoutTemplates.length}
+                  aria-label="Modelo de treino salvo"
+                  className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground"
+                >
+                  {!workoutTemplates.length && <option value="">Nenhum modelo salvo</option>}
+                  {workoutTemplates.map(template => <option key={template.id} value={template.id}>{template.name} · {template.plans.length} dias</option>)}
+                </select>
+                <button type="button" onClick={handleApplyWorkoutTemplate} disabled={!workoutTemplates.length} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50">
+                  Aplicar modelo
+                </button>
+              </div>
+            </div>
+            {workoutTemplateMessage && <p role="status" className="text-xs text-emerald-300">{workoutTemplateMessage}</p>}
+            {workoutTemplateError && <p role="alert" className="text-xs text-destructive">{workoutTemplateError}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

@@ -209,6 +209,31 @@ export const WorkoutSessionInputSchema = z.object({
   }).strict()).min(1).max(100)
 }).strict();
 
+export const WorkoutTemplatePlanSchema = z.object({
+  dayName: z.string().trim().min(1).max(40),
+  splitTitle: z.string().trim().min(1).max(120),
+  focusMuscles: z.string().trim().max(200),
+  recoveryNotes: z.string().trim().max(500),
+  exercises: z.array(z.object({
+    exerciseId: z.string().trim().min(1).max(160).regex(/^[a-zA-Z0-9_-]+$/),
+    sets: z.number().int().min(1).max(30),
+    repRange: z.string().trim().min(1).max(50),
+    restSeconds: z.number().int().min(0).max(3600),
+    recommendedWeightKg: z.number().min(0.1).max(1000).optional()
+  }).strict()).max(50)
+}).strict();
+
+export const SaveWorkoutTemplateInputSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  plans: z.array(WorkoutTemplatePlanSchema).min(1).max(14)
+}).strict().refine(input => input.plans.reduce((total, plan) => total + plan.exercises.length, 0) <= 120, {
+  message: 'O modelo pode conter no máximo 120 itens de exercício.',
+  path: ['plans']
+}).refine(input => input.plans.some(plan => plan.exercises.length > 0), {
+  message: 'Adicione ao menos um exercício antes de salvar o modelo.',
+  path: ['plans']
+});
+
 export const LoggedMealInputSchema = z.object({
   date: z.string().refine(isRealCalendarDate, 'Informe uma data válida.'),
   mealName: z.string().trim().min(1).max(80),

@@ -1,5 +1,7 @@
 import { IDatabase } from '../driver';
-import { Exercise, WorkoutSession, WorkoutSet } from '../../shared/types';
+import { randomUUID } from 'crypto';
+import { Exercise, SaveWorkoutTemplateInput, WorkoutSession, WorkoutSet, WorkoutTemplate } from '../../shared/types';
+import { SaveWorkoutTemplateInputSchema } from '../../shared/schema';
 import { INITIAL_EXERCISES } from '../seeds/exercise-seeds';
 
 export class WorkoutRepository {
@@ -256,5 +258,48 @@ export class WorkoutRepository {
       isPr: Boolean(r.is_pr),
       notes: r.notes || undefined
     }));
+  }
+
+  getTemplates(): WorkoutTemplate[] {
+    const rows = this.db.query<any>('SELECT * FROM workout_templates ORDER BY updated_at DESC, name COLLATE NOCASE');
+    return rows.flatMap(row => {
+      try {
+        const parsed = SaveWorkoutTemplateInputSchema.safeParse({ name: row.name, plans: JSON.parse(row.plans_json) });
+        return parsed.success ? [{
+          id: row.id,
+          name: parsed.data.name,
+          plans: parsed.data.plans,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        }] : [];
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  saveTemplate(rawInput: SaveWorkoutTemplateInput): WorkoutTemplate {
+    const input = SaveWorkoutTemplateInputSchema.parse(rawInput);
+    const normalizedName = input.name.normalize('NFC').toLocaleLowerCase('pt-BR');
+    if (this.getTemplates().some(template => template.name.normalize('NFC').toLocaleLowerCase('pt-BR') === normalizedName)) {
+      throw new Error('Já existe um modelo de treino com esse nome.');
+    }
+    const plannedExerciseIds = [...new Set(input.plans.flatMap(plan => plan.exercises.map(item => item.exerciseId)))];
+    if (plannedExerciseIds.length === 0) throw new Error('Adicione ao menos um exercício antes de salvar o modelo.');
+    for (const exerciseId of plannedExerciseIds) {
+      if (!this.db.queryOne('SELECT 1 FROM exercises WHERE id = ?', [exerciseId])) {
+        throw new Error(`O exercício ${exerciseId} não existe no catálogo local.`);
+      }
+    }
+
+    const now = new Date().toISOString();
+    const id = `workout-template-${randomUUID()}`;
+    this.db.execute(
+      'INSERT INTO workout_templates (id, name, plans_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+      [id, input.name, JSON.stringify(input.plans), now, now]
+    );
+    const saved = this.getTemplates().find(template => template.id === id);
+    if (!saved) throw new Error('Não foi possível reabrir o modelo de treino salvo.');
+    return saved;
   }
 }

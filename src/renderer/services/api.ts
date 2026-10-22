@@ -14,6 +14,8 @@ import {
   WeightAnalyticsPoint,
   WeightRecord,
   WorkoutSession,
+  WorkoutTemplate,
+  SaveWorkoutTemplateInput,
   PhysiqueProjectionInput,
   PhysiqueProjectionSnapshot,
   ExerciseMediaInput,
@@ -51,7 +53,7 @@ import { INITIAL_FOODS, INITIAL_RECIPES } from '../../database/seeds/nutrition-s
 import { INITIAL_EXERCISES } from '../../database/seeds/exercise-seeds';
 import { DEFAULT_VISUAL_CUSTOMIZATION } from '../../domain/visual-customization';
 import { browserPhotoStore } from './browser-photo-store';
-import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema } from '../../shared/schema';
+import { CustomFoodInputSchema, DailyMealDateSchema, DailyMealHistoryQuerySchema, DailyMealCopyInputSchema, NutritionAnalyticsQuerySchema, SaveMealTemplateInputSchema, ApplyMealTemplateInputSchema, SaveWorkoutTemplateInputSchema } from '../../shared/schema';
 import { getRecentlyUsedFoods as selectRecentlyUsedFoods } from '../../domain/recent-foods';
 import { filterDailyMealHistory } from '../../domain/daily-meal-history';
 import { calculateNutritionAnalytics } from '../../domain/nutrition-analytics';
@@ -62,6 +64,7 @@ const LOCAL_STORAGE_KEY_WEIGHTS = 'fittrack_weights';
 const LOCAL_STORAGE_KEY_MEASUREMENTS = 'fittrack_measurements';
 const LOCAL_STORAGE_KEY_PANTRY = 'fittrack_pantry';
 const LOCAL_STORAGE_KEY_SESSIONS = 'fittrack_sessions';
+const LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES = 'fittrack_workout_templates';
 const LOCAL_STORAGE_KEY_PROJECTIONS = 'fittrack_physique_projections';
 const LOCAL_STORAGE_KEY_DAILY_LOGS = 'fittrack_daily_logs';
 const LOCAL_STORAGE_KEY_DAILY_MEALS = 'fittrack_daily_meals';
@@ -548,6 +551,54 @@ export const api = {
     const days = profile?.trainingDaysPerWeek || 5;
     const isReturning = Boolean(profile?.interruptionHistoryNotes && profile.interruptionHistoryNotes.includes('Retorno'));
     return workoutEngine.generateSplit(days, isReturning);
+  },
+
+  getWorkoutTemplates: async (): Promise<WorkoutTemplate[]> => {
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.getWorkoutTemplates();
+      if (!res.success) throw new Error(res.error || 'Erro ao carregar modelos de treino.');
+      return res.data || [];
+    }
+    try {
+      const templates = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES) || '[]') as WorkoutTemplate[];
+      if (!Array.isArray(templates)) return [];
+      return templates.flatMap(template => {
+        const parsed = SaveWorkoutTemplateInputSchema.safeParse({ name: template?.name, plans: template?.plans });
+        if (!parsed.success || typeof template?.id !== 'string' || typeof template?.createdAt !== 'string' || typeof template?.updatedAt !== 'string') return [];
+        return [{ id: template.id, name: parsed.data.name, plans: parsed.data.plans, createdAt: template.createdAt, updatedAt: template.updatedAt }];
+      });
+    } catch {
+      return [];
+    }
+  },
+
+  saveWorkoutTemplate: async (rawInput: SaveWorkoutTemplateInput): Promise<WorkoutTemplate> => {
+    const input = SaveWorkoutTemplateInputSchema.parse(rawInput);
+    if (api.isElectron()) {
+      const res = await window.fitTrackAPI.saveWorkoutTemplate(input);
+      if (!res.success || !res.data) throw new Error(res.error || 'Erro ao salvar modelo de treino.');
+      return res.data;
+    }
+    const exercises = await api.getExercises();
+    const exerciseIds = new Set(exercises.map(exercise => exercise.id));
+    const missingId = input.plans.flatMap(plan => plan.exercises).find(item => !exerciseIds.has(item.exerciseId));
+    if (missingId) throw new Error(`O exercício ${missingId.exerciseId} não existe no catálogo local.`);
+    const templates = await api.getWorkoutTemplates();
+    const normalizedName = input.name.normalize('NFC').toLocaleLowerCase('pt-BR');
+    if (templates.some(template => template.name.normalize('NFC').toLocaleLowerCase('pt-BR') === normalizedName)) {
+      throw new Error('Já existe um modelo de treino com esse nome.');
+    }
+    if (!input.plans.some(plan => plan.exercises.length > 0)) throw new Error('Adicione ao menos um exercício antes de salvar o modelo.');
+    const now = new Date().toISOString();
+    const template: WorkoutTemplate = {
+      id: `workout-template-${globalThis.crypto.randomUUID()}`,
+      name: input.name,
+      plans: input.plans,
+      createdAt: now,
+      updatedAt: now
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY_WORKOUT_TEMPLATES, JSON.stringify([template, ...templates]));
+    return template;
   },
 
   // --- METAS & DASHBOARD ---

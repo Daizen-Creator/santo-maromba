@@ -13,6 +13,7 @@ import {
   ProfileInputSchema,
   WeightRecordInputSchema,
   WorkoutSessionInputSchema,
+  SaveWorkoutTemplateInputSchema,
   VisualCustomizationSchema,
   CustomizationMediaInputSchema,
   CustomizationMediaIdSchema,
@@ -360,6 +361,24 @@ export function registerIpcHandlers(
       return { success: true, data: split };
     } catch (err: any) {
       return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_WORKOUT_TEMPLATES, async event => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.getWorkoutTemplates() };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível consultar os modelos de treino.' };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_WORKOUT_TEMPLATE, async (event, rawInput) => {
+    try {
+      getCallingWindow(event);
+      return { success: true, data: service.saveWorkoutTemplate(SaveWorkoutTemplateInputSchema.parse(rawInput)) };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Não foi possível salvar o modelo de treino.' };
     }
   });
 

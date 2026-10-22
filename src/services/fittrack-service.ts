@@ -37,6 +37,8 @@ import {
   WeightAnalyticsPoint,
   WeightRecord,
   WorkoutSession,
+  SaveWorkoutTemplateInput,
+  WorkoutTemplate,
   PhysiqueProjectionInput,
   PhysiqueProjectionSnapshot,
   ExerciseMediaInput,
@@ -373,6 +375,14 @@ export class FitTrackService {
     const days = profile?.trainingDaysPerWeek || 5;
     const isReturning = Boolean(profile?.interruptionHistoryNotes && profile.interruptionHistoryNotes.includes('Retorno'));
     return this.workoutEngine.generateSplit(days, isReturning);
+  }
+
+  getWorkoutTemplates(): WorkoutTemplate[] {
+    return this.workoutRepo.getTemplates();
+  }
+
+  saveWorkoutTemplate(input: SaveWorkoutTemplateInput): WorkoutTemplate {
+    return this.workoutRepo.saveTemplate(input);
   }
 
   logMeal(input: LoggedMealInput): void {

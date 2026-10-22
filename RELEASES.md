@@ -121,7 +121,11 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Gera uma divisão de treino doméstico em três dias sem prescrever halteres ou cargas externas.
 - A rotina usa exercícios da biblioteca instalada e informa os apoios necessários e as precauções para barra fixa.
 - Validada com 114 testes, build Windows e abertura do app portátil com criação do SQLite; GitHub Actions 39736038144 publicou instalador, portátil, manifesto e blockmap.
-- Validada com 110 testes, build Windows e abertura do app portátil com criação do SQLite; GitHub Actions 39734571772 publicou instalador, portátil, manifesto e blockmap.
+
+## v1.1.14
+
+- Salva e reaplica divisões de treino nomeadas usando os exercícios do catálogo local.
+- Os modelos permanecem no SQLite do desktop ou no armazenamento local do navegador e são validados antes de atravessar o IPC.
 
 ## Publicar uma versão
 

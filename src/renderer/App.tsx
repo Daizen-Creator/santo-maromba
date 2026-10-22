@@ -517,6 +517,8 @@ export const App: React.FC = () => {
               onLogSession={handleLogWorkoutSession}
               onAddExerciseMedia={handleAddExerciseMedia}
               onDeleteExerciseMedia={handleDeleteExerciseMedia}
+              onGetWorkoutTemplates={api.getWorkoutTemplates}
+              onSaveWorkoutTemplate={api.saveWorkoutTemplate}
             />
           )}
 

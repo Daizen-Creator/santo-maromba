@@ -61,6 +61,8 @@ export const IPC_CHANNELS = {
   GET_WORKOUT_SESSIONS: 'workout:get-sessions',
   LOG_WORKOUT_SESSION: 'workout:log-session',
   GENERATE_WORKOUT_SPLIT: 'workout:generate-split',
+  GET_WORKOUT_TEMPLATES: 'workout:get-templates',
+  SAVE_WORKOUT_TEMPLATE: 'workout:save-template',
 
   // System
   GET_VISUAL_CUSTOMIZATION: 'visual:get-customization',
