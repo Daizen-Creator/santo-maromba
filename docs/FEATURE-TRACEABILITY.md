@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.46. Estado após validação dos incrementos: **111 validadas, 34 parciais, 32 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.47. Estado após validação dos incrementos: **112 validadas, 33 parciais, 32 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -188,7 +188,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 127 | Cadastrar e consultar estoque por alimento em gramas, aceitar zero, rejeitar IDs inválidos e quantidades negativas ou acima do limite; manter o saldo após reiniciar. | `NutritionView.tsx`; `nutrition-repository.ts`; `api.ts`; validação e handler IPC | Catálogo local; SQLite desktop ou localStorage PWA | V · `pantry-consumption-api.test.ts`, `pantry-consumption-persistence.test.ts`, `validation.test.ts` |
 | 128 | Ao registrar consumo parcial/total, descontar somente a diferença ainda não registrada; não duplicar em salvamentos repetidos; devolver o saldo ao editar, excluir e desfazer; nunca permitir saldo negativo. | `pantry-consumption.ts`; `daily-log-repository.ts`; `nutrition-repository.ts`; `api.ts`; schema/migration 32 | Checklist alimentar e despensa | V · SQLite reaberto e fluxo offline testados; `pantry-consumption.test.ts`, `pantry-consumption-persistence.test.ts`, `pantry-consumption-api.test.ts`, `daily-meal-undo.test.ts` |
 | 129 | Salvar uma data real de validade por alimento na despensa, mostrar itens vencidos e alertar até sete dias antes; recuperar a data após reiniciar. | `NutritionView.tsx`; `pantry-expiry.ts`; `nutrition-repository.ts`; `api.ts`; schema/migration 33; handler/preload | SQLite desktop ou localStorage PWA | V · limite de sete dias e calendário; SQLite reaberto, PWA e validação testados em `pantry-expiry.test.ts`, `pantry-consumption-persistence.test.ts`, `pantry-consumption-api.test.ts`, `validation.test.ts` |
-| 130 | Calcular custo estimado por refeição. | NUTR; DESP | preços locais confiáveis | P · cálculo existe com preços estimados fixos |
+| 130 | Calcular o custo total e por porção com preços por kg informados para todos os ingredientes; mostrar origem do preço e manter estimativa identificada quando faltar algum preço. | `src/domain/recipe-cost.ts`; `NutritionView.tsx`; `nutrition-repository.ts`; `api.ts`; `types.ts` | Preços de usuário salvos por ingrediente; estimativa do catálogo como fallback identificado | V · `recipe-cost.test.ts` verifica cálculo e fallback; testes de persistência SQLite e PWA verificam preços reais e origem |
 | 131 | Definir orçamento por período. | DESP | — | A · sem orçamento |
 | 132 | Registrar ou remover preço por kg informado pelo usuário, origem e data de atualização; persistir após reabrir SQLite e no modo PWA offline; manter separados preços informados e estimativas do catálogo. | `NutritionView.tsx`; `nutrition-repository.ts`; `api.ts`; handlers/preload IPC; schema/migration 34 | Entrada manual; sem busca de preço externa | V · validação, SQLite reaberto e PWA testados em `validation.test.ts`, `pantry-consumption-persistence.test.ts`, `pantry-consumption-api.test.ts` |
 | 133 | Calcular deterministicamente custo por grama de proteína a partir de preço informado por kg e proteína por 100 g; não exibir cálculo quando faltar preço ou proteína positiva. | `nutrition-cost.ts`; `NutritionView.tsx`; catálogos alimentares | Preço e macronutriente cadastrados, com qualidade nutricional indicada | V · conversão, casos-limite e ausência de dado testados em `nutrition-cost.test.ts` |
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.46: 229/229 testes em 71 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; publicação pendente.
+- Incremento 1.1.47 (ID 130): 233/233 testes em 73 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos com criação do SQLite aprovados; publicação pendente.
+- Incremento 1.1.46 (IDs 132 e 133): 229/229 testes em 71 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; GitHub Actions 39779345989 publicou os artefatos.
 - Incremento 1.1.45: 225/225 testes em 70 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; GitHub Actions 39778413859 publicou os artefatos.
 - Incremento 1.1.44: 224/224 testes em 70 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; GitHub Actions 39777843147 publicou os artefatos.
 - Incremento 1.1.43: 222/222 testes em 69 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; GitHub Actions 39777137097 publicou os artefatos.

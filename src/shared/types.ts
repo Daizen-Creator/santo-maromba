@@ -710,6 +710,7 @@ export interface Recipe {
   totalCarbsG: number;
   totalFatsG: number;
   estimatedCost?: number;
+  costSource?: 'user_prices' | 'catalog_estimate';
   budgetSwaps?: string[];
   imageUrl?: string;
   imageCredit?: string;

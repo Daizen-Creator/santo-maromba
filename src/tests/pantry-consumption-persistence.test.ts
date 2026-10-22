@@ -101,4 +101,28 @@ describe('estoque e consumo confirmado no SQLite', () => {
     expect(service.getPantry().find(item => item.foodId === rice.id)).toMatchObject({ amountAvailableG: 350 });
     expect(service.getPantry().find(item => item.foodId === rice.id)?.unitPrice).toBeUndefined();
   });
+
+  it('usa preços locais para calcular custo da receita e mantém a origem após reabrir', async () => {
+    directory = fs.mkdtempSync(path.join(os.tmpdir(), 'santo-maromba-recipe-cost-'));
+    const databasePath = path.join(directory, 'fittrack.db');
+    db = await createDatabaseDriver(databasePath);
+    await runMigrations(db);
+    let service = new FitTrackService(db);
+    const foodIds = new Set(service.getFoods().map(food => food.id));
+    const recipe = service.getRecipes().find(item => item.ingredients.length > 0 && item.ingredients.every(ingredient => foodIds.has(ingredient.foodId)))!;
+    const priceByFood = new Map<string, number>();
+    recipe.ingredients.forEach((ingredient, index) => {
+      const price = 12 + index;
+      priceByFood.set(ingredient.foodId, price);
+      service.updatePantryPrice(ingredient.foodId, price, 'Pesquisa manual');
+    });
+    const expectedCost = Number(recipe.ingredients.reduce((sum, ingredient) => sum + priceByFood.get(ingredient.foodId)! * ingredient.amountG / 1000, 0).toFixed(2));
+    expect(service.getRecipes().find(item => item.id === recipe.id)).toMatchObject({ estimatedCost: expectedCost, costSource: 'user_prices' });
+
+    db.close();
+    db = await createDatabaseDriver(databasePath);
+    await runMigrations(db);
+    service = new FitTrackService(db);
+    expect(service.getRecipes().find(item => item.id === recipe.id)).toMatchObject({ estimatedCost: expectedCost, costSource: 'user_prices' });
+  });
 });

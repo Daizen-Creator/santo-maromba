@@ -4,6 +4,7 @@ import { CustomFoodInput, FoodItem, FoodPortionPreference, PantryItem, Recipe, R
 import { INITIAL_FOODS, INITIAL_RECIPES } from '../seeds/nutrition-seeds';
 import { normalizeRecipeFinalWeight, normalizeRecipeServings } from '../../domain/recipe-portions';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
+import { resolveRecipeCost } from '../../domain/recipe-cost';
 import { PantryItemUpdateInputSchema, PantryPriceUpdateInputSchema } from '../../shared/schema';
 
 export class NutritionRepository {
@@ -238,6 +239,7 @@ export class NutritionRepository {
 
   getRecipes(): Recipe[] {
     const rows = this.db.query<any>('SELECT * FROM recipes ORDER BY name ASC');
+    const pantry = this.getPantry();
     return rows.map(row => {
       const ingredients = this.db.query<any>(
         `SELECT ri.food_id, f.name, ri.amount_g, f.calories, f.protein_g, f.carbs_g, f.fats_g, f.price_estimated,
@@ -265,7 +267,7 @@ export class NutritionRepository {
         };
       });
 
-      return {
+      return resolveRecipeCost({
         id: row.id,
         name: row.name,
         category: row.category,
@@ -286,7 +288,7 @@ export class NutritionRepository {
         isFavorite: Boolean(row.is_favorite),
         userRating: row.user_rating == null ? undefined : Number(row.user_rating),
         personalNotes: row.personal_notes || ''
-      };
+      }, pantry);
     });
   }
 

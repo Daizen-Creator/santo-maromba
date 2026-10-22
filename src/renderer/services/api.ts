@@ -93,6 +93,7 @@ import { getWorkoutWeekDates } from '../../domain/workout-week-calendar';
 import { inferMealTurn } from '../../domain/meal-turn';
 import { calculateCustomFoodInput } from '../../domain/custom-food-composition';
 import { buildShoppingList } from '../../domain/shopping-list';
+import { resolveRecipeCost } from '../../domain/recipe-cost';
 import { PantryConsumptionRecord, reconcilePantryConsumption } from '../../domain/pantry-consumption';
 
 const LOCAL_STORAGE_KEY_PROFILE = 'fittrack_profile';
@@ -640,14 +641,15 @@ export const api = {
     const servingValues = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_SERVINGS) || '{}') as Record<string, number>;
     const finalWeights = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_FINAL_WEIGHTS) || '{}') as Record<string, number>;
     const feedbackValues = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_RECIPE_FEEDBACK) || '{}') as Record<string, { rating: number | null; personalNotes: string }>;
-    return INITIAL_RECIPES.map(recipe => ({
+    const pantry = await api.getPantry();
+    return INITIAL_RECIPES.map(recipe => resolveRecipeCost({
       ...recipe,
       servings: servingValues[recipe.id] ?? 1,
       finalWeightG: finalWeights[recipe.id],
       isFavorite: favorites.has(recipe.id),
       userRating: feedbackValues[recipe.id]?.rating ?? undefined,
       personalNotes: feedbackValues[recipe.id]?.personalNotes ?? ''
-    }));
+    }, pantry));
   },
 
   setRecipeFavorite: async (id: string, isFavorite: boolean): Promise<Recipe> => {

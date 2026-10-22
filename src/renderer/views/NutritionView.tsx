@@ -1650,7 +1650,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     </div>
                     {recipe.estimatedCost && (
                       <div className="flex items-center gap-0.5 text-emerald-400 font-bold">
-                        <span>R$ {(recipe.estimatedCost / servings).toFixed(2)} / porção (estimado)</span>
+                        <span>R$ {(recipe.estimatedCost / servings).toFixed(2)} / porção ({recipe.costSource === 'user_prices' ? 'preços informados' : 'estimativa do catálogo'})</span>
                       </div>
                     )}
                   </div>
@@ -2090,7 +2090,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                     <div className="rounded-xl border border-border bg-secondary/30 p-2 text-xs flex justify-between">
                       <span>{getRecipeNutritionPerServing(recipe).calories} kcal/porção</span>
                       <span className="font-bold text-primary">{getRecipeNutritionPerServing(recipe).proteinG}g Proteína</span>
-                      <span>R$ {((recipe.estimatedCost || 0) / (recipe.servings || 1)).toFixed(2)}/porção</span>
+                      <span>R$ {((recipe.estimatedCost || 0) / (recipe.servings || 1)).toFixed(2)}/porção · {recipe.costSource === 'user_prices' ? 'preço informado' : 'estimativa'}</span>
                     </div>
 
                     <ul className="text-[11px] text-muted-foreground space-y-1">
