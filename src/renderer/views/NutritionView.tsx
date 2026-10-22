@@ -26,6 +26,7 @@ import { getMaxPlannedAmountG, scalePlannedMealItem } from '../../domain/planned
 import { NutritionBalanceMetric, calculateNutritionBalance } from '../../domain/nutrition-balance';
 import { displayMassToGrams, formatFoodMass, gramsToDisplayMass } from '../../domain/measurement-units';
 import { useMeasurementUnits } from '../hooks/use-measurement-units';
+import { NaturalMealParseResult, parseNaturalMealDescription } from '../../domain/natural-meal-parser';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -153,6 +154,11 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [foodPortionDrafts, setFoodPortionDrafts] = useState<Record<string, string>>({});
   const [foodPortionSaving, setFoodPortionSaving] = useState<string | null>(null);
   const [foodPortionError, setFoodPortionError] = useState<string | null>(null);
+  const [naturalMealDescription, setNaturalMealDescription] = useState('');
+  const [naturalMealParse, setNaturalMealParse] = useState<NaturalMealParseResult | null>(null);
+  const [naturalMealSlotId, setNaturalMealSlotId] = useState('');
+  const [naturalMealError, setNaturalMealError] = useState<string | null>(null);
+  const [naturalMealStatus, setNaturalMealStatus] = useState<string | null>(null);
   const [historyFromDate, setHistoryFromDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 29);
@@ -504,6 +510,48 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     });
   }, [mealsPerDay, compatibleRecipes, dietaryPreferences, selectedSubstitutions, targets, wakeTime, sleepTime]);
 
+  const naturalMealSlots = mealPlan.filter(({ slot }) => {
+    const existing = dailyMealEntries.find(entry => entry.date === todayString && entry.slotId === slot.id);
+    return existing?.status !== 'consumed' && existing?.status !== 'partial';
+  });
+  const naturalMealSlot = naturalMealSlots.find(({ slot }) => slot.id === naturalMealSlotId) ?? naturalMealSlots[0] ?? null;
+
+  const interpretNaturalMeal = () => {
+    setNaturalMealError(null);
+    setNaturalMealStatus(null);
+    try {
+      setNaturalMealParse(parseNaturalMealDescription(naturalMealDescription, foods));
+    } catch (error) {
+      setNaturalMealParse(null);
+      setNaturalMealError(error instanceof Error ? error.message : 'Não foi possível interpretar a refeição.');
+    }
+  };
+
+  const saveNaturalMeal = async () => {
+    if (!naturalMealParse || !naturalMealSlot) return;
+    setSavingMealSlot(naturalMealSlot.slot.id);
+    setNaturalMealError(null);
+    setNaturalMealStatus(null);
+    try {
+      await onSaveDailyMeal({
+        date: todayString,
+        slotId: naturalMealSlot.slot.id,
+        mealName: naturalMealSlot.slot.title,
+        scheduledTime: naturalMealSlot.slot.time,
+        status: 'consumed',
+        items: naturalMealParse.items
+      });
+      setNaturalMealDescription('');
+      setNaturalMealParse(null);
+      setNaturalMealStatus(`Refeição registrada como consumida em ${naturalMealSlot.slot.title}.`);
+      await refreshRecentFoods();
+    } catch (error) {
+      setNaturalMealError(error instanceof Error ? error.message : 'Não foi possível salvar a refeição.');
+    } finally {
+      setSavingMealSlot(null);
+    }
+  };
+
   const visibleMealPlan = mealPlan.filter(({ slot }) => {
     if (mealListFilter === 'all') return true;
     const entry = dailyMealEntries.find(item => item.date === todayString && item.slotId === slot.id);
@@ -647,6 +695,60 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               </div>
             </div>
           )}
+
+          <section className="rounded-3xl border border-primary/20 bg-card p-5 shadow-sm space-y-4" aria-label="Registrar refeição escrevendo em português">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></span>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Registrar refeição em texto</h3>
+                <p className="mt-1 max-w-3xl text-[10px] leading-relaxed text-muted-foreground">Escreva os alimentos e o peso de cada um. O app interpreta localmente usando o catálogo, mostra os macros e só inclui no consumo depois da sua confirmação.</p>
+              </div>
+            </div>
+            <label className="block space-y-1.5 text-xs font-medium text-muted-foreground">
+              Descrição da refeição
+              <textarea
+                value={naturalMealDescription}
+                maxLength={2000}
+                rows={2}
+                placeholder="Ex.: 150 g de peito de frango grelhado e 100 g de arroz branco cozido"
+                onChange={event => { setNaturalMealDescription(event.target.value); setNaturalMealParse(null); setNaturalMealError(null); setNaturalMealStatus(null); }}
+                className="block w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none"
+              />
+            </label>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="min-w-48 flex-1 space-y-1.5 text-xs font-medium text-muted-foreground">
+                Registrar em um horário livre
+                <select value={naturalMealSlot?.slot.id ?? ''} onChange={event => setNaturalMealSlotId(event.target.value)} disabled={!naturalMealSlots.length} className="block w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground disabled:opacity-50">
+                  {naturalMealSlots.length === 0 ? <option value="">Todos os horários já têm consumo registrado</option> : naturalMealSlots.map(({ slot }) => <option key={slot.id} value={slot.id}>{slot.title} · {slot.time}</option>)}
+                </select>
+              </label>
+              <button type="button" onClick={interpretNaturalMeal} disabled={!naturalMealDescription.trim()} className="min-h-10 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50">Interpretar</button>
+            </div>
+            {naturalMealSlot && dailyMealEntries.some(entry => entry.date === todayString && entry.slotId === naturalMealSlot.slot.id) && (
+              <p className="text-[10px] text-amber-200">Este horário tem um plano pendente. Ao confirmar, o registro planejado será substituído pelo alimento realmente consumido.</p>
+            )}
+            {naturalMealParse && (
+              <div className="rounded-2xl border border-border/70 bg-background/35 p-4 space-y-3">
+                <h4 className="text-xs font-semibold text-foreground">Itens reconhecidos e porções</h4>
+                <ul className="space-y-2">
+                  {naturalMealParse.items.map(item => (
+                    <li key={item.itemId} className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
+                      <span className="text-foreground">{formatMass(item.plannedAmountG)} · {item.foodName}</span>
+                      <span className="text-muted-foreground">{item.calories} kcal · {item.proteinG} g proteína · {item.dataSource || 'origem não informada'}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border/70 pt-2 text-[10px] font-medium text-muted-foreground">
+                  <span>{naturalMealParse.calories} kcal</span><span>{naturalMealParse.proteinG} g proteína</span><span>{naturalMealParse.carbsG} g carboidratos</span><span>{naturalMealParse.fatsG} g gorduras</span>
+                </div>
+                <button type="button" onClick={() => void saveNaturalMeal()} disabled={!naturalMealSlot || savingMealSlot === naturalMealSlot?.slot.id} className="min-h-10 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">
+                  {savingMealSlot === naturalMealSlot?.slot.id ? 'Salvando…' : 'Confirmar e registrar como consumida'}
+                </button>
+              </div>
+            )}
+            {naturalMealStatus && <p role="status" className="text-xs text-emerald-300">{naturalMealStatus}</p>}
+            {naturalMealError && <p role="alert" className="text-xs text-red-300">{naturalMealError}</p>}
+          </section>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card/70 p-3">
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar refeições do dia">

@@ -213,7 +213,14 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Adiciona diário pessoal para registrar, revisar e excluir observações da rotina e dos treinos por data, com consulta mensal e edição sem criar duplicatas.
 - As anotações ficam no SQLite do desktop e no armazenamento local offline da PWA; o limite é de 3.000 caracteres por dia.
 - Migração 23 cria a tabela do diário sem alterar os demais registros.
-- 168 testes em 50 arquivos passaram; build, instalador NSIS e versão portátil foram aprovados. O executável abriu em perfil isolado e criou um SQLite com a migração 23 e a tabela do diário. Publicação GitHub pendente.
+- 168 testes em 50 arquivos passaram; build, instalador NSIS e versão portátil foram aprovados. O executável abriu em perfil isolado e criou um SQLite com a migração 23 e a tabela do diário. GitHub Actions 39751404845 publicou os quatro artefatos.
+
+## v1.1.29
+
+- Interpreta descrições em português com pesos explícitos (g/kg), procurando nomes no catálogo local e calculando os macros deterministicamente por 100 g.
+- Exibe os alimentos e valores reconhecidos antes da confirmação; salva o consumo no horário escolhido do checklist, com quantidades e referências de origem do catálogo.
+- Não chama serviços de IA ou servidores externos; desconhecidos, ambiguidades e porções fora do limite geram mensagem para correção.
+- 172 testes em 51 arquivos passaram; build, instalador NSIS e versão portátil foram aprovados. O executável abriu em perfil isolado e criou o SQLite com catálogo local e checklist disponíveis. Publicação GitHub pendente.
 
 ## Publicar uma versão
 

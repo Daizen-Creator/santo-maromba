@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.28. Estado após validação do incremento: **86 validadas, 44 parciais, 47 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.29. Estado após validação do incremento: **87 validadas, 43 parciais, 47 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -54,7 +54,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 | ID | Comportamento verificável (critério de aceitação) | Arquivos | Dependência | Estado / teste |
 |---:|---|---|---|---|
-| 21 | Entender alimento e quantidade escritos em português natural. | DIAR | serviço de linguagem/IA para interpretação robusta | P · existe texto manual, sem interpretação |
+| 21 | Descrever uma refeição em português com quantidade explícita, reconhecer itens do catálogo local, revisar pesos/macros calculados e confirmar o consumo em horário livre do checklist; rejeitar desconhecidos ou nomes ambíguos. | `natural-meal-parser.ts`; `NutritionView.tsx`; `daily-log-repository.ts`; `api.ts`; catálogo de alimentos | SQLite desktop; armazenamento local offline na PWA | V · `natural-meal-parser.test.ts` cobre correspondência do catálogo, cálculo por grama, quantidades ausentes/fora de faixa, alimento desconhecido, ambiguidade e persistência de itens/macros após reabrir SQLite e PWA |
 | 22 | Classificar registro por café, almoço, lanche, jantar ou ceia. | DIAR | — | P · slots existem; classificação manual limitada |
 | 23 | Distinguir itens planejados dos realmente consumidos. | DIAR | — | V · `daily-meal-api.test.ts` |
 | 24 | Registrar gramas parciais e recalcular totais consumidos. | DIAR; NUTR | — | V · `daily-log-persistence.test.ts` |
