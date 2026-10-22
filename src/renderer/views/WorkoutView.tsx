@@ -105,6 +105,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   const [sessionDiscomfortLevel, setSessionDiscomfortLevel] = useState('');
   const [sessionDiscomfortArea, setSessionDiscomfortArea] = useState('');
   const [sessionRecoveryRating, setSessionRecoveryRating] = useState('');
+  const [warmupCompleted, setWarmupCompleted] = useState(false);
+  const [cooldownCompleted, setCooldownCompleted] = useState(false);
   const [savingSession, setSavingSession] = useState<boolean>(false);
   const [sessionSuccessMsg, setSessionSuccessMsg] = useState<string | null>(null);
   const [sessionValidationError, setSessionValidationError] = useState<string | null>(null);
@@ -375,6 +377,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
         discomfortLevel: sessionDiscomfortLevel === '' ? undefined : Number(sessionDiscomfortLevel),
         discomfortArea: Number(sessionDiscomfortLevel) > 0 ? sessionDiscomfortArea.trim() || undefined : undefined,
         recoveryRating: sessionRecoveryRating === '' ? undefined : Number(sessionRecoveryRating),
+        warmupCompleted,
+        cooldownCompleted,
         notes: sessionNotes.trim() || undefined,
         sets: activeSets.map(({ exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir, notes }) => ({
           exerciseId, setNumber, weightKg, reps, completed: setCompleted, rpe, rir, notes: notes?.trim() || undefined
@@ -390,6 +394,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
       setSessionDiscomfortLevel('');
       setSessionDiscomfortArea('');
       setSessionRecoveryRating('');
+      setWarmupCompleted(false);
+      setCooldownCompleted(false);
       setTimeout(() => setSessionSuccessMsg(null), 4000);
     } catch (error: any) {
       setSessionValidationError(error.message || 'Não foi possível salvar o treino.');
@@ -711,6 +717,18 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                   </div>
                 )}
                 {restCompleteMessage && <p role="status" className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">{restCompleteMessage}</p>}
+
+                <fieldset className="grid gap-2 rounded-2xl border border-border/70 bg-background/40 p-4 sm:grid-cols-2">
+                  <legend className="px-1 text-xs font-semibold text-muted-foreground">Preparação e encerramento</legend>
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-card/50 px-3 py-2.5 text-xs text-foreground transition hover:border-primary/40">
+                    <input type="checkbox" checked={warmupCompleted} onChange={event => setWarmupCompleted(event.target.checked)} className="h-4 w-4 accent-primary" />
+                    <span><strong className="block">Aquecimento</strong><span className="text-[10px] text-muted-foreground">Marcar quando concluir antes das séries.</span></span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-card/50 px-3 py-2.5 text-xs text-foreground transition hover:border-primary/40">
+                    <input type="checkbox" checked={cooldownCompleted} onChange={event => setCooldownCompleted(event.target.checked)} className="h-4 w-4 accent-primary" />
+                    <span><strong className="block">Volta à calma</strong><span className="text-[10px] text-muted-foreground">Marcar quando concluir após o treino.</span></span>
+                  </label>
+                </fieldset>
 
                 {/* Finalizar Treino */}
                 <div className="pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -1283,6 +1301,10 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                       {s.recoveryRating !== undefined && <span className="rounded-lg border border-border bg-card/60 px-2 py-1">Recuperação: {s.recoveryRating}/5</span>}
                     </div>
                   )}
+                  <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    <span className={`rounded-lg border px-2 py-1 ${s.warmupCompleted ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-border bg-card/60'}`}>Aquecimento: {s.warmupCompleted ? 'concluído' : 'não marcado'}</span>
+                    <span className={`rounded-lg border px-2 py-1 ${s.cooldownCompleted ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-border bg-card/60'}`}>Volta à calma: {s.cooldownCompleted ? 'concluída' : 'não marcada'}</span>
+                  </div>
                   <div className="flex flex-wrap gap-2 pt-1">
                     {s.sets.map(set => (
                       <div key={set.id} className={`max-w-full rounded-lg border px-2 py-1 text-[10px] ${set.isPr ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-border bg-card/60 text-muted-foreground'}`}>

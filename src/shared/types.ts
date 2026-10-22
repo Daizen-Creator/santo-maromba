@@ -963,6 +963,8 @@ export interface WorkoutSession {
   discomfortLevel?: number;
   discomfortArea?: string;
   recoveryRating?: number;
+  warmupCompleted?: boolean;
+  cooldownCompleted?: boolean;
   sets: WorkoutSet[];
   notes?: string;
   createdAt: string;

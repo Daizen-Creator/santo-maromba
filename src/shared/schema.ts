@@ -313,6 +313,8 @@ export const WorkoutSessionInputSchema = z.object({
   discomfortLevel: z.number().int().min(0).max(10).optional(),
   discomfortArea: z.string().trim().max(120).optional(),
   recoveryRating: z.number().int().min(1).max(5).optional(),
+  warmupCompleted: z.boolean().optional(),
+  cooldownCompleted: z.boolean().optional(),
   notes: z.string().trim().max(500).optional(),
   sets: z.array(z.object({
     exerciseId: z.string().min(1).max(160).regex(/^[a-zA-Z0-9_-]+$/),

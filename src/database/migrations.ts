@@ -153,6 +153,12 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!workoutSessionColumns.some(column => column.name === 'recovery_rating')) {
     db.exec('ALTER TABLE workout_sessions ADD COLUMN recovery_rating INTEGER CHECK(recovery_rating BETWEEN 1 AND 5)');
   }
+  if (!workoutSessionColumns.some(column => column.name === 'warmup_completed')) {
+    db.exec('ALTER TABLE workout_sessions ADD COLUMN warmup_completed INTEGER NOT NULL DEFAULT 0 CHECK(warmup_completed IN (0, 1))');
+  }
+  if (!workoutSessionColumns.some(column => column.name === 'cooldown_completed')) {
+    db.exec('ALTER TABLE workout_sessions ADD COLUMN cooldown_completed INTEGER NOT NULL DEFAULT 0 CHECK(cooldown_completed IN (0, 1))');
+  }
   db.exec(`CREATE TABLE IF NOT EXISTS app_metadata (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -589,6 +595,13 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [39, 'Diário estruturado de sono, energia e sintomas', new Date().toISOString()]
+    );
+  }
+  const version40 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 40');
+  if (!version40) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [40, 'Checklist de aquecimento e volta à calma por sessão', new Date().toISOString()]
     );
   }
 }

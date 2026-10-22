@@ -1118,6 +1118,8 @@ export const api = {
       discomfortLevel: validatedSession.discomfortLevel,
       discomfortArea: validatedSession.discomfortArea,
       recoveryRating: validatedSession.recoveryRating,
+      warmupCompleted: validatedSession.warmupCompleted,
+      cooldownCompleted: validatedSession.cooldownCompleted,
       notes: validatedSession.notes,
       sets: validatedSession.sets.map((set, index) => ({
         ...set,

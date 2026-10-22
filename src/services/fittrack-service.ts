@@ -503,6 +503,8 @@ export class FitTrackService {
     discomfortLevel?: number;
     discomfortArea?: string;
     recoveryRating?: number;
+    warmupCompleted?: boolean;
+    cooldownCompleted?: boolean;
     notes?: string;
     sets: any[];
   }): WorkoutSession {

@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.59. Estado após validação dos incrementos: **128 validadas, 28 parciais, 21 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.60. Estado após validação dos incrementos: **130 validadas, 28 parciais, 19 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -243,8 +243,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 172 | Distinguir descanso planejado de treino não realizado. | TREI | — | P · dias de recuperação existem, falta registrar treino perdido |
 | 173 | Registrar suplementos consumidos. | DIAR; NUTR | — | A · suplemento só aparece como categoria de alimento |
 | 174 | Registrar dose/quantidade e consultar histórico de suplementos. | DIAR; NUTR | — | A · sem histórico específico |
-| 175 | Marcar aquecimento concluído por treino. | TREI | — | A · sem checklist de aquecimento |
-| 176 | Marcar volta à calma concluída. | TREI | — | A · sem checklist |
+| 175 | Marcar aquecimento concluído por treino. | `WorkoutView.tsx`; SQLite/PWA; migração 40 | — | V · checklist por sessão permanece após reabrir o SQLite e funciona offline; `workout-media-persistence.test.ts`, `workout-recovery-persistence.test.ts`, `workout-migration.test.ts`, `validation.test.ts` |
+| 176 | Marcar volta à calma concluída. | `WorkoutView.tsx`; SQLite/PWA; migração 40 | — | V · conclusão separada e persistente por sessão; coberta pelos mesmos testes dos itens 175 |
 | 177 | Gerar revisão semanal de treino, alimentação e hábitos. | DASH | — | A · sem relatório semanal combinado |
 | 178 | Mostrar associações exploratórias sem alegar causalidade. | DASH | dados longitudinais suficientes | A · sem análise de associação |
 | 179 | Pausar metas/treinos por doença e retomar depois. | PERF; TREI | — | A · sem estado de pausa |

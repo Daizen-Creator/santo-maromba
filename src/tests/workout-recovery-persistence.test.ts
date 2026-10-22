@@ -26,6 +26,8 @@ describe('Recuperação e desconforto no histórico de treino web', () => {
       discomfortLevel: 4,
       discomfortArea: 'Joelho direito',
       recoveryRating: 3,
+      warmupCompleted: true,
+      cooldownCompleted: true,
       sets: [{ exerciseId: 'agachamento', setNumber: 1, weightKg: 40, reps: 8 }]
     };
 
@@ -33,13 +35,17 @@ describe('Recuperação e desconforto no histórico de treino web', () => {
     expect(saved).toMatchObject({
       discomfortLevel: 4,
       discomfortArea: 'Joelho direito',
-      recoveryRating: 3
+      recoveryRating: 3,
+      warmupCompleted: true,
+      cooldownCompleted: true
     });
     expect(await api.getWorkoutSessions()).toMatchObject([{
       id: saved.id,
       discomfortLevel: 4,
       discomfortArea: 'Joelho direito',
-      recoveryRating: 3
+      recoveryRating: 3,
+      warmupCompleted: true,
+      cooldownCompleted: true
     }]);
     await expect(api.logWorkoutSession({ ...input, recoveryRating: 6 })).rejects.toThrow();
     await expect(api.logWorkoutSession({ ...input, discomfortLevel: 0, discomfortArea: 'Joelho direito' })).rejects.toThrow();

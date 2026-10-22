@@ -345,6 +345,8 @@ CREATE TABLE IF NOT EXISTS workout_sessions (
   discomfort_level INTEGER CHECK(discomfort_level BETWEEN 0 AND 10),
   discomfort_area TEXT,
   recovery_rating INTEGER CHECK(recovery_rating BETWEEN 1 AND 5),
+  warmup_completed INTEGER NOT NULL DEFAULT 0 CHECK(warmup_completed IN (0, 1)),
+  cooldown_completed INTEGER NOT NULL DEFAULT 0 CHECK(cooldown_completed IN (0, 1)),
   notes TEXT,
   created_at TEXT NOT NULL
 );

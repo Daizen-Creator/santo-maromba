@@ -120,6 +120,26 @@ describe('Mídia local e progressão de cargas', () => {
     });
   });
 
+  it('persiste o checklist de aquecimento e volta à calma após reabrir o banco', async () => {
+    const exerciseId = INITIAL_EXERCISES[0].id;
+    const saved = service.logWorkoutSession({
+      date: '2026-10-22', splitName: 'Treino C', completed: true,
+      warmupCompleted: true, cooldownCompleted: false,
+      sets: [{ exerciseId, setNumber: 1, weightKg: 20, reps: 8 }]
+    });
+    expect(saved).toMatchObject({ warmupCompleted: true, cooldownCompleted: false });
+
+    db!.close();
+    db = await createDatabaseDriver(databasePath);
+    await runMigrations(db);
+    service = new FitTrackService(db, path.join(tempDirectory, 'photos'), mediaDirectory);
+
+    expect(service.getWorkoutSessions().find(session => session.id === saved.id)).toMatchObject({
+      warmupCompleted: true,
+      cooldownCompleted: false
+    });
+  });
+
   it('persiste sessões parciais e conclusão de cada série sem contar uma sessão parcial como PR', async () => {
     const exerciseId = INITIAL_EXERCISES[0].id;
     const partial = service.logWorkoutSession({
