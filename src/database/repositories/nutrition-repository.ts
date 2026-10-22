@@ -334,7 +334,7 @@ export class NutritionRepository {
 
   getPantry(): PantryItem[] {
     const rows = this.db.query<any>(
-      `SELECT p.id, p.food_id, f.name as food_name, p.amount_available_g, p.unit_price, p.updated_at
+      `SELECT p.id, p.food_id, f.name as food_name, p.amount_available_g, p.unit_price, p.expires_at, p.updated_at
        FROM pantry_items p
        JOIN foods f ON p.food_id = f.id
        ORDER BY f.name ASC`
@@ -346,26 +346,31 @@ export class NutritionRepository {
       foodName: r.food_name,
       amountAvailableG: Number(r.amount_available_g),
       unitPrice: r.unit_price ? Number(r.unit_price) : undefined,
+      expiresAt: r.expires_at || undefined,
       updatedAt: r.updated_at
     }));
   }
 
-  updatePantryItem(foodId: string, amountAvailableG: number): void {
-    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG: amountAvailableG });
+  updatePantryItem(foodId: string, amountAvailableG: number, expiresAt?: string | null): void {
+    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG: amountAvailableG, expiresAt });
     const existing = this.db.queryOne<any>('SELECT id FROM pantry_items WHERE food_id = ?', [input.foodId]);
+    const existingExpiry = existing
+      ? this.db.queryOne<{ expires_at: string | null }>('SELECT expires_at FROM pantry_items WHERE id = ?', [existing.id])?.expires_at
+      : null;
+    const savedExpiry = input.expiresAt === undefined ? existingExpiry : input.expiresAt;
     const now = new Date().toISOString();
 
     this.db.transaction(() => {
       if (existing) {
         this.db.execute(
-          'UPDATE pantry_items SET amount_available_g = ?, updated_at = ? WHERE id = ?',
-          [input.amountG, now, existing.id]
+          'UPDATE pantry_items SET amount_available_g = ?, expires_at = ?, updated_at = ? WHERE id = ?',
+          [input.amountG, savedExpiry, now, existing.id]
         );
       } else {
         const id = `pantry-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
         this.db.execute(
-          'INSERT INTO pantry_items (id, food_id, amount_available_g, updated_at) VALUES (?, ?, ?, ?)',
-          [id, input.foodId, input.amountG, now]
+          'INSERT INTO pantry_items (id, food_id, amount_available_g, expires_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+          [id, input.foodId, input.amountG, savedExpiry, now]
         );
       }
       // A manual stock entry is authoritative, so later edits cannot refund older deductions twice.

@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.43. Estado após validação dos incrementos: **107 validadas, 36 parciais, 34 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.44. Estado após validação dos incrementos: **108 validadas, 36 parciais, 33 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -187,7 +187,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 126 | Somar o mesmo alimento em vários horários/dias e recalcular itens ao regenerar a semana. | `shopping-list.ts`; `shopping-list-repository.ts`; `WeeklyMealPlanner.tsx` | Plano e catálogo local | V · quantidades consolidadas e recalculadas; `shopping-list.test.ts`, `shopping-list-persistence.test.ts` |
 | 127 | Cadastrar e consultar estoque por alimento em gramas, aceitar zero, rejeitar IDs inválidos e quantidades negativas ou acima do limite; manter o saldo após reiniciar. | `NutritionView.tsx`; `nutrition-repository.ts`; `api.ts`; validação e handler IPC | Catálogo local; SQLite desktop ou localStorage PWA | V · `pantry-consumption-api.test.ts`, `pantry-consumption-persistence.test.ts`, `validation.test.ts` |
 | 128 | Ao registrar consumo parcial/total, descontar somente a diferença ainda não registrada; não duplicar em salvamentos repetidos; devolver o saldo ao editar, excluir e desfazer; nunca permitir saldo negativo. | `pantry-consumption.ts`; `daily-log-repository.ts`; `nutrition-repository.ts`; `api.ts`; schema/migration 32 | Checklist alimentar e despensa | V · SQLite reaberto e fluxo offline testados; `pantry-consumption.test.ts`, `pantry-consumption-persistence.test.ts`, `pantry-consumption-api.test.ts`, `daily-meal-undo.test.ts` |
-| 129 | Salvar validade e alertar antes do vencimento. | DESP | — | A · sem validade |
+| 129 | Salvar uma data real de validade por alimento na despensa, mostrar itens vencidos e alertar até sete dias antes; recuperar a data após reiniciar. | `NutritionView.tsx`; `pantry-expiry.ts`; `nutrition-repository.ts`; `api.ts`; schema/migration 33; handler/preload | SQLite desktop ou localStorage PWA | V · limite de sete dias e calendário; SQLite reaberto, PWA e validação testados em `pantry-expiry.test.ts`, `pantry-consumption-persistence.test.ts`, `pantry-consumption-api.test.ts`, `validation.test.ts` |
 | 130 | Calcular custo estimado por refeição. | NUTR; DESP | preços locais confiáveis | P · cálculo existe com preços estimados fixos |
 | 131 | Definir orçamento por período. | DESP | — | A · sem orçamento |
 | 132 | Atualizar preços e guardar data/fonte. | DESP; NUTR | entrada do usuário ou fonte de preços | P · preço estimado estático |
@@ -295,7 +295,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 
 ## Resultado da validação desta versão
 
-- Incremento 1.1.43: 222/222 testes em 69 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; publicação pendente.
+- Incremento 1.1.44: 224/224 testes em 70 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; publicação pendente.
+- Incremento 1.1.43: 222/222 testes em 69 arquivos, build, instalador NSIS, portable e abertura isolada por 12 segundos aprovados; GitHub Actions 39777137097 publicou os artefatos.
 - Incremento 1.1.42: 216/216 testes, build, instalador NSIS, portable e inicialização isolada por 12 segundos aprovados; workflow 39775584057 publicou instalador, portátil, blockmap e `latest.yml`.
 - Incremento 1.1.41: 211/211 testes, build, instalador NSIS, portable, inicialização isolada e publicação aprovados pelo workflow 39774510725.
 - Incremento 1.1.40: 208/208 testes, build, instalador NSIS, portable, inicialização isolada e publicação aprovados pelo workflow 39773627942.

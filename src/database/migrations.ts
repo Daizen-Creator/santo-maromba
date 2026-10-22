@@ -465,4 +465,15 @@ export async function runMigrations(db: IDatabase): Promise<void> {
       [32, 'Controle de estoque e consumo confirmado por refeição', new Date().toISOString()]
     );
   }
+  const pantryColumns = db.query<{ name: string }>('PRAGMA table_info(pantry_items)');
+  if (!pantryColumns.some(column => column.name === 'expires_at')) {
+    db.exec('ALTER TABLE pantry_items ADD COLUMN expires_at TEXT');
+  }
+  const version33 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 33');
+  if (!version33) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [33, 'Datas de validade e alertas da despensa', new Date().toISOString()]
+    );
+  }
 }

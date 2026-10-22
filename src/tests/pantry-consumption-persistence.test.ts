@@ -22,7 +22,7 @@ describe('estoque e consumo confirmado no SQLite', () => {
     await runMigrations(db);
     let service = new FitTrackService(db);
     const rice = service.getFoods().find(food => food.id === 'food-arroz')!;
-    service.updatePantryItem(rice.id, 500);
+    service.updatePantryItem(rice.id, 500, '2026-11-02');
     const meal = {
       date: '2026-10-22', slotId: 'lunch', mealName: 'Almoço', scheduledTime: '12:00', status: 'consumed' as const,
       items: [{ itemId: 'rice-1', foodId: rice.id, foodName: rice.name, plannedAmountG: 200, consumedAmountG: 200,
@@ -39,7 +39,9 @@ describe('estoque e consumo confirmado no SQLite', () => {
     await runMigrations(db);
     service = new FitTrackService(db);
     expect(service.getPantry().find(item => item.foodId === rice.id)?.amountAvailableG).toBe(300);
+    expect(service.getPantry().find(item => item.foodId === rice.id)?.expiresAt).toBe('2026-11-02');
     expect(db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 32')?.version).toBe(32);
+    expect(db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 33')?.version).toBe(33);
 
     const deleted = service.deleteDailyMeal({ date: meal.date, slotId: meal.slotId });
     expect(service.getPantry().find(item => item.foodId === rice.id)?.amountAvailableG).toBe(500);

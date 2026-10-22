@@ -724,10 +724,10 @@ export const api = {
     return json ? JSON.parse(json) : [];
   },
 
-  updatePantry: async (foodId: string, amountG: number): Promise<void> => {
-    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG });
+  updatePantry: async (foodId: string, amountG: number, expiresAt?: string | null): Promise<void> => {
+    const input = PantryItemUpdateInputSchema.parse({ foodId, amountG, expiresAt });
     if (api.isElectron()) {
-      const res = await window.fitTrackAPI.updatePantry(input.foodId, input.amountG);
+      const res = await window.fitTrackAPI.updatePantry(input.foodId, input.amountG, input.expiresAt);
       if (!res.success) throw new Error(res.error || 'Erro ao atualizar despensa.');
       return;
     }
@@ -736,6 +736,7 @@ export const api = {
     if (existing) {
       existing.amountAvailableG = input.amountG;
       existing.updatedAt = new Date().toISOString().split('T')[0];
+      if (input.expiresAt !== undefined) existing.expiresAt = input.expiresAt || undefined;
     } else {
       const food = (await api.getFoods()).find(f => f.id === input.foodId);
       if (!food) throw new Error('Alimento não encontrado no catálogo.');
@@ -745,6 +746,7 @@ export const api = {
           foodId: input.foodId,
           foodName: food.name,
           amountAvailableG: input.amountG,
+          expiresAt: input.expiresAt || undefined,
           updatedAt: new Date().toISOString().split('T')[0]
         });
       }

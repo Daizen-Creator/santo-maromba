@@ -379,7 +379,8 @@ export const PantryRecipeSearchInputSchema = z.object({
 
 export const PantryItemUpdateInputSchema = z.object({
   foodId: z.string().trim().min(1).max(100).regex(/^[\w-]+$/),
-  amountG: z.number().finite().min(0).max(100000)
+  amountG: z.number().finite().min(0).max(100000),
+  expiresAt: z.string().refine(isRealCalendarDate, 'Informe uma data de validade válida.').nullable().optional()
 }).strict();
 
 export const ShoppingListPurchaseInputSchema = z.object({

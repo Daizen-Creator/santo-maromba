@@ -767,6 +767,7 @@ export interface PantryItem {
   foodName: string;
   amountAvailableG: number;
   unitPrice?: number;
+  expiresAt?: string;
   updatedAt: string;
 }
 

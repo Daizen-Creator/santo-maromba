@@ -33,6 +33,7 @@ import { NaturalMealParseResult, parseNaturalMealDescription } from '../../domai
 import { getMealTurnLabel, MEAL_TURN_OPTIONS } from '../../domain/meal-turn';
 import { createPlannedMealFoodItem, removePlannedMealFoodItem } from '../../domain/meal-composition';
 import { WeeklyMealPlanner } from '../components/WeeklyMealPlanner';
+import { getPantryExpiryReminder } from '../../domain/pantry-expiry';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -68,7 +69,7 @@ interface NutritionViewProps {
   onGetNutritionDistribution: (date: string) => Promise<NutritionMealDistributionEntry[]>;
   pantry: PantryItem[];
   onGetSubstitutions: (foodId: string, amountG: number) => Promise<SubstitutionOption[]>;
-  onUpdatePantry: (foodId: string, amountG: number) => Promise<void>;
+  onUpdatePantry: (foodId: string, amountG: number, expiresAt?: string | null) => Promise<void>;
   onFindRecipesFromPantry: (input?: PantryRecipeSearchInput) => Promise<Array<Recipe & { matchRate: number }>>;
   onSaveDailyMeal: (input: DailyMealEntryInput) => Promise<void>;
   onDeleteDailyMeal: (input: DailyMealIdentityInput) => Promise<DailyMealEntry>;
@@ -146,6 +147,10 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const displayFoodMass = (grams: number) => gramsToDisplayMass(grams, unitPreferences.foodMassUnit);
   const formatMass = (grams: number) => formatFoodMass(grams, unitPreferences.foodMassUnit);
   const saveUnitPreference = (change: Partial<typeof unitPreferences>) => { void updatePreferences(change).catch(() => undefined); };
+  const pantryExpiryAlerts = useMemo(() => pantry
+    .filter(item => item.amountAvailableG > 0)
+    .map(item => ({ item, reminder: getPantryExpiryReminder(item.expiresAt) }))
+    .filter(({ reminder }) => reminder.status === 'expired' || reminder.status === 'expiring'), [pantry]);
 
   // Filtros do Catálogo de 200 Receitas
   const [selectedTurn, setSelectedTurn] = useState<MealTurn | 'all'>('all');
@@ -2103,6 +2108,15 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             </div>
           </div>
 
+          {pantryExpiryAlerts.length > 0 && (
+            <div role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
+              <strong>{pantryExpiryAlerts.filter(({ reminder }) => reminder.status === 'expired').length} vencido(s)</strong>
+              {' · '}
+              <strong>{pantryExpiryAlerts.filter(({ reminder }) => reminder.status === 'expiring').length} vence(m) em até 7 dias</strong>
+              <span className="mt-1 block text-amber-100/80">Confira as datas abaixo antes de usar esses alimentos.</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {foods.map(f => {
               const inPantry = pantry.find(p => p.foodId === f.id);
@@ -2138,12 +2152,29 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                         step={unitPreferences.foodMassUnit === 'kg' ? 0.05 : 50}
                         value={displayFoodMass(amountG)}
                         aria-label={`Quantidade de ${f.name} na despensa em ${unitPreferences.foodMassUnit}`}
-                        onChange={e => onUpdatePantry(f.id, displayMassToGrams(Number(e.target.value) || 0, unitPreferences.foodMassUnit))}
+                        onChange={e => onUpdatePantry(f.id, displayMassToGrams(Number(e.target.value) || 0, unitPreferences.foodMassUnit), inPantry?.expiresAt ?? null)}
                         className="w-20 rounded-lg border border-border bg-background p-1 text-xs font-bold text-foreground text-center focus:border-primary focus:outline-none"
                       />
                       <span className="text-xs text-muted-foreground">{unitPreferences.foodMassUnit}</span>
                     </div>
                   </div>
+                  <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-2">
+                    <label htmlFor={`pantry-expiry-${f.id}`} className="text-xs text-muted-foreground">Validade:</label>
+                    <input
+                      id={`pantry-expiry-${f.id}`}
+                      type="date"
+                      value={inPantry?.expiresAt || ''}
+                      aria-label={`Validade de ${f.name}`}
+                      onChange={e => onUpdatePantry(f.id, amountG, e.target.value || null)}
+                      className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground"
+                    />
+                  </div>
+                  {inPantry?.expiresAt && (() => {
+                    const expiry = getPantryExpiryReminder(inPantry.expiresAt);
+                    return expiry.status === 'expired' ? <p className="text-[11px] font-medium text-red-300">Vencido em {inPantry.expiresAt}</p>
+                      : expiry.status === 'expiring' ? <p className="text-[11px] font-medium text-amber-200">Vence em {expiry.daysRemaining} dia(s)</p>
+                        : null;
+                  })()}
                 </div>
               );
             })}

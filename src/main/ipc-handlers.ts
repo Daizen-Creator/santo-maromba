@@ -407,8 +407,8 @@ export function registerIpcHandlers(
   ipcMain.handle(IPC_CHANNELS.UPDATE_PANTRY, async (event, rawInput) => {
     try {
       getCallingWindow(event);
-      const { foodId, amountG } = PantryItemUpdateInputSchema.parse(rawInput);
-      service.updatePantryItem(foodId, amountG);
+      const { foodId, amountG, expiresAt } = PantryItemUpdateInputSchema.parse(rawInput);
+      service.updatePantryItem(foodId, amountG, expiresAt);
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message };

@@ -349,8 +349,8 @@ export class FitTrackService {
     return this.nutritionRepo.getPantry();
   }
 
-  updatePantryItem(foodId: string, amountG: number): void {
-    this.nutritionRepo.updatePantryItem(foodId, amountG);
+  updatePantryItem(foodId: string, amountG: number, expiresAt?: string | null): void {
+    this.nutritionRepo.updatePantryItem(foodId, amountG, expiresAt);
   }
 
   removePantryItem(foodId: string): void {
