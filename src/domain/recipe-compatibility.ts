@@ -6,6 +6,10 @@ export interface RecipeProfileRestrictions {
   dietaryRestrictions?: string[];
 }
 
+export interface RecipeProfilePreferences extends RecipeProfileRestrictions {
+  dietaryPreferences?: string;
+}
+
 const normalize = (value: string): string => value.trim().toLocaleLowerCase('pt-BR')
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -128,4 +132,9 @@ export function rankRecipesByPreferences<T extends Recipe>(
     index,
     score: baseScore(recipe) + getRecipePreferenceScore(recipe, preferences)
   })).sort((a, b) => b.score - a.score || a.index - b.index).map(item => item.recipe);
+}
+
+export function rankPantryRecipesForProfile<T extends Recipe>(recipes: T[], profile?: RecipeProfilePreferences | null): T[] {
+  const compatible = profile ? filterRecipesForProfile(recipes, profile) : recipes;
+  return rankRecipesByPreferences(compatible, profile?.dietaryPreferences);
 }

@@ -78,6 +78,7 @@ import {
 import { calculateNutritionPlan } from '../../domain/nutrition-calculator';
 import { calculatePhysiqueProjection } from '../../domain/physique-projection';
 import { SubstitutionEngine } from '../../domain/substitution-engine';
+import { rankPantryRecipesForProfile } from '../../domain/recipe-compatibility';
 import { DailyWorkoutPlan, WorkoutEngine } from '../../domain/workout-engine';
 import {
   calculateMovingAverages,
@@ -905,9 +906,12 @@ export const api = {
       if (!res.success) throw new Error(res.error || 'Erro ao buscar receitas.');
       return res.data || [];
     }
-    const pantry = await api.getPantry();
-    const [foods, recipes] = await Promise.all([api.getFoods(), api.getRecipes()]);
-    return new SubstitutionEngine(foods, recipes).findRecipesFromPantry(pantry, input.maxPrepTime, input.requireAllIngredients);
+    const [pantry, foods, recipes, profile] = await Promise.all([
+      api.getPantry(), api.getFoods(), api.getRecipes(), api.getProfile()
+    ]);
+    const matches = new SubstitutionEngine(foods, recipes)
+      .findRecipesFromPantry(pantry, input.maxPrepTime, input.requireAllIngredients);
+    return rankPantryRecipesForProfile(matches, profile);
   },
 
   getShoppingList: async (rawWeekStartDate: string): Promise<ShoppingListItem[]> => {

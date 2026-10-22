@@ -46,4 +46,23 @@ describe('sobras da despensa e priorização de receitas no SQLite', () => {
       .toMatchObject({ amountAvailableG: 600, isLeftover: true });
     expect(service.findRecipesFromPantry({ maxPrepTime: 360 })[0]?.leftoverIngredientCount).toBeGreaterThan(0);
   });
+
+  it('aplica restrições alimentares do perfil antes de sugerir receita com estoque suficiente', async () => {
+    directory = fs.mkdtempSync(path.join(os.tmpdir(), 'santo-maromba-pantry-profile-'));
+    db = await createDatabaseDriver(path.join(directory, 'fittrack.db'));
+    await runMigrations(db);
+    const service = new FitTrackService(db);
+    const recipeWithMeat = service.getRecipes().find(recipe => recipe.ingredients.some(ingredient =>
+      /frango|patinho|carne bovina|til[aá]pia|atum/i.test(ingredient.foodName)));
+    expect(recipeWithMeat).toBeDefined();
+
+    for (const ingredient of recipeWithMeat!.ingredients) {
+      service.updatePantryItem(ingredient.foodId, ingredient.amountG);
+    }
+    expect(service.findRecipesFromPantry({ requireAllIngredients: true }).some(recipe => recipe.id === recipeWithMeat!.id)).toBe(true);
+
+    service.saveProfile({ name: 'Pessoa Teste', birthDate: '1995-04-12', heightCm: 175, dietaryRestrictions: ['vegetariano'] });
+    const filtered = service.findRecipesFromPantry({ requireAllIngredients: true });
+    expect(filtered.some(recipe => recipe.id === recipeWithMeat!.id)).toBe(false);
+  });
 });

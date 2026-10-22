@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.55. Estado após validação dos incrementos: **121 validadas, 30 parciais, 26 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.56. Estado após validação dos incrementos: **122 validadas, 29 parciais, 26 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -210,7 +210,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 144 | Corrigir registro por uma mensagem curta e atualizar histórico. | NENHUM | provedor de IA/parser | B · assistente ausente |
 | 145 | Resumir consumo registrado do dia. | DIAR; DASH | — | V · totais/revisão diária persistidos |
 | 146 | Informar saldo calórico e de macros do dia. | NUTR; DASH | — | V · mostra o que falta ou o excesso usando metas e consumo persistido; sem consumo salvo, mostra “Sem registro”; `nutrition-balance.test.ts` |
-| 147 | Sugerir refeições com base na despensa real. | DESP | — | P · motor determinístico existe, não usa preferências/restrições completas |
+| 147 | Sugerir refeições com base na despensa real. | `SubstitutionEngine`; `recipe-compatibility.ts`; `FitTrackService`; API PWA; SQLite/perfil | estoque e perfil local | V · mantém correspondência/ordenação de estoque e sobras, remove receitas incompatíveis com alergias/restrições e prioriza preferências; `recipe-compatibility.test.ts`, `pantry-leftovers-persistence.test.ts` |
 | 148 | Analisar foto de refeição, pedir confirmação e só então registrar. | NENHUM | visão computacional/provedor de IA | B · integração não configurada |
 | 149 | Identificar produto por barcode durante a conversa. | NENHUM | API de barcode | B · serviço não configurado |
 | 150 | Responder perguntas com base no histórico real do usuário. | NENHUM | provedor de IA + camada de contexto local segura | B · assistente ausente |

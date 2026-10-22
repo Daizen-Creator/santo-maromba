@@ -20,6 +20,7 @@ import { ShapeMilestoneRepository } from '../database/repositories/shape-milesto
 import { seedDatabase } from '../database/seeds/seedDatabase';
 import { calculateNutritionPlan } from '../domain/nutrition-calculator';
 import { SubstitutionEngine } from '../domain/substitution-engine';
+import { rankPantryRecipesForProfile } from '../domain/recipe-compatibility';
 import { DailyWorkoutPlan, WorkoutEngine } from '../domain/workout-engine';
 import {
   calculateMovingAverages,
@@ -406,8 +407,10 @@ export class FitTrackService {
 
   findRecipesFromPantry(input: PantryRecipeSearchInput = {}): PantryRecipeMatch[] {
     const pantry = this.nutritionRepo.getPantry();
-    return new SubstitutionEngine(this.nutritionRepo.getFoods(), this.nutritionRepo.getRecipes())
+    const profile = this.profileRepo.getProfile();
+    const matches = new SubstitutionEngine(this.nutritionRepo.getFoods(), this.nutritionRepo.getRecipes())
       .findRecipesFromPantry(pantry, input.maxPrepTime, input.requireAllIngredients);
+    return rankPantryRecipesForProfile(matches, profile);
   }
 
   getShoppingList(weekStartDate: string): ShoppingListItem[] {

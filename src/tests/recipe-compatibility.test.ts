@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterRecipesForProfile, isRecipeCompatible, rankRecipesByPreferences } from '../domain/recipe-compatibility';
+import { filterRecipesForProfile, isRecipeCompatible, rankPantryRecipesForProfile, rankRecipesByPreferences } from '../domain/recipe-compatibility';
 import { Recipe, RecipeIngredient } from '../shared/types';
 
 const ingredient = (foodId: string, foodName: string): RecipeIngredient => ({
@@ -75,5 +75,21 @@ describe('Compatibilidade do catálogo com alergias e restrições do perfil', (
     ];
     expect(rankRecipesByPreferences(pantry, 'prefiro frango', item => item.matchRate * 100).map(item => item.id))
       .toEqual(['leite', 'frango']);
+  });
+
+  it('filtra recomendações da despensa por alergia/restrição e ordena o restante pelas preferências', () => {
+    const pantryMatches = [
+      { ...chicken, matchRate: 100, leftoverIngredientCount: 1, leftoverUseGrams: 120 },
+      { ...egg, matchRate: 90, leftoverIngredientCount: 1, leftoverUseGrams: 80 },
+      { ...soyProtein, matchRate: 70, leftoverIngredientCount: 0, leftoverUseGrams: 0 }
+    ];
+
+    const compatible = rankPantryRecipesForProfile(pantryMatches, {
+      dietaryRestrictions: ['vegetariano'],
+      dietaryPreferences: 'prefiro ovo'
+    });
+
+    expect(compatible.map(item => item.id)).toEqual(['ovo', 'soja']);
+    expect(compatible[0]).toMatchObject({ matchRate: 90, leftoverUseGrams: 80 });
   });
 });
