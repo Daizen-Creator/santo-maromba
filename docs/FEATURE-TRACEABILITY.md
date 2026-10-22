@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.30. Estado após validação do incremento: **88 validadas, 42 parciais, 47 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.31. Estado após validação dos incrementos: **89 validadas, 41 parciais, 47 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -60,7 +60,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 24 | Registrar gramas parciais e recalcular totais consumidos. | DIAR; NUTR | — | V · `daily-log-persistence.test.ts` |
 | 25 | Favoritar alimento e consultá-lo em lista própria. | NUTR | — | V · catálogo mantém favoritos no SQLite/PWA e filtra a lista; testes `catalog-persistence.test.ts` e `daily-meal-api.test.ts` |
 | 26 | Copiar refeições de uma data para outra. | DIAR; IPC; PWA | — | V · copia para horários vazios, zera consumo e preserva destinos ocupados; SQLite reaberto e PWA local testados |
-| 27 | Editar ingredientes/quantidades e atualizar macros. | DIAR; NUTR | — | P · quantidades planejadas editáveis, recalculadas e persistidas; adicionar/remover ingredientes de uma refeição salva ainda falta |
+| 27 | Em refeições planejadas, adicionar um alimento do catálogo ou remover um ingrediente, recalcular macros a partir dos dados por 100 g, salvar a nova composição e relê-la após reiniciar; preservar composição de refeições que já têm consumo real. | `NutritionView.tsx`; `meal-composition.ts`; `daily-log-repository.ts`; `api.ts`; checklist persistente | SQLite existente; armazenamento local offline da PWA | V · `meal-composition.test.ts` cobre cálculos, proteção do último ingrediente, persistência da composição após reabrir SQLite e armazenamento offline da PWA; `daily-log-persistence.test.ts` cobre edição persistida de quantidades |
 | 28 | Excluir um lançamento e desfazer a exclusão. | DIAR | — | P · checklist pode voltar a pendente; exclusão/undo de histórico ausente |
 | 29 | Guardar data e hora real do consumo. | DIAR | — | V · data, timestamp de conclusão e horário exibido persistem; edição posterior mantém o horário registrado; `daily-log-persistence.test.ts` |
 | 30 | Anexar e reabrir foto de refeição. | DIAR; IPC | — | A · sem mídia de refeições |

@@ -11,7 +11,8 @@ import {
   Circle,
   SkipForward,
   Plus,
-  Star
+  Star,
+  Trash2
 } from 'lucide-react';
 import { ApplyMealTemplateInput, ApplyMealTemplateResult, CustomFoodInput, DailyMealCopyInput, DailyMealCopyResult, DailyMealEntry, DailyMealEntryInput, DailyMealHistoryQuery, DailyMealItemLog, DailyMealStatus, DashboardSummary, FoodItem, FoodPortionPreference, MealTemplate, MealTurn, NutritionMealDistributionEntry, NutritionTargets, PantryItem, Recipe, RecentlyUsedFood, SaveFoodPortionPreferenceInput, SaveMealTemplateInput, SubstitutionOption } from '../../shared/types';
 import { buildMealSchedule } from '../../domain/meal-schedule';
@@ -28,6 +29,7 @@ import { displayMassToGrams, formatFoodMass, gramsToDisplayMass } from '../../do
 import { useMeasurementUnits } from '../hooks/use-measurement-units';
 import { NaturalMealParseResult, parseNaturalMealDescription } from '../../domain/natural-meal-parser';
 import { getMealTurnLabel, MEAL_TURN_OPTIONS } from '../../domain/meal-turn';
+import { createPlannedMealFoodItem, removePlannedMealFoodItem } from '../../domain/meal-composition';
 
 const nutritionQualityLabel = (quality: DailyMealItemLog['dataQuality']): string => {
   switch (quality) {
@@ -140,6 +142,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   const [findingPantryLoading, setFindingPantryLoading] = useState<boolean>(false);
   const [draftAmounts, setDraftAmounts] = useState<Record<string, number>>({});
   const [draftPlannedAmounts, setDraftPlannedAmounts] = useState<Record<string, number>>({});
+  const [ingredientSelections, setIngredientSelections] = useState<Record<string, string>>({});
   const [nutritionDistribution, setNutritionDistribution] = useState<NutritionMealDistributionEntry[]>([]);
   const [nutritionDistributionLoading, setNutritionDistributionLoading] = useState(true);
   const [nutritionDistributionError, setNutritionDistributionError] = useState<string | null>(null);
@@ -397,7 +400,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     substitution: SubstitutionOption | undefined,
     status: DailyMealStatus,
     amounts: Record<string, number>,
-    plannedItems?: DailyMealItemLog[]
+    plannedItems?: DailyMealItemLog[],
+    preserveRecipeLink = true
   ) => {
     const sourceItems = plannedItems ?? itemsForMeal(recipe, substitution);
     const existing = dailyMealEntries.find(item => item.date === todayString && item.slotId === slot.id);
@@ -416,7 +420,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
         mealName: slot.title,
         mealTurn: slot.category,
         scheduledTime: slot.time,
-        recipeId: recipe?.id,
+        recipeId: preserveRecipeLink ? recipe?.id : undefined,
         status,
         items,
         note: existing?.note
@@ -432,6 +436,44 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     } finally {
       setSavingMealSlot(null);
     }
+  };
+
+  const addIngredientToMeal = async (
+    slot: ReturnType<typeof buildMealSchedule>[number],
+    recipe: Recipe | null,
+    substitution: SubstitutionOption | undefined,
+    currentItems: DailyMealItemLog[]
+  ) => {
+    const foodId = ingredientSelections[slot.id];
+    const food = foods.find(candidate => candidate.id === foodId);
+    if (!food) {
+      setMealSaveError('Selecione um alimento do catálogo para adicionar.');
+      return;
+    }
+    const item = createPlannedMealFoodItem(food, 100, `added-${food.id}-${Date.now()}`);
+    const amounts = getCurrentAmounts(slot.id, currentItems);
+    await saveMealState(slot, recipe, substitution, 'pending', amounts, [...currentItems, item], false);
+    setIngredientSelections(current => ({ ...current, [slot.id]: '' }));
+    setDraftPlannedAmounts(current => {
+      const next = { ...current };
+      currentItems.forEach(existing => delete next[`${slot.id}:${existing.itemId}`]);
+      return next;
+    });
+  };
+
+  const removeIngredientFromMeal = async (
+    slot: ReturnType<typeof buildMealSchedule>[number],
+    recipe: Recipe | null,
+    substitution: SubstitutionOption | undefined,
+    currentItems: DailyMealItemLog[],
+    itemId: string
+  ) => {
+    const nextItems = removePlannedMealFoodItem(currentItems, itemId);
+    const amounts = getCurrentAmounts(slot.id, currentItems);
+    delete amounts[itemId];
+    await saveMealState(slot, recipe, substitution, 'pending', amounts, nextItems, false);
+    setDraftAmounts(current => { const next = { ...current }; delete next[`${slot.id}:${itemId}`]; return next; });
+    setDraftPlannedAmounts(current => { const next = { ...current }; delete next[`${slot.id}:${itemId}`]; return next; });
   };
 
   const toggleMealIngredient = async (
@@ -838,6 +880,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
               const recipePortion = recipe ? getRecipeNutritionPerServing(recipe) : null;
               const amounts = getCurrentAmounts(slot.id, checklistItems);
               const nutritionComparison = compareMealNutrition(checklistItems, entry);
+              const canEditIngredients = !entry || entry.status === 'pending';
               const statusLabels: Record<DailyMealStatus, string> = {
                 pending: 'Pendente', preparing: 'Em preparo', consumed: 'Consumida', partial: 'Parcial',
                 deferred: 'Adiada', skipped: 'Não consumida', cancelled: 'Cancelada'
@@ -1007,6 +1050,15 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                               className="h-4 w-4 accent-primary"
                             />
                             <span className="min-w-0 flex-1 text-xs text-foreground">{item.foodName} <span className="text-muted-foreground">({formatMass(item.plannedAmountG)} no plano atual)</span></span>
+                            {canEditIngredients && (
+                              <button type="button" disabled={savingMealSlot === slot.id || checklistItems.length <= 1}
+                                aria-label={`Remover ${item.foodName} do plano de ${slot.title}`}
+                                title={checklistItems.length <= 1 ? 'Mantenha pelo menos um ingrediente' : 'Remover do plano'}
+                                onClick={() => void removeIngredientFromMeal(slot, recipe, substitution, checklistItems, item.itemId)}
+                                className="rounded-md border border-border px-2 py-1 text-muted-foreground transition hover:border-destructive/40 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                             <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               Plano
                               <input
@@ -1086,6 +1138,24 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                         >
                           {savingMealSlot === slot.id ? 'Salvando…' : 'Salvar porções planejadas'}
                         </button>
+                      )}
+                      {canEditIngredients && (
+                        <div className="flex flex-wrap gap-2 rounded-lg border border-border/60 bg-background/30 p-2.5">
+                          <label className="min-w-48 flex-1 space-y-1 text-[10px] text-muted-foreground">
+                            Adicionar alimento ao plano
+                            <select aria-label={`Adicionar alimento em ${slot.title}`} value={ingredientSelections[slot.id] ?? ''}
+                              onChange={event => setIngredientSelections(current => ({ ...current, [slot.id]: event.target.value }))}
+                              className="block w-full rounded-lg border border-border bg-card px-2.5 py-2 text-xs text-foreground">
+                              <option value="">Selecione no catálogo</option>
+                              {[...foods].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(food => <option key={food.id} value={food.id}>{food.name}</option>)}
+                            </select>
+                          </label>
+                          <button type="button" disabled={!ingredientSelections[slot.id] || savingMealSlot === slot.id}
+                            onClick={() => void addIngredientToMeal(slot, recipe, substitution, checklistItems)}
+                            className="self-end rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-45">
+                            Adicionar ingrediente · 100 g
+                          </button>
+                        </div>
                       )}
                       <button type="button" onClick={saveCurrentQuantities} disabled={savingMealSlot === slot.id} className="w-full rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:opacity-50">
                         {savingMealSlot === slot.id ? 'Salvando…' : 'Salvar quantidades consumidas'}

@@ -227,7 +227,14 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Classifica os registros do checklist e lançamentos nutricionais como café da manhã, almoço, lanche, pré-treino, pós-treino, jantar ou ceia.
 - A anotação de refeição em texto permite escolher a categoria; refeições planejadas herdam a categoria do horário. Histórico e distribuição exibem a classificação.
 - Migração SQLite 24 preserva os dados existentes e classifica registros antigos pelo horário/nome; SQLite e armazenamento offline da PWA mantêm a categoria ao reabrir.
-- 174 testes em 52 arquivos passaram; build concluído. Publicação GitHub pendente.
+- 174 testes em 52 arquivos passaram; build, instalador NSIS e portable passaram. O executável abriu em perfil isolado e criou o SQLite com a migração 24. GitHub Actions 39763645163 publicou os quatro artefatos.
+
+## v1.1.31
+
+- Permite adicionar alimentos do catálogo a refeições planejadas ou remover ingredientes, usando porções iniciais explícitas de 100 g e recalculando macros a partir dos valores locais por 100 g.
+- A nova composição é salva no SQLite ou no armazenamento offline da PWA e reaparece após reabrir; refeições com consumo registrado mantêm sua composição para preservar o histórico real.
+- A interface mantém ao menos um ingrediente por refeição; a troca de composição remove o vínculo com a receita original.
+- 178 testes em 53 arquivos passaram; build e executável Windows validados em perfil isolado. Publicação GitHub pendente.
 
 ## Publicar uma versão
 
