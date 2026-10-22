@@ -121,6 +121,16 @@ describe('Validação de Schemas Zod — Contratos de Dados', () => {
     expect(() => ProfileInputSchema.parse({ ...base, trainingWeekdays: [1, 3, 7] })).toThrow();
   });
 
+  it('valida a data de prazo da meta usando uma data real do calendário', () => {
+    const base = {
+      name: 'João Silva', birthDate: '2008-05-14', heightCm: 182,
+      biologicalSex: 'male', activityLevel: 'moderate', trainingExperience: 'intermediate',
+      fitnessGoal: 'muscle_gain', mealsPerDay: 4, trainingDaysPerWeek: 5
+    };
+    expect(ProfileInputSchema.parse({ ...base, targetDate: '2026-12-31' }).targetDate).toBe('2026-12-31');
+    expect(() => ProfileInputSchema.parse({ ...base, targetDate: '2026-02-30' })).toThrow();
+  });
+
   it('deve rejeitar perfil com dados inconsistentes ou fora dos limites clínicos', () => {
     expect(() =>
       ProfileInputSchema.parse({

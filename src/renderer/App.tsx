@@ -545,6 +545,7 @@ export const App: React.FC = () => {
           {currentTab === 'profile' && (
             <ProfileView
               profile={profile}
+              currentWeightKg={summary?.currentWeightKg ?? null}
               mealsPerDay={mealCount}
               onMealsPerDayChange={handleMealCountChange}
               onSaveProfile={handleSaveProfile}

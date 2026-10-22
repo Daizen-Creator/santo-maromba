@@ -24,6 +24,7 @@ export class ProfileRepository {
       trainingExperience: row.training_experience,
       fitnessGoal: row.fitness_goal,
       targetWeightKg: row.target_weight_kg ? Number(row.target_weight_kg) : undefined,
+      targetDate: row.target_date || undefined,
       dietaryRestrictions: row.dietary_restrictions ? JSON.parse(row.dietary_restrictions) : [],
       allergies: row.allergies ? JSON.parse(row.allergies) : [],
       dietaryPreferences: row.dietary_preferences || undefined,
@@ -86,6 +87,9 @@ export class ProfileRepository {
     const targetWeightKg = Object.prototype.hasOwnProperty.call(profile, 'targetWeightKg')
       ? profile.targetWeightKg ?? null
       : existing?.targetWeightKg ?? null;
+    const targetDate = Object.prototype.hasOwnProperty.call(profile, 'targetDate')
+      ? profile.targetDate || null
+      : existing?.targetDate ?? null;
     const changedFields: ProfileGoalChangeField[] = existing
       ? [
           ...(fitnessGoal !== existing.fitnessGoal ? ['fitnessGoal' as const] : []),
@@ -105,6 +109,7 @@ export class ProfileRepository {
           training_experience = ?,
           fitness_goal = ?,
           target_weight_kg = ?,
+          target_date = ?,
           dietary_restrictions = ?,
           allergies = ?,
           dietary_preferences = ?,
@@ -132,6 +137,7 @@ export class ProfileRepository {
           trainingExperience,
           fitnessGoal,
           targetWeightKg,
+          targetDate,
           dietaryRestrictions,
           allergies,
           profile.dietaryPreferences ?? existing.dietaryPreferences ?? null,
@@ -158,12 +164,12 @@ export class ProfileRepository {
         this.db.execute(
         `INSERT INTO profiles (
           id, name, birth_date, height_cm, biological_sex, activity_level,
-          training_experience, fitness_goal, target_weight_kg, dietary_restrictions,
+          training_experience, fitness_goal, target_weight_kg, target_date, dietary_restrictions,
           allergies, dietary_preferences, food_budget_monthly, meals_per_day,
           training_days_per_week, training_weekdays, work_schedule, study_schedule, sleep_schedule,
           wake_time, sleep_time, training_schedule, available_equipment, interruption_history_notes,
           initial_history_confirmed, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           profile.name,
@@ -174,6 +180,7 @@ export class ProfileRepository {
           trainingExperience,
           fitnessGoal,
           targetWeightKg,
+          targetDate,
           dietaryRestrictions,
           allergies,
           profile.dietaryPreferences ?? null,

@@ -73,6 +73,7 @@ export const ProfileInputSchema = z.object({
   trainingExperience: TrainingExperienceSchema,
   fitnessGoal: FitnessGoalSchema,
   targetWeightKg: z.number().min(30).max(300).optional(),
+  targetDate: z.string().refine(isRealCalendarDate, 'Informe uma data-alvo válida.').optional(),
   dietaryRestrictions: z.array(z.string()).optional(),
   allergies: z.array(z.string()).optional(),
   dietaryPreferences: z.string().max(500).optional(),

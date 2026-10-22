@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.25. Estado após validação do incremento: **82 validadas, 45 parciais, 50 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.26. Estado após validação do incremento: **84 validadas, 45 parciais, 48 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -45,10 +45,10 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 14 | Selecionar 3–6 refeições e gerar exatamente essa quantidade. | PERF; DIAR | — | V · `meal-schedule.test.ts` |
 | 15 | Calcular meta calórica a partir de dados válidos do perfil. | PERF | — | V · `nutrition-calculator.test.ts` |
 | 16 | Calcular meta diária de proteína. | PERF | — | V · `nutrition-calculator.test.ts` |
-| 17 | Definir prazo e acompanhar progresso até a data. | PERF | — | A · sem prazo de objetivo |
+| 17 | Definir data-alvo, reabrir com a data salva e consultar dias restantes/vencidos e diferença entre peso atual e peso-alvo; calcular variação aritmética semanal quando houver prazo futuro e ambos os pesos. | `ProfileView.tsx`; `goal-deadline.ts`; `profile-repository.ts`; `schema.sql`; `migrations.ts`; `ProfileInputSchema` | Migração SQLite 21; perfil/PWA | V · `goal-deadline.test.ts` cobre dias, prazo hoje/vencido, diferença, taxa aritmética e datas impossíveis; `profile-routine-persistence.test.ts` cobre migração, salvar, reabrir e limpar o prazo; `validation.test.ts` cobre data real |
 | 18 | Definir porções padrão e aplicá-las às refeições. | PERF; NUTR | — | P · porções de receitas são fixas |
 | 19 | Escrever, salvar e consultar diário pessoal por data. | PERF | — | A · sem diário pessoal |
-| 20 | Consultar histórico de objetivos anteriores. | PERF | — | A · sem histórico de objetivos |
+| 20 | Consultar histórico de objetivos anteriores. | `ProfileView.tsx`; `profile-repository.ts`; `profile-goal-history.test.ts` | SQLite desktop; armazenamento offline da PWA | V · mesmo comportamento já entregue pelo ID 6; testes cobrem snapshots iniciais, alterações, remoção do peso-alvo, ausência de duplicatas e reabertura. ID 20 é contabilizado como concluído sem criar armazenamento duplicado |
 
 ## Funcionalidades 21–40 — alimentação e checklist
 

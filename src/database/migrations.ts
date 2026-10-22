@@ -259,6 +259,9 @@ export async function runMigrations(db: IDatabase): Promise<void> {
   if (!profileColumns.some(column => column.name === 'training_weekdays')) {
     db.exec('ALTER TABLE profiles ADD COLUMN training_weekdays TEXT');
   }
+  if (!profileColumns.some(column => column.name === 'target_date')) {
+    db.exec("ALTER TABLE profiles ADD COLUMN target_date TEXT CHECK(target_date IS NULL OR (length(target_date) = 10 AND target_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'))");
+  }
   const version19 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 19');
   if (!version19) {
     db.execute(
@@ -271,6 +274,13 @@ export async function runMigrations(db: IDatabase): Promise<void> {
     db.execute(
       'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
       [20, 'Dias disponíveis para encaixe da divisão semanal de treino', new Date().toISOString()]
+    );
+  }
+  const version21 = db.queryOne<{ version: number }>('SELECT version FROM schema_version WHERE version = 21');
+  if (!version21) {
+    db.execute(
+      'INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)',
+      [21, 'Prazo da meta corporal no perfil', new Date().toISOString()]
     );
   }
 }

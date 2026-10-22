@@ -28,6 +28,7 @@ export interface UserProfile {
   trainingExperience: TrainingExperience;
   fitnessGoal: FitnessGoal;
   targetWeightKg?: number;
+  targetDate?: string;
   dietaryRestrictions?: string[];
   allergies?: string[];
   dietaryPreferences?: string;

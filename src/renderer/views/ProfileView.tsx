@@ -19,9 +19,11 @@ import {
   ProfileGoalHistoryRecord
 } from '../../shared/types';
 import { calculateAge } from '../../domain/nutrition-calculator';
+import { getGoalDeadlineProgress } from '../../domain/goal-deadline';
 
 interface ProfileViewProps {
   profile: UserProfile | null;
+  currentWeightKg: number | null;
   mealsPerDay: number;
   onMealsPerDayChange: (count: number) => void;
   onSaveProfile: (profile: any) => Promise<void>;
@@ -45,6 +47,7 @@ const TRAINING_WEEKDAY_LABELS: Record<number, string> = {
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   profile,
+  currentWeightKg,
   mealsPerDay,
   onMealsPerDayChange,
   onSaveProfile,
@@ -69,6 +72,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [targetWeightKg, setTargetWeightKg] = useState<string>(
     profile?.targetWeightKg ? String(profile.targetWeightKg) : ''
   );
+  const [targetDate, setTargetDate] = useState<string>(profile?.targetDate || '');
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState<number>(
     profile?.trainingDaysPerWeek || 5
   );
@@ -103,6 +107,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const calculatedAge = birthDate ? calculateAge(birthDate) : null;
+  const deadlineProgress = targetDate ? getGoalDeadlineProgress(
+    targetDate,
+    currentWeightKg,
+    targetWeightKg ? Number(targetWeightKg) : null
+  ) : null;
 
   useEffect(() => {
     let active = true;
@@ -144,6 +153,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         trainingExperience,
         fitnessGoal,
         targetWeightKg: targetWeightKg ? Number(targetWeightKg) : undefined,
+        targetDate: targetDate || undefined,
         mealsPerDay: Number(mealsPerDay),
         trainingDaysPerWeek: Number(trainingDaysPerWeek),
         trainingWeekdays,
@@ -297,7 +307,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground">Objetivo Corporal</label>
               <select
@@ -326,7 +336,47 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 className="w-full rounded-xl border border-border bg-secondary/50 px-3.5 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">Prazo da meta</label>
+              <input
+                type="date"
+                value={targetDate}
+                onChange={e => setTargetDate(e.target.value)}
+                className="w-full rounded-xl border border-border bg-secondary/50 px-3.5 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+              />
+            </div>
           </div>
+
+          {deadlineProgress && (
+            <section className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-4" aria-label="Acompanhamento do prazo da meta">
+              <p className="text-xs font-semibold text-foreground">
+                {deadlineProgress.status === 'upcoming'
+                  ? `Faltam ${deadlineProgress.daysRemaining} ${deadlineProgress.daysRemaining === 1 ? 'dia' : 'dias'} para a meta.`
+                  : deadlineProgress.status === 'today'
+                    ? 'O prazo da meta é hoje.'
+                    : `O prazo passou há ${Math.abs(deadlineProgress.daysRemaining)} ${Math.abs(deadlineProgress.daysRemaining) === 1 ? 'dia' : 'dias'}.`}
+              </p>
+              {deadlineProgress.remainingWeightKg !== null ? (
+                <div className="mt-1 space-y-1">
+                  <p className="text-[11px] text-muted-foreground">
+                    {deadlineProgress.remainingWeightKg === 0
+                      ? 'Peso-alvo atingido.'
+                      : `${Math.abs(deadlineProgress.remainingWeightKg).toLocaleString('pt-BR')} kg ${deadlineProgress.remainingWeightKg > 0 ? 'até ganhar' : 'até perder'} para alcançar o alvo.`}
+                  </p>
+                  {deadlineProgress.weeklyChangeNeededKg !== null && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Variação média aritmética no prazo: {deadlineProgress.weeklyChangeNeededKg.toLocaleString('pt-BR')} kg/semana.
+                    </p>
+                  )}
+                </div>
+              ) : targetWeightKg ? (
+                <p className="mt-1 text-[11px] text-muted-foreground">Registre seu peso atual para acompanhar a diferença até a meta.</p>
+              ) : (
+                <p className="mt-1 text-[11px] text-muted-foreground">Informe o peso-alvo para acompanhar a diferença até a data.</p>
+              )}
+            </section>
+          )}
 
           <section className="rounded-2xl border border-border/70 bg-background/40 p-4" aria-labelledby="goal-history-heading">
             <div className="mb-3 flex items-center gap-2">

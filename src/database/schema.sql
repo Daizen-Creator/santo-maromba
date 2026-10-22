@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   training_experience TEXT NOT NULL CHECK(training_experience IN ('beginner', 'intermediate', 'advanced')),
   fitness_goal TEXT NOT NULL CHECK(fitness_goal IN ('muscle_gain', 'gradual_weight_gain', 'maintenance', 'fat_loss', 'weight_reduction', 'body_recomposition')),
   target_weight_kg REAL,
+  target_date TEXT CHECK(target_date IS NULL OR (length(target_date) = 10 AND target_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]')),
   dietary_restrictions TEXT, -- JSON Array
   allergies TEXT,            -- JSON Array
   dietary_preferences TEXT,

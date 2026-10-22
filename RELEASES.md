@@ -192,7 +192,14 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 
 - Usa as preferências alimentares salvas para ordenar o catálogo, o plano diário e as sugestões da despensa por custo, tempo de preparo, macros, dieta e ingredientes preferidos.
 - Preferências afetam a ordem das sugestões; alergias e restrições incompatíveis continuam sendo excluídas.
-- 159 testes em 47 arquivos, build React/Electron, instalador e versão portátil aprovados; executável abriu em perfil isolado e criou SQLite. Publicação GitHub pendente.
+- 159 testes em 47 arquivos, build React/Electron, instalador e versão portátil aprovados; executável abriu em perfil isolado e criou SQLite. GitHub Actions 39748835313 publicou os quatro artefatos.
+
+## v1.1.26
+
+- Adiciona prazo opcional à meta de peso e mostra dias restantes ou atraso, diferença até o peso-alvo e variação média aritmética por semana; os valores dependem do peso real registrado e não são uma previsão fisiológica.
+- Migração 21 adiciona a data ao perfil sem apagar os dados existentes; valida datas impossíveis e preserva o prazo após fechar e reabrir.
+- Reconhece o histórico de objetivos do ID 20 como já coberto pelo histórico persistente do ID 6, evitando duplicar dados e comportamento.
+- 163 testes em 48 arquivos passaram; build, instalador NSIS e versão portátil foram gerados. O executável abriu em perfil isolado e criou um SQLite com a migração 21 e a coluna `target_date`. Publicação GitHub pendente.
 
 ## Publicar uma versão
 
