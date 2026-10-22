@@ -298,8 +298,8 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 - `npm test`: 61/61 testes aprovados localmente; inclui snapshots v7→v8, metadados de qualidade e armazenamento de fibra ausente como `NULL`.
 - `npm run build`: build de renderer e Electron aprovado.
 - Instalador NSIS e portable 1.0.4: empacotados; smoke test do portable ficou ativo por 12 segundos e criou `fittrack.db` num perfil temporário isolado.
-- GitHub Actions e release 1.0.4: publicação pendente de CI.
-- Release 1.0.3 anterior: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.3.
+- GitHub Actions e release 1.0.4: testes, build, instalador NSIS, portable e manifesto do auto-update publicados com sucesso (workflow 39721903982).
+- Release 1.0.4: https://github.com/Daizen-Creator/santo-maromba/releases/tag/v1.0.4.
 - Firebase/ImageKit: não configurados; não há sincronização real, login compartilhado ou upload remoto para testar.
 
 ## Incremento implementado após a auditoria
