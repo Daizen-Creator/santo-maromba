@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade — Santo Maromba
 
-Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.15. Estado após validação do incremento: **72 validadas, 51 parciais, 54 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
+Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 22/10/2026 a partir das especificações anexadas e atualizada até o incremento 1.1.16. Estado após validação do incremento: **73 validadas, 50 parciais, 54 ausentes e 23 bloqueadas por dependências externas**. O texto dos anexos é tratado como requisito, não como prova de implementação.
 
 ## Como ler
 
@@ -164,7 +164,7 @@ Auditoria iniciada no commit `57f0317` (versão publicada 1.0.3), realizada em 2
 | 108 | Mostrar peso corporal associado à data da foto. | SHAP | — | P · associação por data, sem snapshot imutável do peso |
 | 109 | Registrar medida da cintura com data. | SHAP | — | V · persistência de medidas |
 | 110 | Criar medidas corporais personalizadas. | SHAP | — | A · conjunto de campos fixos |
-| 111 | Comparar evolução de medidas em gráfico. | SHAP | — | P · histórico/tabular presente, gráfico de medidas incompleto |
+| 111 | Comparar evolução de medidas em gráfico. | SHAP | — | V · gráfico filtrável usa somente valores de medições salvas; `measurement-trend.test.ts` |
 | 112 | Adicionar e editar notas nas fotos. | SHAP | — | V · update de notas e persistência local |
 | 113 | Selecionar duas datas e comparar as fotos correspondentes. | SHAP | — | V · seletor A/B por foto com data/pose |
 | 114 | Exportar relatório visual de evolução. | SHAP | — | P · comparação visual existe; exportação não comprovada |

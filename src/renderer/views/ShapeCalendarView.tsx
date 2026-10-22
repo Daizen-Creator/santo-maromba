@@ -12,6 +12,8 @@ import {
   Columns
 } from 'lucide-react';
 import { BodyMeasurementRecord, PhotoCreateInput, PhotoPose, PhotoRecord, WeightRecord, WorkoutSession } from '../../shared/types';
+import { buildMeasurementTrend, MEASUREMENT_METRICS, MeasurementMetric } from '../../domain/measurement-trend';
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const localDateString = (date = new Date()): string => {
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -54,6 +56,8 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
   initialTab = 'calendar'
 }) => {
   const [activeTab, setActiveTab] = useState<'calendar' | 'compare' | 'timeline' | 'measurements'>(initialTab);
+  const [measurementMetric, setMeasurementMetric] = useState<MeasurementMetric>('waistCircCm');
+  const measurementTrend = useMemo(() => buildMeasurementTrend(measurements, measurementMetric), [measurements, measurementMetric]);
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
 
@@ -767,6 +771,46 @@ export const ShapeCalendarView: React.FC<ShapeCalendarViewProps> = ({
               <span>Lançar Nova Medição</span>
             </button>
           </div>
+
+          <section aria-label="Gráfico da evolução das medidas" className="space-y-3 rounded-2xl border border-border/70 bg-background/50 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-foreground">Evolução registrada</h4>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">O gráfico usa somente medições salvas, sem estimar pontos faltantes.</p>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Métrica</span>
+                <select aria-label="Métrica do gráfico de medidas" value={measurementMetric}
+                  onChange={event => setMeasurementMetric(event.target.value as MeasurementMetric)}
+                  className="rounded-lg border border-border bg-card px-3 py-2 text-foreground">
+                  {Object.entries(MEASUREMENT_METRICS).map(([key, metric]) => (
+                    <option key={key} value={key}>{metric.label} ({metric.unit})</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {measurementTrend.length < 2 ? (
+              <p role="status" className="flex h-48 items-center justify-center rounded-xl border border-dashed border-border px-4 text-center text-xs text-muted-foreground">
+                Registre pelo menos duas medições de {MEASUREMENT_METRICS[measurementMetric].label.toLocaleLowerCase('pt-BR')} para visualizar a tendência.
+              </p>
+            ) : (
+              <div className="h-56 w-full" role="img" aria-label={`Evolução de ${MEASUREMENT_METRICS[measurementMetric].label}`}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={measurementTrend} margin={{ top: 12, right: 16, left: 0, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tickFormatter={value => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(new Date(`${value}T12:00:00`))}
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                    <YAxis width={44} domain={['auto', 'auto']} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                    <Tooltip
+                      labelFormatter={value => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(`${value}T12:00:00`))}
+                      formatter={value => [`${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${MEASUREMENT_METRICS[measurementMetric].unit}`, MEASUREMENT_METRICS[measurementMetric].label]}
+                      contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 12, fontSize: 11 }} />
+                    <Line type="monotone" dataKey="value" name={MEASUREMENT_METRICS[measurementMetric].label} stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 3, fill: 'hsl(var(--primary))' }} activeDot={{ r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </section>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">

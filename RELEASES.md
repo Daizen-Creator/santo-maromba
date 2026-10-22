@@ -134,6 +134,12 @@ O repositório público `Daizen-Creator/santo-maromba` publica releases pelo Git
 - Uma sessão só aparece como perdida quando o dia de treino passou e não há sessão registrada; uma sessão parcial permanece identificada como parcial.
 - Validada com 126 testes, build Windows e abertura/migração em perfil isolado; publicação no GitHub está pendente.
 
+## v1.1.16
+
+- Exibe gráfico histórico de medidas com filtro para cintura, braços, peitoral, ombros, pernas, peso e percentual de gordura.
+- A linha apresenta apenas medições registradas, sem estimar datas ou valores ausentes.
+- Validada pelo teste da série temporal e build React/Electron; empacotamento e publicação estão em andamento.
+
 ## Publicar uma versão
 
 1. Atualize `version` em `package.json` e `package-lock.json`; a Action recusa tags divergentes.
